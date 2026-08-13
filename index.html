@@ -2252,6 +2252,19 @@ function persistLocalNow(){
 // alive, so the async write there actually completes.
 window.addEventListener('beforeunload', persistLocalNow);
 window.addEventListener('pagehide', persistLocalNow);
+// The local flush above is reliable and synchronous, but the actual GitHub
+// commit is not -- it's an in-flight network request that a reload/close
+// simply cancels mid-air, with no way to force it through in time. A large
+// program's save can genuinely take several seconds (encoding + upload +
+// any network retry), so warn instead of silently losing that edit if one
+// is still genuinely running when the page is about to go away.
+window.addEventListener('beforeunload', (e)=>{
+  if(githubMode()!=='editor') return;
+  if(!saveTimer && !persistInFlight && !persistAgainRequested) return;
+  e.preventDefault();
+  e.returnValue = 'A save to GitHub is still in progress. If you leave now, your latest edit may not be saved.';
+  return e.returnValue;
+});
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState!=='hidden') return;
   if(window.__skipPersist) return;
