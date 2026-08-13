@@ -1723,6 +1723,15 @@ async function pushLocalContentToGithub(){
 // overwrite the other programs' real files with nothing. That's not a
 // hypothetical: it's exactly the kind of gap that caused a real data-loss
 // incident earlier this session, just relocated to a new seam.
+//
+// Write order matters: every program file is written FIRST, manifest.json
+// LAST, and only if every program file actually succeeded. Boot only ever
+// switches an app into the new mode by finding manifest.json -- so as long
+// as that file is the last thing written, an interruption partway through
+// (a slow section with embedded images, a lost connection, an impatient
+// reload) always leaves the repo in a state boot still reads as "not
+// migrated yet," never a half-migrated one where the app thinks it's on the
+// new storage but some programs' content was never actually written.
 async function migrateContentToPerProgramFiles(){
   if(githubMode() !== 'editor'){ await appAlert('Connect an editor GitHub token first (Export ▾ → Connect to GitHub).'); return; }
   if(manifestMode){
@@ -1731,29 +1740,43 @@ async function migrateContentToPerProgramFiles(){
   }
   const existing = await githubReadFileStatus(GITHUB_MANIFEST_PATH);
   if(existing.status === 'ok'){
-    const proceed = await appConfirm('manifest.json already exists in this content repo -- migration was likely already run from another browser. This browser is still fully loaded in the old single-file mode, so re-running will overwrite every program\'s file with whatever\'s currently loaded here. Only continue if this browser\'s content is the one you want to keep. Continue?');
+    const proceed = await appConfirm('manifest.json already exists in this content repo -- migration was likely already run before (possibly interrupted). This browser is still fully loaded in the old single-file mode, so re-running will overwrite every program\'s file with whatever\'s currently loaded here. Only continue if this browser\'s content is the one you want to keep. Continue?');
     if(!proceed) return;
   }
   saveCurrentBlocks();
   const programIds = programs.map(p=>p.id);
-  if(!await appConfirm('This splits your current content into a manifest plus one file per program ('+programIds.length+' programs) and pushes all of them to GitHub. Your existing sdi-space.json is left untouched as a backup. Continue?')) return;
+  if(!await appConfirm('This splits your current content into a manifest plus one file per program ('+programIds.length+' programs) and pushes all of them to GitHub. This can take a while if any section has large embedded images -- the toolbar will show progress, so give it time even if it looks slow. Your existing sdi-space.json is left untouched as a backup either way. Continue?')) return;
 
-  const manifest = buildManifest();
-  let ok = await githubCommitFile(GITHUB_MANIFEST_PATH, manifest, 'Migrate: manifest');
+  const ind = document.getElementById('save-ind');
+  const ts = Date.now();
   const failedPrograms = [];
-  for(const pid of programIds){
-    const progFile = { blockStore: sliceBlockStoreForProgram(pid), ts: manifest.ts };
+  for(let i=0;i<programIds.length;i++){
+    const pid = programIds[i];
+    if(ind){ ind.textContent = 'Migrating '+(i+1)+'/'+programIds.length+'…'; ind.style.color = '#f59e0b'; }
+    const progFile = { blockStore: sliceBlockStoreForProgram(pid), ts };
     const progOk = await githubCommitFile(githubProgramPath(pid), progFile, 'Migrate: '+pid);
-    if(!progOk){ ok = false; failedPrograms.push(pid); }
+    if(!progOk) failedPrograms.push(pid);
   }
 
-  if(ok){
+  if(failedPrograms.length){
+    if(ind){ ind.textContent=''; ind.style.color=''; }
+    await appAlert('Migration stopped -- '+failedPrograms.length+' program file(s) failed to write ('+failedPrograms.join(', ')+'). Nothing has switched over: no manifest was written, so your app is still using the original file exactly as before. Check your connection and try again -- re-running from this browser is safe since it still has everything loaded.');
+    return;
+  }
+
+  if(ind){ ind.textContent = 'Finishing up…'; ind.style.color = '#f59e0b'; }
+  const manifest = buildManifest();
+  manifest.ts = ts; // keep it consistent with the program files just written
+  const manifestOk = await githubCommitFile(GITHUB_MANIFEST_PATH, manifest, 'Migrate: manifest');
+  if(ind){ ind.textContent=''; ind.style.color=''; }
+
+  if(manifestOk){
     manifestMode = true;
     programIds.forEach(pid=>loadedPrograms.add(pid)); // every program's content is already in memory right now
     dirtyPrograms.clear(); // everything was just written fresh
     await appAlert('Migration complete ✓ This browser is now using the new per-program storage. Your old sdi-space.json is still there, untouched, as a fallback.');
   } else {
-    await appAlert('Migration did not fully complete -- '+failedPrograms.length+' program file(s) failed to write ('+failedPrograms.join(', ')+'). Nothing was deleted and your old sdi-space.json is untouched. Check your connection and try again; re-running from this browser is safe since it still has everything loaded.');
+    await appAlert('Every program file was written successfully, but the final manifest write failed -- nothing has switched over yet, your app is still using the original file exactly as before. Just try again; it will pick up cleanly.');
   }
 }
 
