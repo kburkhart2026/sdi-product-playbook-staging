@@ -1587,7 +1587,15 @@ async function githubCommitFile(path, jsonObj, message){
 
   const MAX_ATTEMPTS = 3;
   const RETRY_DELAY_MS = 500;
+  // Separate from the conflict-retry loop below: covers a genuinely dropped
+  // connection or timeout mid-request (a thrown exception), not a completed
+  // request GitHub explicitly rejected. Larger files (a big program's full
+  // content) spend longer uploading and are more likely to hit exactly this
+  // kind of transient network hiccup than a small manifest ever was -- this
+  // is what "worked on retry, no conflict warning in the console" pointed to.
+  const NETWORK_RETRY_ATTEMPTS = 3;
 
+  for(let netAttempt=1; netAttempt<=NETWORK_RETRY_ATTEMPTS; netAttempt++){
   try{
     // Content is fixed for this call (same jsonObj on every attempt) -- build
     // the blob once, outside the retry loop.
@@ -1650,7 +1658,16 @@ async function githubCommitFile(path, jsonObj, message){
       // loop back: re-read ref + tree fresh, rebuild tree/commit on the new base
     }
     return false;
-  }catch(e){ return false; }
+  }catch(e){
+    // A thrown exception (not a completed HTTP response) -- likely a dropped
+    // connection or timeout mid-upload. Worth retrying the WHOLE chain from
+    // scratch (including rebuilding the blob), unlike a rejection.
+    if(netAttempt===NETWORK_RETRY_ATTEMPTS) return false;
+    await new Promise(r=>setTimeout(r, RETRY_DELAY_MS));
+    continue;
+  }
+  }
+  return false;
 }
 
 async function saveToGithub(state){
