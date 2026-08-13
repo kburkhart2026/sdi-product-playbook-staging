@@ -1411,6 +1411,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--mut);margin:16px 0 8px;">GitHub Hosting</div>
     <div class="export-opt" onclick="closeDataBackupModal(); connectGithubEditor();">🐙 Connect to GitHub…</div>
     <div class="export-opt" onclick="closeDataBackupModal(); pushLocalContentToGithub();">⬆🐙 Push local content to GitHub</div>
+    <div class="export-opt" onclick="closeDataBackupModal(); migrateContentToPerProgramFiles();">🗂️🐙 Migrate content to per-program files</div>
     <div class="backup-meta" id="backup-meta"></div>
   </div>
 </div>
@@ -1708,6 +1709,52 @@ async function pushLocalContentToGithub(){
   const ok = await githubCommitFile(GITHUB_CONTENT_PATH, state, 'Push local content');
   if(ok) await appAlert('Current content pushed to GitHub ✓');
   else await appAlert('Push failed. Check that your editor token is still valid and scoped to '+(GITHUB_CONTENT_REPO||'the content repo')+'.');
+}
+
+// One-time action: splits the single sdi-space.json blob into manifest.json
+// (metadata + all the small side-tables) plus one programs/<id>.json file
+// per program, and pushes all of them. The old sdi-space.json is NEVER
+// deleted -- it's the automatic rollback for the entire rest of this feature.
+//
+// Only ever reachable from a browser that's still in the OLD, fully-loaded
+// single-file mode (manifestMode===false), never from one that's already
+// lazy-loading -- a lazy-loading browser only has SOME programs' content in
+// memory, and writing "everything currently loaded" from it would silently
+// overwrite the other programs' real files with nothing. That's not a
+// hypothetical: it's exactly the kind of gap that caused a real data-loss
+// incident earlier this session, just relocated to a new seam.
+async function migrateContentToPerProgramFiles(){
+  if(githubMode() !== 'editor'){ await appAlert('Connect an editor GitHub token first (Export ▾ → Connect to GitHub).'); return; }
+  if(manifestMode){
+    await appAlert('This browser is already using the new per-program storage -- migration already happened. Nothing to do here.');
+    return;
+  }
+  const existing = await githubReadFileStatus(GITHUB_MANIFEST_PATH);
+  if(existing.status === 'ok'){
+    const proceed = await appConfirm('manifest.json already exists in this content repo -- migration was likely already run from another browser. This browser is still fully loaded in the old single-file mode, so re-running will overwrite every program\'s file with whatever\'s currently loaded here. Only continue if this browser\'s content is the one you want to keep. Continue?');
+    if(!proceed) return;
+  }
+  saveCurrentBlocks();
+  const programIds = programs.map(p=>p.id);
+  if(!await appConfirm('This splits your current content into a manifest plus one file per program ('+programIds.length+' programs) and pushes all of them to GitHub. Your existing sdi-space.json is left untouched as a backup. Continue?')) return;
+
+  const manifest = buildManifest();
+  let ok = await githubCommitFile(GITHUB_MANIFEST_PATH, manifest, 'Migrate: manifest');
+  const failedPrograms = [];
+  for(const pid of programIds){
+    const progFile = { blockStore: sliceBlockStoreForProgram(pid), ts: manifest.ts };
+    const progOk = await githubCommitFile(githubProgramPath(pid), progFile, 'Migrate: '+pid);
+    if(!progOk){ ok = false; failedPrograms.push(pid); }
+  }
+
+  if(ok){
+    manifestMode = true;
+    programIds.forEach(pid=>loadedPrograms.add(pid)); // every program's content is already in memory right now
+    dirtyPrograms.clear(); // everything was just written fresh
+    await appAlert('Migration complete ✓ This browser is now using the new per-program storage. Your old sdi-space.json is still there, untouched, as a fallback.');
+  } else {
+    await appAlert('Migration did not fully complete -- '+failedPrograms.length+' program file(s) failed to write ('+failedPrograms.join(', ')+'). Nothing was deleted and your old sdi-space.json is untouched. Check your connection and try again; re-running from this browser is safe since it still has everything loaded.');
+  }
 }
 
 async function connectGithubEditor(){
