@@ -547,10 +547,9 @@ body.view-mode .tbl-rowops,
 body.view-mode .tbl-row-del,
 body.view-mode .dl-add,
 body.view-mode .ap-add,
-body.view-mode .pm-drag,
 body.view-mode .pm-gdrag,
 body.view-mode .pm-gdel,
-body.view-mode .pm-del,
+body.view-mode .pm-del:not(.pm-del-row),
 body.view-mode .pm-addrow,
 body.view-mode .pm-addgroup,
 body.view-mode .pm-subadd{display:none!important;}
@@ -559,6 +558,14 @@ body.view-mode .block-file:not(.filled),
 body.view-mode .img-ph,
 body.view-mode .vid-ph,
 body.view-mode .emb-ph{pointer-events:none;cursor:default;}
+/* .pm-drag and .pm-del-row are direct children of the PM table's CSS-grid
+   row (.pm-row) with implicit (DOM-order) column placement -- display:none
+   on a grid item removes it from the grid entirely, shifting every later
+   cell into the wrong column and corrupting the whole row's layout. Only
+   these two get visibility:hidden instead, which hides them (and blocks
+   their clicks) without removing their column from the grid. */
+body.view-mode .pm-drag,
+body.view-mode .pm-del-row{visibility:hidden;}
 /* PM board: content stays fully visible, only add/edit/delete/drag are
    disabled -- the expand-detail toggle and section-link preview are pure
    viewing/navigation and are deliberately left untouched here. */
@@ -1027,11 +1034,14 @@ body.view-mode .wysiwyg-bar{display:none!important;}
 .pm-gantt{overflow-x:auto;border:1px solid var(--bdr);border-radius:8px;}
 .pm-gantt-inner{position:relative;}
 .pm-gantt-row{display:flex;border-bottom:1px solid #f3f4f6;min-height:34px;background:#fff;}
-.pm-gantt-row.head{position:sticky;top:0;z-index:3;background:#f8fafc;font-size:10px;color:#9ca3af;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;}
+.pm-gantt-row.head{position:sticky;z-index:3;background:#f8fafc;font-size:10px;color:#9ca3af;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;min-height:22px;}
+.pm-gantt-row.head-month{top:0;}
+.pm-gantt-row.head-week{top:22px;border-bottom:1px solid var(--bdr);}
 .pm-glabel{position:sticky;left:0;z-index:1;background:#fff;width:220px;flex:0 0 220px;padding:0 10px;display:flex;align-items:center;font-size:12px;color:var(--txt);border-right:1px solid var(--bdr);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .pm-gantt-row.head .pm-glabel{background:#f8fafc;z-index:4;}
 .pm-gtrack{position:relative;flex:0 0 auto;}
-.pm-gdaylbl{flex:0 0 auto;text-align:center;font-size:10px;padding-top:8px;box-sizing:border-box;border-right:1px solid #f1f5f9;}
+.pm-gmonthlbl{flex:0 0 auto;text-align:left;padding:6px 0 0 6px;box-sizing:border-box;border-right:1px solid #f1f5f9;overflow:hidden;white-space:nowrap;}
+.pm-gweeklbl{flex:0 0 auto;text-align:left;padding:5px 0 0 6px;box-sizing:border-box;border-right:1px solid #f1f5f9;overflow:hidden;white-space:nowrap;}
 .pm-gbar{position:absolute;top:6px;height:22px;border-radius:4px;font-size:10px;font-weight:600;display:flex;align-items:center;padding:0 6px;overflow:hidden;white-space:nowrap;box-sizing:border-box;z-index:2;}
 .pm-gbar[onclick]{cursor:pointer;}
 .pm-gnodate{font-size:11px;color:var(--mut);padding-left:8px;line-height:34px;}
@@ -7751,6 +7761,17 @@ function pmInitialStatusFor(pid, secId){
   const st = sectionStatus[pid+':'+secId]||'not-started';
   return (st==='complete'||st==='approved') ? 'done' : (st==='in-progress'||st==='review') ? 'working' : 'not-started';
 }
+// A section-linked deliverable's status is never manually set -- it's always
+// computed fresh from the section's actual current lock/status, restricted to
+// exactly 3 states (a locked section is always "Complete", regardless of
+// whatever t.status happens to hold in storage). Colors reuse PM_STATUSES so
+// this stays visually consistent with the rest of the board (Kanban columns,
+// etc.); only the "Complete" wording is overridden from PM_STATUSES' "DONE".
+function pmSectionDerivedStatus(pid, secId){
+  const id = pmInitialStatusFor(pid, secId);
+  const base = pmStatusOf(id);
+  return { id, lbl: id==='done' ? 'COMPLETE' : base.lbl, bg: base.bg, fg: base.fg };
+}
 function pmNewTaskFor(ph, sec, status){
   return {id:pmNewId(), name:sec.name, group:ph.id, owner:'', status, start:'', due:'',
     progress:status==='done'?100:status==='working'?50:0, notes:'', subs:[], sectionId:sec.id};
@@ -7967,24 +7988,25 @@ function renderPMBody(){
   pmInitTableDrag();
 }
 function pmRowHTML(t,g){
-  const st=pmStatusOf(t.status);
+  const isLinked = !!t.sectionId;
+  const st = isLinked ? pmSectionDerivedStatus(pmProgId, t.sectionId) : pmStatusOf(t.status);
   const today=new Date().toISOString().slice(0,10);
-  const overdue = t.due && t.due<today && t.status!=='done';
+  const overdue = !isLinked && t.due && t.due<today && t.status!=='done';
   const subDone=t.subs.filter(s=>s.done).length;
   const badges=(t.subs.length?`<span class="pm-badge">${subDone}/${t.subs.length} ✓</span>`:'')+(t.notes?'<span class="pm-badge">📝</span>':'');
   const open = pmOpenDetail===t.id;
   let h=`<div class="pm-item" data-tid="${t.id}"><div class="pm-row" style="border-left:3px solid ${g.color}">
     <div class="pm-drag" title="Drag to move">⠿</div>
     <div class="pm-exp" onclick="pmToggleDetail('${t.id}')" title="Notes &amp; subtasks">${open?'▾':'▸'}</div>
-    <div>${t.sectionId?`<span class="pm-linkicon" onclick="pmShowSectionPreview('${t.id}', event)" title="Linked to a section -- click to preview">📄</span> `:''}<span class="pm-nm" contenteditable="true" spellcheck="false" onblur="pmEdit('${t.id}','name',this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${pmEsc(t.name)}</span>${badges}</div>
+    <div>${isLinked?`<span class="pm-linkicon" onclick="pmShowSectionPreview('${t.id}', event)" title="Linked to a section -- click to preview">📄</span> `:''}<span class="pm-nm" contenteditable="true" spellcheck="false" onblur="pmEdit('${t.id}','name',this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${pmEsc(t.name)}</span>${badges}</div>
     <div class="pm-owner" contenteditable="true" spellcheck="false" data-ph="Owner…" onblur="pmEdit('${t.id}','owner',this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${pmEsc(t.owner)}</div>
-    <div style="text-align:center"><span class="pm-pill" style="background:${st.bg};color:${st.fg}" onclick="pmStatusMenu(event,'${t.id}')">${st.lbl} ▾</span></div>
-    <div><input type="date" class="pm-date" value="${pmEsc(t.start||'')}" onchange="pmEdit('${t.id}','start',this.value)"></div>
-    <div><input type="date" class="pm-date ${overdue?'overdue':''}" value="${pmEsc(t.due)}" onchange="pmEdit('${t.id}','due',this.value)">${overdue?'<span class="pm-warn" title="Overdue">⚠</span>':''}</div>
-    <div class="pm-progwrap">${t.sectionId
-      ? `<div class="pm-prog-locked" title="Auto-tracked from this section's status -- not manually editable">🔒 <span class="pm-pct">${t.progress}%</span></div>`
-      : `<input type="range" min="0" max="100" step="5" value="${t.progress}" oninput="pmProg('${t.id}',this)"><span class="pm-pct">${t.progress}%</span>`}</div>
-    <div class="pm-del" onclick="pmDelTask('${t.id}')" title="Delete task">✕</div>
+    <div style="text-align:center">${isLinked
+      ? `<span class="pm-pill pm-pill-locked" style="background:${st.bg};color:${st.fg}" title="Auto-tracked from this section's status -- not manually editable">🔒 ${st.lbl}</span>`
+      : `<span class="pm-pill" style="background:${st.bg};color:${st.fg}" onclick="pmStatusMenu(event,'${t.id}')">${st.lbl} ▾</span>`}</div>
+    <div>${isLinked ? '' : `<input type="date" class="pm-date" value="${pmEsc(t.start||'')}" onchange="pmEdit('${t.id}','start',this.value)">`}</div>
+    <div>${isLinked ? '' : `<input type="date" class="pm-date ${overdue?'overdue':''}" value="${pmEsc(t.due)}" onchange="pmEdit('${t.id}','due',this.value)">${overdue?'<span class="pm-warn" title="Overdue">⚠</span>':''}`}</div>
+    <div class="pm-progwrap">${isLinked ? '' : `<input type="range" min="0" max="100" step="5" value="${t.progress}" oninput="pmProg('${t.id}',this)"><span class="pm-pct">${t.progress}%</span>`}</div>
+    <div class="pm-del pm-del-row" onclick="pmDelTask('${t.id}')" title="Delete task">✕</div>
   </div>`;
   if(open){
     h+=`<div class="pm-detail">
@@ -8000,17 +8022,25 @@ function pmRowHTML(t,g){
 function renderPMKanban(root, board){
   const gcolor={}, gname={};
   board.groups.forEach(g=>{ gcolor[g.id]=g.color; gname[g.id]=g.name; });
+  // A deliverable's column placement (and its pill's wording/color) come from
+  // the section's real current state, never the stored t.status -- same
+  // derivation used in the table view, so a deliverable always lands in the
+  // right column even if it was never explicitly re-synced.
+  const effStatus = t => t.sectionId ? pmInitialStatusFor(pmProgId, t.sectionId) : t.status;
   let html='<div class="pm-kanban">';
   PM_STATUSES.forEach(s=>{
-    const tasks=board.tasks.filter(t=>t.status===s.id).filter(pmMatches);
+    const tasks=board.tasks.filter(t=>effStatus(t)===s.id).filter(pmMatches);
     html+=`<div class="pm-kcol"><div class="pm-khead" style="background:${s.bg};color:${s.fg}">${s.lbl}<span>${tasks.length}</span></div><div class="pm-kbody" data-status="${s.id}">`;
     tasks.forEach(t=>{
       const init = t.owner ? t.owner.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase() : '';
-      html+=`<div class="pm-kcard" data-tid="${t.id}" style="border-top:3px solid ${gcolor[t.group]||'#9ca3af'}">
-        <div class="pm-knm">${pmEsc(t.name)}</div>
-        <div class="pm-kmeta"><span>${pmEsc(gname[t.group]||'Other')}</span>${t.due?`<span>📅 ${pmEsc(t.due)}</span>`:''}${init?`<span class="pm-kav">${pmEsc(init)}</span>`:''}</div>
-        <div class="pm-kprog"><div style="width:${t.progress}%;background:${s.id==='not-started'?'#9ca3af':s.bg}"></div></div>
-        <span class="pm-pill" style="background:${s.bg};color:${s.fg}" onclick="pmStatusMenu(event,'${t.id}')">${s.lbl} ▾</span>
+      const pillLbl = t.sectionId && s.id==='done' ? 'COMPLETE' : s.lbl;
+      html+=`<div class="pm-kcard${t.sectionId?' pm-klinked':''}" data-tid="${t.id}" style="border-top:3px solid ${gcolor[t.group]||'#9ca3af'}">
+        <div class="pm-knm">${t.sectionId?`<span class="pm-linkicon" onclick="pmShowSectionPreview('${t.id}', event)" title="Linked to a section -- click to preview">📄</span> `:''}${pmEsc(t.name)}</div>
+        <div class="pm-kmeta"><span>${pmEsc(gname[t.group]||'Other')}</span>${(!t.sectionId && t.due)?`<span>📅 ${pmEsc(t.due)}</span>`:''}${init?`<span class="pm-kav">${pmEsc(init)}</span>`:''}</div>
+        ${t.sectionId ? '' : `<div class="pm-kprog"><div style="width:${t.progress}%;background:${s.id==='not-started'?'#9ca3af':s.bg}"></div></div>`}
+        ${t.sectionId
+          ? `<span class="pm-pill pm-pill-locked" style="background:${s.bg};color:${s.fg}" title="Auto-tracked from this section's status -- not manually editable">🔒 ${pillLbl}</span>`
+          : `<span class="pm-pill" style="background:${s.bg};color:${s.fg}" onclick="pmStatusMenu(event,'${t.id}')">${s.lbl} ▾</span>`}
       </div>`;
     });
     html+='</div></div>';
@@ -8023,7 +8053,7 @@ function renderPMKanban(root, board){
 // Today line and weekend shading. No dependencies, no drag-to-reschedule --
 // dates are still edited via the table view's date inputs, this is purely a
 // visualization of them (deliberately, per the confirmed v1 scope).
-const PM_GANTT_DAY_W = 28;
+const PM_GANTT_DAY_W = 12;
 function pmParseDate(s){ if(!s) return null; const d=new Date(s+'T00:00:00'); return isNaN(d.getTime())?null:d; }
 function pmDaysBetween(a,b){ return Math.round((b-a)/86400000); }
 function renderPMGantt(root, board){
@@ -8042,19 +8072,35 @@ function renderPMGantt(root, board){
   }
   rangeStart.setDate(rangeStart.getDate()-2);
   rangeEnd.setDate(rangeEnd.getDate()+2);
+  // Snap to full weeks (Sun-Sat) so the week/month header segments align cleanly with columns.
+  rangeStart.setDate(rangeStart.getDate()-rangeStart.getDay());
+  rangeEnd.setDate(rangeEnd.getDate()+(6-rangeEnd.getDay()));
   const totalDays = Math.max(1, pmDaysBetween(rangeStart, rangeEnd)+1);
   const totalWidth = totalDays*dayW;
   const xFor = date => pmDaysBetween(rangeStart, date)*dayW;
 
-  let dayLabels='';
-  for(let i=0;i<totalDays;i++){
+  let monthCells='', i=0;
+  while(i<totalDays){
     const d=new Date(rangeStart); d.setDate(d.getDate()+i);
-    const wknd = d.getDay()===0 || d.getDay()===6;
-    const lbl = d.getDate()===1 ? d.toLocaleDateString(undefined,{month:'short'}) : d.getDate();
-    dayLabels += `<div class="pm-gdaylbl" style="width:${dayW}px;${wknd?'background:rgba(0,0,0,0.035);':''}">${lbl}</div>`;
+    const month=d.getMonth(), year=d.getFullYear();
+    let span=0;
+    while(i+span<totalDays){
+      const dd=new Date(rangeStart); dd.setDate(dd.getDate()+i+span);
+      if(dd.getMonth()!==month || dd.getFullYear()!==year) break;
+      span++;
+    }
+    monthCells += `<div class="pm-gmonthlbl" style="width:${span*dayW}px;">${d.toLocaleDateString(undefined,{month:'long',year:'numeric'})}</div>`;
+    i+=span;
+  }
+  let weekCells='';
+  for(i=0;i<totalDays;i+=7){
+    const span=Math.min(7,totalDays-i);
+    const d=new Date(rangeStart); d.setDate(d.getDate()+i);
+    weekCells += `<div class="pm-gweeklbl" style="width:${span*dayW}px;">${d.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div>`;
   }
 
-  let rows = `<div class="pm-gantt-row head"><div class="pm-glabel">Task</div><div class="pm-gtrack" style="width:${totalWidth}px;display:flex;">${dayLabels}</div></div>`;
+  let rows = `<div class="pm-gantt-row head head-month"><div class="pm-glabel"></div><div class="pm-gtrack" style="width:${totalWidth}px;display:flex;">${monthCells}</div></div>`;
+  rows += `<div class="pm-gantt-row head head-week"><div class="pm-glabel">Task</div><div class="pm-gtrack" style="width:${totalWidth}px;display:flex;">${weekCells}</div></div>`;
 
   groups.forEach(g=>{
     const inGroup = t => g.id==='__other' ? !known.has(t.group) : t.group===g.id;
@@ -8102,7 +8148,7 @@ function pmInitKanbanDrag(){
   pmDestroySortables();
   if(typeof Sortable==='undefined' || viewerModeForced) return;
   document.querySelectorAll('#pm-body .pm-kbody').forEach(c=>{
-    pmSortables.push(new Sortable(c,{group:'pm-kanban',draggable:'.pm-kcard',animation:150,onEnd:pmKanbanDrop}));
+    pmSortables.push(new Sortable(c,{group:'pm-kanban',draggable:'.pm-kcard',filter:'.pm-klinked',preventOnFilter:false,animation:150,onEnd:pmKanbanDrop}));
   });
 }
 function pmGroupDrop(){
@@ -8130,6 +8176,7 @@ function pmTaskDrop(){
 }
 function pmKanbanDrop(evt){
   const t=pmTaskById(evt.item.dataset.tid);
+  if(t && t.sectionId){ renderPMBody(); return; } // belt-and-suspenders -- Sortable's filter already excludes these; just re-render to snap it back
   const sid=evt.to && evt.to.dataset.status;
   if(t&&sid&&t.status!==sid){ t.status=sid; if(sid==='done') t.progress=100; }
   pmSave(); renderPMBody();
@@ -8166,6 +8213,7 @@ function pmToggleDetail(tid){ pmOpenDetail = pmOpenDetail===tid ? null : tid; re
 function pmEdit(tid,field,val){
   if(viewerModeForced) return; // belt-and-suspenders -- the field itself is already non-interactive
   const t=pmTaskById(tid); if(!t) return;
+  if(t.sectionId && (field==='start'||field==='due')) return; // a deliverable has no dates -- no input renders for these, this just double-checks
   const nv = typeof val==='string' ? val.trim() : val;
   if(t[field]===nv) return;
   t[field]=nv; pmSave();
@@ -8174,12 +8222,14 @@ function pmEdit(tid,field,val){
 function pmProg(tid,el){
   if(viewerModeForced) return; // belt-and-suspenders -- the slider itself is already non-interactive
   const t=pmTaskById(tid); if(!t) return;
+  if(t.sectionId) return; // belt-and-suspenders -- a deliverable's progress is derived, never manual, no slider is ever rendered for it
   t.progress=+el.value;
   const pct=el.parentElement.querySelector('.pm-pct'); if(pct) pct.textContent=t.progress+'%';
   pmSave();
 }
 function pmStatusMenu(ev,tid){
   if(viewerModeForced) return; // status stays visible as a pill -- just not changeable
+  const _t=pmTaskById(tid); if(_t && _t.sectionId) return; // belt-and-suspenders -- a deliverable's status is derived, no pill click is ever wired for it
   ev.stopPropagation();
   const m=document.getElementById('pm-status-menu');
   m.innerHTML=PM_STATUSES.map(s=>`<div class="pm-mi" onclick="pmSetStatus('${tid}','${s.id}')"><span class="pm-pill" style="background:${s.bg};color:${s.fg}">${s.lbl}</span></div>`).join('');
@@ -8191,6 +8241,7 @@ function pmStatusMenu(ev,tid){
 function pmSetStatus(tid,sid){
   if(viewerModeForced) return; // belt-and-suspenders -- pmStatusMenu() already refuses to open for a viewer
   const t=pmTaskById(tid);
+  if(t && t.sectionId) return; // belt-and-suspenders -- a deliverable's status is derived, never manually set
   if(t){ t.status=sid; if(sid==='done') t.progress=100; pmSave(); }
   document.getElementById('pm-status-menu').style.display='none';
   renderPMBody();
