@@ -194,9 +194,27 @@ body{font-family:var(--font-body);background:var(--cbg);color:var(--txt);height:
 .mode-btn.active{background:#fff;color:var(--txt);font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,0.1);}
 
 /* ===== CONTENT ===== */
-.content-area{flex:1;overflow-y:auto;padding:32px 0 60px;}
+.main-body{flex:1;display:flex;overflow:hidden;min-height:0;}
+.content-area{flex:1;min-width:0;overflow-y:auto;padding:32px 0 60px;}
 .content-area::-webkit-scrollbar{width:6px;}
 .content-area::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.12);border-radius:3px;}
+
+/* ===== PM SIDE PANEL ===== */
+.pm-panel-handle{flex:0 0 6px;cursor:col-resize;background:var(--bdr);}
+.pm-panel-handle:hover,.pm-panel-handle.dragging{background:var(--acc);}
+#pm-panel{flex:0 0 460px;min-width:0;display:flex;flex-direction:column;background:#fff;border-left:1px solid var(--bdr);overflow:hidden;}
+.pmp-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--bdr);flex-wrap:wrap;}
+.pmp-title{font-family:var(--font-cond);text-transform:uppercase;letter-spacing:0.03em;font-size:14px;font-weight:800;color:var(--ink);flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pmp-iconbtn{border:1px solid var(--bdr);background:#fff;color:var(--mut);font-size:12px;padding:3px 7px;border-radius:4px;cursor:pointer;line-height:1;}
+.pmp-iconbtn:hover{background:var(--cbg);color:var(--ink);}
+.pmp-toggle{display:flex;border:1.5px solid var(--ink);border-radius:4px;overflow:hidden;flex:0 0 auto;}
+.pmp-toggle button{border:none;background:#fff;color:var(--ink);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;padding:5px 9px;cursor:pointer;font-family:inherit;}
+.pmp-toggle button.active{background:var(--acc);color:#fff;}
+.pmp-row2{display:flex;align-items:center;gap:8px;padding:0 12px 10px;flex-wrap:wrap;}
+.pmp-filter{border:1px solid var(--bdr);border-radius:4px;padding:5px 8px;font-size:12px;font-family:inherit;outline:none;flex:1;min-width:80px;background:#fff;}
+.pmp-filter:focus{border-color:var(--acc);}
+.pmp-dashbtn{border:none;background:var(--ink);color:#C9B79C;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;padding:5px 9px;border-radius:4px;cursor:pointer;font-family:inherit;white-space:nowrap;}
+#pm-panel-body{flex:1;overflow-y:auto;padding:0 12px 24px;}
 .content-inner{max-width:1100px;margin:0 auto;padding:0 20px 0 76px;}
 .page-title{font-size:30px;font-weight:700;color:var(--txt);line-height:1.2;margin-bottom:10px;outline:none;border-radius:4px;padding:2px 4px;margin-left:-4px;}
 .page-title:focus{background:#f8fafc;}
@@ -991,6 +1009,15 @@ body.view-mode .wysiwyg-bar{display:none!important;}
 .pm-progwrap{display:flex;align-items:center;gap:7px;}
 .pm-progwrap input[type=range]{flex:1;accent-color:var(--acc);height:14px;cursor:pointer;}
 .pm-pct{font-size:11px;font-weight:800;color:var(--mut);width:34px;text-align:right;}
+/* compact task row -- stacked card used in the docked panel below its table
+   width threshold, instead of the fixed 9-column grid (which needs ~970px). */
+.pmc-row{border-left:3px solid transparent;padding:8px 8px 8px 10px;border-bottom:1px solid #f3f4f6;}
+.pmc-line1{display:flex;align-items:center;gap:6px;}
+.pmc-exp{cursor:pointer;color:#9ca3af;font-size:11px;flex:0 0 auto;}
+.pmc-exp:hover{color:var(--acc);}
+.pmc-nm{flex:1 1 auto;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pmc-nm .pm-nm{display:inline;}
+.pmc-meta{font-size:11px;color:var(--mut);margin:4px 0 0 17px;}
 .pm-prog-locked{font-size:11px;color:var(--mut);display:flex;align-items:center;gap:5px;cursor:default;}
 .pm-prog-locked .pm-pct{width:auto;}
 .pm-del{opacity:0;color:#c4c8cd;cursor:pointer;font-size:12px;text-align:center;transition:opacity 0.12s;}
@@ -1030,6 +1057,11 @@ body.view-mode .wysiwyg-bar{display:none!important;}
 .pm-kav{background:#4F0A12;color:#C9B79C;font-weight:800;border-radius:50%;width:18px;height:18px;display:grid;place-items:center;font-size:8px;}
 .pm-kprog{background:#eef0f2;height:5px;border-radius:3px;overflow:hidden;}
 .pm-kprog div{height:100%;border-radius:3px;}
+.pm-kanban-compact .pm-kbody{background:#ececea;border-radius:8px;padding:8px;gap:8px;}
+.pmk-switcher{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
+.pmk-sw-btn{border:1px solid var(--bdr);background:#fff;color:var(--mut);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.03em;padding:5px 8px;border-radius:5px;cursor:pointer;font-family:inherit;}
+.pmk-sw-btn span{opacity:0.75;margin-left:2px;}
+.pmk-sw-btn.active{border-color:transparent;}
 .pm-kcard .pm-pill{width:auto;padding:3px 9px;font-size:9px;align-self:flex-start;}
 .pm-gantt{overflow-x:auto;border:1px solid var(--bdr);border-radius:8px;}
 .pm-gantt-inner{position:relative;}
@@ -1258,7 +1290,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
               <button class="pm-board-btn" id="tools-btn" onclick="toggleToolsMenu(event)">🧰 Tools ▾</button>
               <div class="export-menu" id="tools-menu">
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); showShortcutsModal();">❓ Keyboard Shortcuts</div>
-                <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); openPM();">📋 PM Board</div>
+                <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); pmOpenSmart();">📋 PM Board</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); openMarginCalc();">💲 Margin Calculator</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); togglePanel();">✦ Ask Claude</div>
               </div>
@@ -1287,33 +1319,54 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
           </div>
         </div>
       </div>
-      <div class="content-area">
-        <div class="content-inner">
-          <h1 class="page-title" id="page-title" contenteditable="true" spellcheck="false" oninput="syncSectionTitle()"></h1>
-          <div class="sdi-rule"></div>
-          <div class="page-meta">
-            <div class="meta-item">📅 <span id="meta-date">Updated today</span></div>
-            <div class="meta-item" style="cursor:pointer" onclick="changeUserName()" title="Click to set or change your name">👤 <span id="meta-user">Set your name</span></div>
-            <div class="meta-item" id="phase-pill"></div>
-          </div>
-          <div class="locked-banner" id="locked-banner">🔒 This section is locked and approved. Unlock to make changes.</div>
-          <div class="blocks-container" id="blocks-root"></div>
-          <div class="add-block-area" id="add-block-area">
-            <button class="add-block-btn" onclick="showPicker(event)">+ Add Block</button>
-          </div>
-          <div class="comments-area" id="comments-area">
-            <div class="comments-toggle" onclick="toggleComments()">
-              <span id="comments-count-label">💬 Comments (0)</span>
-              <span id="comments-chevron" style="font-size:9px;margin-left:4px;">▶</span>
+      <div class="main-body" id="main-body">
+        <div class="content-area">
+          <div class="content-inner">
+            <h1 class="page-title" id="page-title" contenteditable="true" spellcheck="false" oninput="syncSectionTitle()"></h1>
+            <div class="sdi-rule"></div>
+            <div class="page-meta">
+              <div class="meta-item">📅 <span id="meta-date">Updated today</span></div>
+              <div class="meta-item" style="cursor:pointer" onclick="changeUserName()" title="Click to set or change your name">👤 <span id="meta-user">Set your name</span></div>
+              <div class="meta-item" id="phase-pill"></div>
             </div>
-            <div class="comments-body" id="comments-body" style="display:none">
-              <div class="comments-list" id="comments-list"></div>
-              <div class="comment-input-row">
-                <input id="comment-input" type="text" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')addComment()"/>
-                <button class="comment-post-btn" onclick="addComment()">Post</button>
+            <div class="locked-banner" id="locked-banner">🔒 This section is locked and approved. Unlock to make changes.</div>
+            <div class="blocks-container" id="blocks-root"></div>
+            <div class="add-block-area" id="add-block-area">
+              <button class="add-block-btn" onclick="showPicker(event)">+ Add Block</button>
+            </div>
+            <div class="comments-area" id="comments-area">
+              <div class="comments-toggle" onclick="toggleComments()">
+                <span id="comments-count-label">💬 Comments (0)</span>
+                <span id="comments-chevron" style="font-size:9px;margin-left:4px;">▶</span>
+              </div>
+              <div class="comments-body" id="comments-body" style="display:none">
+                <div class="comments-list" id="comments-list"></div>
+                <div class="comment-input-row">
+                  <input id="comment-input" type="text" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')addComment()"/>
+                  <button class="comment-post-btn" onclick="addComment()">Post</button>
+                </div>
               </div>
             </div>
           </div>
+        </div>
+        <div class="pm-panel-handle" id="pm-panel-handle" title="Drag to resize" style="display:none"></div>
+        <div id="pm-panel" style="display:none">
+          <div class="pmp-head">
+            <div class="pmp-title" id="pm-title-panel"></div>
+            <div class="pmp-toggle">
+              <button id="pm-tbtn-panel" class="active" onclick="setPMView('table')">Table</button>
+              <button id="pm-kbtn-panel" onclick="setPMView('kanban')">Kanban</button>
+              <button id="pm-gbtn-panel" onclick="setPMView('gantt')">Gantt</button>
+            </div>
+            <button class="pmp-iconbtn" onclick="pmPanelFullScreen()" title="Open full screen">↗</button>
+            <button class="pmp-iconbtn" onclick="pmPanelClose()" title="Close panel">✕</button>
+          </div>
+          <div class="pmp-row2">
+            <button id="pm-expand-btn-panel" class="pmp-dashbtn" onclick="pmExpandAllGroups()" title="Expand every group">⌄ Expand All</button>
+            <button id="pm-collapse-btn-panel" class="pmp-dashbtn" onclick="pmCollapseAllGroups()" title="Collapse every group">⌃ Collapse All</button>
+            <input class="pmp-filter" id="pm-filter-panel" type="text" placeholder="Filter tasks…" oninput="pmFilter=this.value;renderPMBody()">
+          </div>
+          <div id="pm-panel-body"></div>
         </div>
       </div>
     </div>
@@ -2862,6 +2915,7 @@ function openProgram(id){
 function goHub(){
   saveCurrentBlocks();
   persist();
+  if(pmPanelOpen) pmPanelClose(); // the panel only ever makes sense alongside an open program
   uiState.lastProg=null; saveUIState();
   document.getElementById('prog-view').style.display = 'none';
   document.getElementById('hub-view').style.display = 'block';
@@ -7748,6 +7802,12 @@ const PM_STATUSES = [
 function pmStatusOf(id){ return PM_STATUSES.find(s=>s.id===id) || PM_STATUSES[0]; }
 function pmEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 let pmProgId=null, pmView='table', pmFilter='', pmOrigin='hub', pmOpenDetail=null;
+// pmPanelOpen is true when the PM board is the docked side panel next to an
+// open program, rather than the full-screen #pm-view -- renderPM()/setPMView()/
+// renderPMBody() all read it to decide which set of DOM ids to update, so every
+// existing call site that already calls them after a mutation (pmEdit, pmProg,
+// pmSetStatus, pmKanbanDrop, etc.) works for the panel with no changes of its own.
+let pmPanelOpen=false, pmPanelWasOpen=false;
 
 function pmNewId(){ return 't'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
@@ -7868,6 +7928,12 @@ async function openPM(pid){
   const progVisible = document.getElementById('prog-view').style.display !== 'none';
   const dashVisible = document.getElementById('pm-dash-view').style.display !== 'none';
   pmOrigin = progVisible ? 'prog' : (dashVisible ? 'dash' : 'hub');
+  // Remember whether we're escalating from the docked panel (the "Full screen"
+  // control calls openPM() directly) so pmBack() can reopen the same panel
+  // instead of leaving you on a bare program view with no PM board at all.
+  pmPanelWasOpen = pmPanelOpen;
+  if(pmPanelOpen) pmPanelHideDom();
+  pmPanelOpen=false;
   if(progVisible){ try{ saveCurrentBlocks(); }catch(e){} }
   pmEnsure(pmProgId);
   pmOpenDetail=null; pmFilter='';
@@ -7879,10 +7945,83 @@ async function openPM(pid){
 }
 function pmBack(){
   document.getElementById('pm-view').style.display='none';
-  if(pmOrigin==='prog'){ document.getElementById('prog-view').style.display='block'; }
+  if(pmOrigin==='prog'){
+    document.getElementById('prog-view').style.display='block';
+    if(pmPanelWasOpen){ pmPanelWasOpen=false; pmPanelOpenFor(pmProgId); }
+  }
   else if(pmOrigin==='dash'){ document.getElementById('pm-dash-view').style.display='block'; renderPMDash(); }
   else { document.getElementById('hub-view').style.display='block'; renderHub(); }
 }
+
+// ---------- docked side panel (PM board next to the open program) ----------
+function pmPanelHideDom(){
+  const panel=document.getElementById('pm-panel'), handle=document.getElementById('pm-panel-handle');
+  if(panel) panel.style.display='none';
+  if(handle) handle.style.display='none';
+}
+function pmPanelOpenFor(pid){
+  pmProgId = pid || curProgId;
+  if(!pmProgId) return;
+  pmEnsure(pmProgId);
+  pmPanelOpen=true;
+  pmOpenDetail=null; pmFilter='';
+  const panel=document.getElementById('pm-panel'), handle=document.getElementById('pm-panel-handle');
+  panel.style.flex='0 0 '+(uiState.pmPanelWidth||460)+'px';
+  panel.style.display='flex';
+  handle.style.display='block';
+  renderPM();
+}
+function pmPanelClose(){
+  pmPanelOpen=false;
+  pmPanelHideDom();
+}
+function pmPanelFullScreen(){
+  openPM(pmProgId);
+}
+// Tools-menu "PM Board" entry point: while a program is open, dock the panel
+// beside it instead of leaving the section entirely; everywhere else (Hub,
+// Portfolio Dashboard) keeps today's full-screen behavior unchanged, since
+// there's no program on screen to split against.
+function pmOpenSmart(){
+  const progVisible = document.getElementById('prog-view').style.display !== 'none';
+  if(progVisible && curProgId){ pmPanelOpenFor(curProgId); }
+  else { openPM(); }
+}
+let __pmPanelDrag=null;
+(function(){
+  const handle=document.getElementById('pm-panel-handle');
+  if(!handle) return;
+  handle.addEventListener('mousedown',function(e){
+    const panel=document.getElementById('pm-panel');
+    __pmPanelDrag={x:e.clientX, w:panel.getBoundingClientRect().width};
+    handle.classList.add('dragging');
+    document.body.style.userSelect='none';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!__pmPanelDrag) return;
+    const panel=document.getElementById('pm-panel');
+    const mainBody=document.getElementById('main-body');
+    const availW=mainBody.getBoundingClientRect().width;
+    // Capped comfortably above every compact-view threshold (Kanban's is the
+    // largest at ~1050px) so dragging wide enough genuinely reaches today's
+    // unmodified full-width renderings, not just a slightly bigger compact one.
+    const maxW=Math.max(360, Math.min(1200, availW-360));
+    const delta=__pmPanelDrag.x-e.clientX;
+    const newW=Math.min(maxW, Math.max(360, __pmPanelDrag.w+delta));
+    panel.style.flex='0 0 '+newW+'px';
+    e.preventDefault();
+  });
+  document.addEventListener('mouseup',function(){
+    if(!__pmPanelDrag) return;
+    __pmPanelDrag=null;
+    handle.classList.remove('dragging');
+    document.body.style.userSelect='';
+    const panel=document.getElementById('pm-panel');
+    uiState.pmPanelWidth=Math.round(panel.getBoundingClientRect().width);
+    saveUIState();
+  });
+})();
 function openPMDash(){
   document.getElementById('hub-view').style.display='none';
   document.getElementById('prog-view').style.display='none';
@@ -7899,19 +8038,26 @@ function pmDashBack(){
 // ---------- board rendering ----------
 function renderPM(){
   const p = programs.find(x=>x.id===pmProgId); if(!p) return;
-  document.getElementById('pm-title').textContent = pmShortName(p.name);
-  document.getElementById('pm-filter').value = pmFilter;
+  // The docked panel has its own header elements ('-panel' suffixed ids) so it
+  // can show a compact title/filter alongside the full-screen board's -- same
+  // state (pmProgId/pmFilter/pmView), whichever DOM happens to be on screen.
+  const sfx = pmPanelOpen ? '-panel' : '';
+  const titleEl=document.getElementById('pm-title'+sfx), filterEl=document.getElementById('pm-filter'+sfx);
+  if(titleEl) titleEl.textContent = pmShortName(p.name);
+  if(filterEl) filterEl.value = pmFilter;
   setPMView(pmView);
 }
 function setPMView(v){
   pmView=v;
-  document.getElementById('pm-tbtn').classList.toggle('active', v==='table');
-  document.getElementById('pm-kbtn').classList.toggle('active', v==='kanban');
-  document.getElementById('pm-gbtn').classList.toggle('active', v==='gantt');
+  const sfx = pmPanelOpen ? '-panel' : '';
+  const tb=document.getElementById('pm-tbtn'+sfx), kb=document.getElementById('pm-kbtn'+sfx), gb=document.getElementById('pm-gbtn'+sfx);
+  if(tb) tb.classList.toggle('active', v==='table');
+  if(kb) kb.classList.toggle('active', v==='kanban');
+  if(gb) gb.classList.toggle('active', v==='gantt');
   // Expand/Collapse All only apply to the table view's collapsible groups --
   // kanban columns (by status) aren't collapsible.
   const disp = v==='table' ? '' : 'none';
-  const eb=document.getElementById('pm-expand-btn'), cb=document.getElementById('pm-collapse-btn');
+  const eb=document.getElementById('pm-expand-btn'+sfx), cb=document.getElementById('pm-collapse-btn'+sfx);
   if(eb) eb.style.display=disp;
   if(cb) cb.style.display=disp;
   renderPMBody();
@@ -7936,13 +8082,24 @@ function pmGroupsOf(board){
   if(board.tasks.some(t=>!known.has(t.group))) groups.push({id:'__other', name:'Other', color:'#9ca3af'});
   return {groups, known};
 }
+// The docked panel is often much narrower than the full-screen board's ~1280px
+// shell. Each view checks this once per render (against the panel's ACTUAL
+// current width, not a viewport breakpoint) and falls back to a compact
+// rendering below its own usable-width threshold; above it, today's existing,
+// already-tested full rendering runs completely unchanged.
+function pmPanelWidthNow(){
+  if(!pmPanelOpen) return Infinity;
+  const el=document.getElementById('pm-panel');
+  return el ? el.getBoundingClientRect().width : Infinity;
+}
 function renderPMBody(){
-  const root=document.getElementById('pm-body');
+  const root=document.getElementById(pmPanelOpen ? 'pm-panel-body' : 'pm-body');
   const p=programs.find(x=>x.id===pmProgId);
   const board=pmEnsure(pmProgId);
   if(!p||!board){ root.innerHTML=''; return; }
   if(pmView==='kanban'){ renderPMKanban(root, board); pmInitKanbanDrag(); return; }
   if(pmView==='gantt'){ renderPMGantt(root, board); return; }
+  const compact = pmPanelWidthNow() < 950;
   const {groups, known} = pmGroupsOf(board);
   let html='';
   groups.forEach(g=>{
@@ -7960,7 +8117,13 @@ function renderPMBody(){
         ${g.id==='__other'?'':`<span class="pm-gdel" title="Delete group" onclick="pmDelGroup(event,'${g.id}')">✕</span>`}
         <span class="pm-garrow">${collapsed?'▶':'▼'}</span>
       </div>`;
-    if(!collapsed){
+    if(!collapsed && compact){
+      html+=`<div class="pm-rows" data-gid="${g.id}">`;
+      tasks.forEach(t=>{ html+=pmRowHTMLCompact(t,g); });
+      html+='</div>';
+      if(!tasks.length && pmFilter.trim()) html+='<div class="pm-empty" style="padding-left:20px">No matching tasks.</div>';
+      html+=`<div class="pm-addrow"><input type="text" placeholder="+ Add task, press Enter" onkeydown="pmAddTask(event,'${g.id}')"></div>`;
+    } else if(!collapsed){
       html+=`<div class="pm-cols"><div></div><div></div><div>Task</div><div>Owner</div><div style="text-align:center">Status</div><div>Start</div><div>Due</div><div>Progress</div><div></div></div>`;
       html+=`<div class="pm-rows" data-gid="${g.id}">`;
       tasks.forEach(t=>{ html+=pmRowHTML(t,g); });
@@ -7995,33 +8158,89 @@ function pmRowHTML(t,g){
     <div class="pm-progwrap">${isLinked ? '' : `<input type="range" min="0" max="100" step="5" value="${t.progress}" oninput="pmProg('${t.id}',this)"><span class="pm-pct">${t.progress}%</span>`}</div>
     <div class="pm-del pm-del-row" onclick="pmDelTask('${t.id}')" title="Delete task">✕</div>
   </div>`;
-  if(open){
-    h+=`<div class="pm-detail">
+  if(open){ h+=pmDetailHTML(t); }
+  h+='</div>';
+  return h;
+}
+function pmDetailHTML(t){
+  return `<div class="pm-detail">
       <div><div class="pm-dlbl">Notes</div><textarea class="pm-notes" placeholder="Add notes…" onblur="pmEdit('${t.id}','notes',this.value)">${pmEsc(t.notes)}</textarea></div>
       <div><div class="pm-dlbl">Subtasks</div><div>`+
       t.subs.map((s,i)=>`<div class="pm-sub"><input class="pm-subcheck" type="checkbox" ${s.done?'checked':''} onchange="pmSubToggle('${t.id}',${i},this.checked)"><span class="${s.done?'done':''}">${pmEsc(s.n)}</span><span class="pm-del" onclick="pmSubDel('${t.id}',${i})">✕</span></div>`).join('')+
       `</div><input class="pm-subadd" type="text" placeholder="+ Add subtask, press Enter" onkeydown="pmSubAdd(event,'${t.id}')"></div>
     </div>`;
-  }
+}
+// Compact stacked-card row for the docked panel below its table width
+// threshold: name + status on one line, owner/dates/progress as small
+// secondary text (read-only there -- widen the panel or use the full-screen
+// board to edit them inline). Drag-to-reorder and per-row delete are dropped
+// too, both fiddly at this width; everything else (status change, expand for
+// notes/subtasks, add task) still works exactly as in the full table.
+function pmRowHTMLCompact(t,g){
+  const isLinked = !!t.sectionId;
+  const st = pmStatusOf(t.status);
+  const today=new Date().toISOString().slice(0,10);
+  const overdue = !isLinked && t.due && t.due<today && t.status!=='done';
+  const open = pmOpenDetail===t.id;
+  const meta=[];
+  if(t.owner) meta.push(pmEsc(t.owner));
+  if(!isLinked && t.start) meta.push('from '+pmEsc(t.start));
+  if(!isLinked && t.due) meta.push((overdue?'⚠ ':'')+'due '+pmEsc(t.due));
+  if(!isLinked) meta.push(t.progress+'%');
+  let h=`<div class="pm-item" data-tid="${t.id}"><div class="pmc-row" style="border-left:3px solid ${g.color}">
+    <div class="pmc-line1">
+      <div class="pmc-exp" onclick="pmToggleDetail('${t.id}')" title="Notes &amp; subtasks">${open?'▾':'▸'}</div>
+      <div class="pmc-nm">${isLinked?`<span class="pm-linkicon" onclick="pmShowSectionPreview('${t.id}', event)" title="Linked to a section -- click to preview">📄</span> `:''}<span class="pm-nm" contenteditable="true" spellcheck="false" onblur="pmEdit('${t.id}','name',this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${pmEsc(t.name)}</span></div>
+      <span class="pm-pill" style="background:${st.bg};color:${st.fg}" onclick="pmStatusMenu(event,'${t.id}')" title="${isLinked?'Auto-set to Complete when the section is locked -- click to change':''}">${st.lbl} ▾</span>
+    </div>
+    ${meta.length?`<div class="pmc-meta">${meta.join(' · ')}</div>`:''}
+  </div>`;
+  if(open){ h+=pmDetailHTML(t); }
   h+='</div>';
   return h;
 }
-function renderPMKanban(root, board){
-  const gcolor={}, gname={};
-  board.groups.forEach(g=>{ gcolor[g.id]=g.color; gname[g.id]=g.name; });
-  let html='<div class="pm-kanban">';
-  PM_STATUSES.forEach(s=>{
-    const tasks=board.tasks.filter(t=>t.status===s.id).filter(pmMatches);
-    html+=`<div class="pm-kcol"><div class="pm-khead" style="background:${s.bg};color:${s.fg}">${s.lbl}<span>${tasks.length}</span></div><div class="pm-kbody" data-status="${s.id}">`;
-    tasks.forEach(t=>{
-      const init = t.owner ? t.owner.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase() : '';
-      html+=`<div class="pm-kcard" data-tid="${t.id}" style="border-top:3px solid ${gcolor[t.group]||'#9ca3af'}">
+function pmKanbanCardHTML(t,s,gcolor,gname){
+  const init = t.owner ? t.owner.split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase() : '';
+  return `<div class="pm-kcard" data-tid="${t.id}" style="border-top:3px solid ${gcolor[t.group]||'#9ca3af'}">
         <div class="pm-knm">${t.sectionId?`<span class="pm-linkicon" onclick="pmShowSectionPreview('${t.id}', event)" title="Linked to a section -- click to preview">📄</span> `:''}${pmEsc(t.name)}</div>
         <div class="pm-kmeta"><span>${pmEsc(gname[t.group]||'Other')}</span>${(!t.sectionId && t.due)?`<span>📅 ${pmEsc(t.due)}</span>`:''}${init?`<span class="pm-kav">${pmEsc(init)}</span>`:''}</div>
         ${t.sectionId ? '' : `<div class="pm-kprog"><div style="width:${t.progress}%;background:${s.id==='not-started'?'#9ca3af':s.bg}"></div></div>`}
         <span class="pm-pill" style="background:${s.bg};color:${s.fg}" onclick="pmStatusMenu(event,'${t.id}')">${s.lbl} ▾</span>
       </div>`;
+}
+// Below its width threshold the docked panel can't fit 6 side-by-side columns
+// (they need ~1080-1320px) -- show one status at a time with a switcher
+// instead. Moving a card between statuses still works, just via the card's
+// own clickable status pill (pmStatusMenu) rather than dragging across
+// columns that aren't all on screen at once.
+let pmKanbanActiveStatus='not-started';
+function pmSetActiveKanbanCol(id){ pmKanbanActiveStatus=id; renderPMBody(); }
+function renderPMKanban(root, board){
+  const gcolor={}, gname={};
+  board.groups.forEach(g=>{ gcolor[g.id]=g.color; gname[g.id]=g.name; });
+  if(pmPanelWidthNow() < 1050){
+    if(!PM_STATUSES.some(s=>s.id===pmKanbanActiveStatus)) pmKanbanActiveStatus=PM_STATUSES[0].id;
+    let sw='<div class="pmk-switcher">';
+    PM_STATUSES.forEach(s=>{
+      const count=board.tasks.filter(t=>t.status===s.id).filter(pmMatches).length;
+      const active=pmKanbanActiveStatus===s.id;
+      sw+=`<button class="pmk-sw-btn${active?' active':''}" style="${active?`background:${s.bg};color:${s.fg};`:''}" onclick="pmSetActiveKanbanCol('${s.id}')">${s.lbl} <span>${count}</span></button>`;
     });
+    sw+='</div>';
+    const s=PM_STATUSES.find(x=>x.id===pmKanbanActiveStatus);
+    const tasks=board.tasks.filter(t=>t.status===s.id).filter(pmMatches);
+    let body=`<div class="pm-kbody" data-status="${s.id}">`;
+    tasks.forEach(t=>{ body+=pmKanbanCardHTML(t,s,gcolor,gname); });
+    if(!tasks.length) body+='<div class="pm-empty" style="padding:14px 4px;">No tasks here.</div>';
+    body+='</div>';
+    root.innerHTML=`<div class="pm-kanban-compact">${sw}${body}</div>`;
+    return;
+  }
+  let html='<div class="pm-kanban">';
+  PM_STATUSES.forEach(s=>{
+    const tasks=board.tasks.filter(t=>t.status===s.id).filter(pmMatches);
+    html+=`<div class="pm-kcol"><div class="pm-khead" style="background:${s.bg};color:${s.fg}">${s.lbl}<span>${tasks.length}</span></div><div class="pm-kbody" data-status="${s.id}">`;
+    tasks.forEach(t=>{ html+=pmKanbanCardHTML(t,s,gcolor,gname); });
     html+='</div></div>';
   });
   root.innerHTML=html+'</div>';
@@ -8037,7 +8256,13 @@ function pmParseDate(s){ if(!s) return null; const d=new Date(s+'T00:00:00'); re
 function pmDaysBetween(a,b){ return Math.round((b-a)/86400000); }
 function renderPMGantt(root, board){
   const {groups, known} = pmGroupsOf(board);
-  const dayW = PM_GANTT_DAY_W, labelW = 220;
+  // Below the panel's usable width for Gantt, shrink the fixed label column
+  // (220px alone eats over half of a narrow panel) and drop the week header
+  // row -- month-only headers plus the existing horizontal scroll is enough
+  // to navigate a compact range; above the threshold both render unchanged.
+  const compact = pmPanelWidthNow() < 900;
+  const dayW = PM_GANTT_DAY_W, labelW = compact ? 130 : 220;
+  const labelStyle = compact ? `width:${labelW}px;flex:0 0 ${labelW}px;` : '';
   const today = pmParseDate(new Date().toISOString().slice(0,10));
 
   const dated = board.tasks.filter(pmMatches).map(t=>({t, s:pmParseDate(t.start), d:pmParseDate(t.due)})).filter(x=>x.s && x.d && x.d>=x.s);
@@ -8078,15 +8303,15 @@ function renderPMGantt(root, board){
     weekCells += `<div class="pm-gweeklbl" style="width:${span*dayW}px;">${d.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div>`;
   }
 
-  let rows = `<div class="pm-gantt-row head head-month"><div class="pm-glabel"></div><div class="pm-gtrack" style="width:${totalWidth}px;display:flex;">${monthCells}</div></div>`;
-  rows += `<div class="pm-gantt-row head head-week"><div class="pm-glabel">Task</div><div class="pm-gtrack" style="width:${totalWidth}px;display:flex;">${weekCells}</div></div>`;
+  let rows = `<div class="pm-gantt-row head head-month"><div class="pm-glabel" style="${labelStyle}">${compact?'Task':''}</div><div class="pm-gtrack" style="width:${totalWidth}px;display:flex;">${monthCells}</div></div>`;
+  if(!compact) rows += `<div class="pm-gantt-row head head-week"><div class="pm-glabel">Task</div><div class="pm-gtrack" style="width:${totalWidth}px;display:flex;">${weekCells}</div></div>`;
 
   groups.forEach(g=>{
     const inGroup = t => g.id==='__other' ? !known.has(t.group) : t.group===g.id;
     const tasks = board.tasks.filter(inGroup).filter(pmMatches);
     if(!tasks.length) return;
     const collapsed = !!board.collapsed[g.id];
-    rows += `<div class="pm-gantt-row" style="background:${g.color}1a;cursor:pointer;" onclick="pmToggleGroup('${g.id}')"><div class="pm-glabel" style="font-weight:800;color:${g.color};background:${g.color}1a;"><span class="pm-garrow" style="margin-left:0;margin-right:6px;">${collapsed?'▶':'▼'}</span>${pmEsc(g.name)}</div><div class="pm-gtrack" style="width:${totalWidth}px"></div></div>`;
+    rows += `<div class="pm-gantt-row" style="background:${g.color}1a;cursor:pointer;" onclick="pmToggleGroup('${g.id}')"><div class="pm-glabel" style="${labelStyle}font-weight:800;color:${g.color};background:${g.color}1a;"><span class="pm-garrow" style="margin-left:0;margin-right:6px;">${collapsed?'▶':'▼'}</span>${pmEsc(g.name)}</div><div class="pm-gtrack" style="width:${totalWidth}px"></div></div>`;
     if(collapsed) return;
     tasks.forEach(t=>{
       const st=pmStatusOf(t.status);
@@ -8099,7 +8324,7 @@ function renderPMGantt(root, board){
       } else {
         trackInner = `<div class="pm-gnodate">No dates set</div>`;
       }
-      rows += `<div class="pm-gantt-row"><div class="pm-glabel">${t.sectionId?`<span class="pm-linkicon" onclick="pmShowSectionPreview('${t.id}', event)" title="Linked to a section -- click to preview">📄</span> `:''}${pmEsc(t.name)}</div><div class="pm-gtrack" style="width:${totalWidth}px">${trackInner}</div></div>`;
+      rows += `<div class="pm-gantt-row"><div class="pm-glabel" style="${labelStyle}">${t.sectionId?`<span class="pm-linkicon" onclick="pmShowSectionPreview('${t.id}', event)" title="Linked to a section -- click to preview">📄</span> `:''}${pmEsc(t.name)}</div><div class="pm-gtrack" style="width:${totalWidth}px">${trackInner}</div></div>`;
     });
   });
 
@@ -8119,7 +8344,7 @@ function pmDestroySortables(){ pmSortables.forEach(s=>{ try{s.destroy();}catch(e
 function pmInitTableDrag(){
   pmDestroySortables();
   if(typeof Sortable==='undefined' || viewerModeForced) return;
-  const body=document.getElementById('pm-body');
+  const body=document.getElementById(pmPanelOpen ? 'pm-panel-body' : 'pm-body');
   pmSortables.push(new Sortable(body,{handle:'.pm-gdrag',draggable:'.pm-group',animation:150,onEnd:pmGroupDrop}));
   body.querySelectorAll('.pm-rows').forEach(c=>{
     pmSortables.push(new Sortable(c,{group:'pm-tasks',handle:'.pm-drag',draggable:'.pm-item',animation:150,onEnd:pmTaskDrop}));
@@ -8128,7 +8353,7 @@ function pmInitTableDrag(){
 function pmInitKanbanDrag(){
   pmDestroySortables();
   if(typeof Sortable==='undefined' || viewerModeForced) return;
-  document.querySelectorAll('#pm-body .pm-kbody').forEach(c=>{
+  document.querySelectorAll('#'+(pmPanelOpen ? 'pm-panel-body' : 'pm-body')+' .pm-kbody').forEach(c=>{
     pmSortables.push(new Sortable(c,{group:'pm-kanban',draggable:'.pm-kcard',animation:150,onEnd:pmKanbanDrop}));
   });
 }
@@ -8268,7 +8493,10 @@ function pmGoToSectionFromPreview(secId){
   let ph=null;
   phasesOf(p).forEach(pp=>{ if(pp.sections.some(s=>s.id===secId)) ph=pp; });
   if(!ph) return;
-  pmBack();
+  // With the docked panel open, #prog-view is already on screen -- skip
+  // pmBack() (which is built for leaving the full-screen board) and just
+  // switch the section underneath it, so the panel stays open the whole time.
+  if(!pmPanelOpen) pmBack();
   openProgram(p.id);
   goTo(ph.id, secId);
 }
