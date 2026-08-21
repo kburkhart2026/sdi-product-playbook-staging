@@ -588,7 +588,6 @@ body.view-mode .pm-del-row{visibility:hidden;}
    disabled -- the expand-detail toggle and section-link preview are pure
    viewing/navigation and are deliberately left untouched here. */
 body.view-mode .pm-date,
-body.view-mode .pm-progwrap input[type=range],
 body.view-mode .pm-subcheck{pointer-events:none;}
 
 /* Margin Calculator is not offered to viewers at all -- unlike PM Board,
@@ -1019,7 +1018,7 @@ body.view-mode .wysiwyg-bar{display:none!important;}
 .pm-gname{font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink);}
 .pm-gcount{font-size:11px;color:var(--mut);}
 .pm-garrow{margin-left:auto;font-size:10px;color:var(--mut);}
-.pm-cols,.pm-row{display:grid;grid-template-columns:18px 26px minmax(180px,1fr) 130px 148px 148px 148px 150px 34px;align-items:center;gap:4px;padding:0 16px 0 10px;}
+.pm-cols,.pm-row{display:grid;grid-template-columns:18px 26px minmax(180px,1fr) 130px 148px 148px 148px 34px;align-items:center;gap:4px;padding:0 16px 0 10px;}
 .pm-cols{font-size:10px;color:#9ca3af;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid var(--bdr);padding-bottom:5px;}
 .pm-row{border-bottom:1px solid #f3f4f6;padding-top:6px;padding-bottom:6px;font-size:13px;color:var(--txt);}
 .pm-row:hover{background:#fcfcfb;}
@@ -1036,9 +1035,6 @@ body.view-mode .wysiwyg-bar{display:none!important;}
 .pm-date.duesoon{color:#E8A33D;font-weight:800;}
 .pm-warn{color:var(--acc);font-size:12px;margin-left:2px;}
 .pm-warn-soon{color:#E8A33D;font-size:12px;margin-left:2px;}
-.pm-progwrap{display:flex;align-items:center;gap:7px;}
-.pm-progwrap input[type=range]{flex:1;accent-color:var(--acc);height:14px;cursor:pointer;}
-.pm-pct{font-size:11px;font-weight:800;color:var(--mut);width:34px;text-align:right;}
 /* compact task row -- stacked card used in the docked panel below its table
    width threshold, instead of the fixed 9-column grid (which needs ~970px). */
 .pmc-row{border-left:3px solid transparent;padding:8px 8px 8px 10px;border-bottom:1px solid #f3f4f6;}
@@ -1048,8 +1044,6 @@ body.view-mode .wysiwyg-bar{display:none!important;}
 .pmc-nm{flex:1 1 auto;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .pmc-nm .pm-nm{display:inline;}
 .pmc-meta{font-size:11px;color:var(--mut);margin:4px 0 0 17px;}
-.pm-prog-locked{font-size:11px;color:var(--mut);display:flex;align-items:center;gap:5px;cursor:default;}
-.pm-prog-locked .pm-pct{width:auto;}
 .pm-del{opacity:0;color:#c4c8cd;cursor:pointer;font-size:12px;text-align:center;transition:opacity 0.12s;}
 .pm-row:hover .pm-del,.pm-sub:hover .pm-del{opacity:1;}
 .pm-del:hover{color:var(--acc);}
@@ -1088,8 +1082,6 @@ body.view-mode .wysiwyg-bar{display:none!important;}
 .pm-knm{font-size:12px;font-weight:600;color:var(--txt);line-height:1.35;}
 .pm-kmeta{display:flex;align-items:center;gap:6px;font-size:10px;color:#9ca3af;flex-wrap:wrap;}
 .pm-kav{background:#4F0A12;color:#C9B79C;font-weight:800;border-radius:50%;width:18px;height:18px;display:grid;place-items:center;font-size:8px;}
-.pm-kprog{background:#eef0f2;height:5px;border-radius:3px;overflow:hidden;}
-.pm-kprog div{height:100%;border-radius:3px;}
 .pm-kanban-compact .pm-kbody{background:#ececea;border-radius:8px;padding:8px;gap:8px;}
 .pmk-switcher{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
 .pmk-sw-btn{border:1px solid var(--bdr);background:#fff;color:var(--mut);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.03em;padding:5px 8px;border-radius:5px;cursor:pointer;font-family:inherit;}
@@ -7872,21 +7864,15 @@ const PM_PRIORITIES = [
 function pmPriorityOf(id){ return PM_PRIORITIES.find(p=>p.id===id) || PM_PRIORITIES[1]; }
 function pmEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 // Same status->percent convention already used to seed a linked task's
-// initial progress (pmNewTaskFor) -- reused here as the rollup's fallback
-// weight for any task that has no real progress slider of its own.
+// initial progress (pmNewTaskFor) -- now the only source of progress for
+// every task, since there's no per-task progress slider anymore.
 const PM_PROGRESS_WEIGHT = {'done':100, 'working':50, 'review':50};
-// Group-level rollup: a manual task (has a real progress slider) contributes
-// its own value; a linked or milestone task (no slider ever rendered for
-// either) contributes the status-weight fallback above. One shared formula
-// used by the group header, the Gantt group row, and the Portfolio
-// Dashboard's program rollup, so all three always agree with each other.
+// Group-level rollup: every task's status maps to a fixed weight above.
+// One shared formula used by the group header, the Gantt group row, and
+// the Portfolio Dashboard's program rollup, so all three always agree.
 function pmGroupProgress(tasks){
   if(!tasks.length) return 0;
-  const sum = tasks.reduce((a,t)=>{
-    const usesSlider = !t.sectionId && !t.isMilestone;
-    const v = usesSlider ? (+t.progress||0) : (PM_PROGRESS_WEIGHT[t.status]||0);
-    return a+v;
-  }, 0);
+  const sum = tasks.reduce((a,t)=>a+(PM_PROGRESS_WEIGHT[t.status]||0), 0);
   return Math.round(sum/tasks.length);
 }
 let pmProgId=null, pmView='table', pmFilter='', pmOrigin='hub', pmOpenDetail=null;
@@ -7912,7 +7898,7 @@ function pmInitialStatusFor(pid, secId){
 }
 function pmNewTaskFor(ph, sec, status){
   return {id:pmNewId(), name:sec.name, group:ph.id, owner:'', status, priority:'medium', start:'', due:'',
-    progress:status==='done'?100:status==='working'?50:0, notes:'', subs:[], sectionId:sec.id};
+    notes:'', subs:[], sectionId:sec.id};
 }
 
 // Seed a program's board from its playbook phases/sections (once), and
@@ -7993,7 +7979,7 @@ function pmOnSectionMoved(pid, sectionId, newPhaseId){
 }
 function pmOnSectionLocked(pid, sectionId, locked){
   const t = pmLinkedTask(pid, sectionId); if(!t) return;
-  if(locked){ t.status='done'; t.progress=100; }
+  if(locked){ t.status='done'; }
   else if(t.status==='done'){ t.status='working'; }
   pmSave();
 }
@@ -8271,7 +8257,7 @@ function renderPMBody(){
       if(!tasks.length && pmFilter.trim()) html+='<div class="pm-empty" style="padding-left:20px">No matching tasks.</div>';
       html+=`<div class="pm-addrow"><input type="text" placeholder="+ Add task, press Enter" onkeydown="pmAddTask(event,'${g.id}')"></div><div class="pm-addrow pm-addrow-milestone"><input type="text" placeholder="&#9670; Add milestone, press Enter" onkeydown="pmAddMilestone(event,'${g.id}')"></div>`;
     } else if(!collapsed){
-      html+=`<div class="pm-cols"><div></div><div></div><div>Task</div><div>Owner</div><div style="text-align:center">Status</div><div>Start</div><div>Due</div><div>Progress</div><div></div></div>`;
+      html+=`<div class="pm-cols"><div></div><div></div><div>Task</div><div>Owner</div><div style="text-align:center">Status</div><div>Start</div><div>Due</div><div></div></div>`;
       html+=`<div class="pm-rows" data-gid="${g.id}">`;
       tasks.forEach(t=>{ html+=pmRowHTML(t,g); });
       html+='</div>';
@@ -8305,7 +8291,6 @@ function pmRowHTML(t,g){
     <div style="text-align:center"><span class="pm-pill" style="background:${st.bg};color:${st.fg}" onclick="pmStatusMenu(event,'${t.id}')" title="${isLinked?'Auto-set to Complete when the section is locked -- click to change':''}">${st.lbl} ▾</span></div>
     <div>${isMilestone ? '' : `<input type="date" class="pm-date" value="${pmEsc(t.start||'')}" onchange="pmEdit('${t.id}','start',this.value)">`}</div>
     <div><input type="date" class="pm-date ${overdue?'overdue':dueSoonDays!==null?'duesoon':''}" value="${pmEsc(t.due)}" onchange="pmEdit('${t.id}','due',this.value)">${overdue?'<span class="pm-warn" title="Overdue">⚠</span>':dueSoonDays!==null?`<span class="pm-warn-soon" title="${pmDueSoonLabel(dueSoonDays)}">⏰</span>`:''}</div>
-    <div class="pm-progwrap">${(isLinked||isMilestone) ? '' : `<input type="range" min="0" max="100" step="5" value="${t.progress}" oninput="pmProg('${t.id}',this)"><span class="pm-pct">${t.progress}%</span>`}</div>
     <div class="pm-del pm-del-row" onclick="pmDelTask('${t.id}')" title="Delete task">✕</div>
   </div>`;
   if(open){ h+=pmDetailHTML(t); }
@@ -8338,7 +8323,6 @@ function pmRowHTMLCompact(t,g){
   if(t.owner) meta.push(pmEsc(t.owner));
   if(!isMilestone && t.start) meta.push('from '+pmEsc(t.start));
   if(t.due) meta.push((overdue?'⚠ ':dueSoonDays!==null?'⏰ ':'')+'due '+pmEsc(t.due));
-  if(!isLinked && !isMilestone) meta.push(t.progress+'%');
   const pri = pmPriorityOf(t.priority);
   let h=`<div class="pm-item" data-tid="${t.id}"><div class="pmc-row" style="border-left:3px solid ${g.color}">
     <div class="pmc-line1">
@@ -8362,7 +8346,6 @@ function pmKanbanCardHTML(t,s,gcolor,gname){
   return `<div class="pm-kcard" data-tid="${t.id}" style="border-top:3px solid ${gcolor[t.group]||'#9ca3af'}">
         <div class="pm-knm"><span class="pm-pri-dot" style="background:${pri.bg}" onclick="pmPriorityMenu(event,'${t.id}')" title="Priority: ${pri.lbl}"></span>${t.isMilestone?'<span class="pm-milestone-ico" title="Milestone">◆</span> ':''}${t.sectionId?`<span class="pm-linkicon" onclick="pmShowSectionPreview('${t.id}', event)" title="Linked to a section -- click to preview">📄</span> `:''}${pmEsc(t.name)}</div>
         <div class="pm-kmeta"><span>${pmEsc(gname[t.group]||'Other')}</span>${t.due?`<span style="${dueStyle}">${overdue?'⚠':dueSoonDays!==null?'⏰':'📅'} ${pmEsc(t.due)}</span>`:''}${init?`<span class="pm-kav">${pmEsc(init)}</span>`:''}</div>
-        ${(t.sectionId||t.isMilestone) ? '' : `<div class="pm-kprog"><div style="width:${t.progress}%;background:${s.id==='not-started'?'#9ca3af':s.bg}"></div></div>`}
         <span class="pm-pill" style="background:${s.bg};color:${s.fg}" onclick="pmStatusMenu(event,'${t.id}')">${s.lbl} ▾</span>
       </div>`;
 }
@@ -8565,7 +8548,7 @@ function pmTaskDrop(){
 function pmKanbanDrop(evt){
   const t=pmTaskById(evt.item.dataset.tid);
   const sid=evt.to && evt.to.dataset.status;
-  if(t&&sid&&t.status!==sid){ t.status=sid; if(sid==='done') t.progress=100; }
+  if(t&&sid&&t.status!==sid){ t.status=sid; }
   pmSave(); renderPMBody();
 }
 function pmAddGroup(ev){
@@ -8605,14 +8588,6 @@ function pmEdit(tid,field,val){
   t[field]=nv; pmSave();
   if(field==='due'||field==='start') renderPMBody();
 }
-function pmProg(tid,el){
-  if(viewerModeForced) return; // belt-and-suspenders -- the slider itself is already non-interactive
-  const t=pmTaskById(tid); if(!t) return;
-  if(t.sectionId || t.isMilestone) return; // belt-and-suspenders -- a deliverable's progress is derived and a milestone has none; no slider is ever rendered for either
-  t.progress=+el.value;
-  const pct=el.parentElement.querySelector('.pm-pct'); if(pct) pct.textContent=t.progress+'%';
-  pmSave();
-}
 function pmStatusMenu(ev,tid){
   if(viewerModeForced) return; // status stays visible as a pill -- just not changeable
   ev.stopPropagation();
@@ -8626,7 +8601,7 @@ function pmStatusMenu(ev,tid){
 function pmSetStatus(tid,sid){
   if(viewerModeForced) return; // belt-and-suspenders -- pmStatusMenu() already refuses to open for a viewer
   const t=pmTaskById(tid);
-  if(t){ t.status=sid; if(sid==='done') t.progress=100; pmSave(); }
+  if(t){ t.status=sid; pmSave(); }
   document.getElementById('pm-status-menu').style.display='none';
   renderPMBody();
 }
@@ -8706,7 +8681,7 @@ function pmAddTask(ev,gid){
   if(viewerModeForced) return; // belt-and-suspenders -- the input itself is already hidden
   if(ev.key!=='Enter') return;
   const v=ev.target.value.trim(); if(!v) return;
-  pmStore[pmProgId].tasks.push({id:pmNewId(), name:v, group:gid, owner:'', status:'not-started', priority:'medium', start:'', due:'', progress:0, notes:'', subs:[]});
+  pmStore[pmProgId].tasks.push({id:pmNewId(), name:v, group:gid, owner:'', status:'not-started', priority:'medium', start:'', due:'', notes:'', subs:[]});
   pmSave(); renderPMBody();
 }
 // Mirrors pmAddTask() exactly except isMilestone:true -- the due date (the
@@ -8716,7 +8691,7 @@ function pmAddMilestone(ev,gid){
   if(viewerModeForced) return; // belt-and-suspenders -- the input itself is already hidden
   if(ev.key!=='Enter') return;
   const v=ev.target.value.trim(); if(!v) return;
-  pmStore[pmProgId].tasks.push({id:pmNewId(), name:v, group:gid, owner:'', status:'not-started', priority:'medium', start:'', due:'', progress:0, notes:'', subs:[], isMilestone:true});
+  pmStore[pmProgId].tasks.push({id:pmNewId(), name:v, group:gid, owner:'', status:'not-started', priority:'medium', start:'', due:'', notes:'', subs:[], isMilestone:true});
   pmSave(); renderPMBody();
 }
 async function pmDelTask(tid){
