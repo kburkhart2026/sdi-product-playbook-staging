@@ -1331,6 +1331,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); pmOpenSmart();">📋 PM Board</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); marginOpenSmart();">💲 Margin Calculator</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); togglePanel();">✦ Ask Claude</div>
+                <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); copyViewerLinkForCurrentPage();">🔗 Copy link to this page</div>
               </div>
             </div>
           </div>
@@ -1565,6 +1566,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
     <div class="export-opt" onclick="closeDataBackupModal(); showVersionHistory();">🕓 Version history…</div>
     <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--mut);margin:16px 0 8px;">GitHub Hosting</div>
     <div class="export-opt" onclick="closeDataBackupModal(); connectGithubEditor();">🐙 Connect to GitHub…</div>
+    <div class="export-opt" onclick="closeDataBackupModal(); connectGithubViewerToken();">🔗 Update viewer link token…</div>
     <div class="export-opt" onclick="closeDataBackupModal(); pushLocalContentToGithub();">⬆🐙 Push local content to GitHub</div>
     <div class="export-opt" onclick="closeDataBackupModal(); migrateContentToPerProgramFiles();">🗂️🐙 Migrate content to per-program files</div>
     <div class="backup-meta" id="backup-meta"></div>
@@ -1653,6 +1655,10 @@ const GITHUB_CONTENT_PATH = 'sdi-space.json';
 const GITHUB_MANIFEST_PATH = 'manifest.json'; // lightweight: program list/metadata + all non-bulk side-tables
 function githubProgramPath(progId){ return 'programs/'+progId+'.json'; } // that program's blockStore slice only
 const GITHUB_EDITOR_KEY = 'sdi_github_editor_pat'; // localStorage key, this browser only
+// Not used to boot THIS browser as a viewer -- only remembered here so
+// "Copy link to this page" doesn't require retyping your read-only PAT
+// every time. Same token you'd otherwise paste into a link by hand.
+const GITHUB_VIEWER_LINK_KEY = 'sdi_github_viewer_link_pat';
 const GITHUB_API = 'https://api.github.com';
 
 // ---- UTF-8-safe base64 -----------------------------------------------------
@@ -1677,6 +1683,18 @@ function githubViewerTokenFromUrl(){
   const h = location.hash || '';
   const m = h.match(/(?:^#|&)data=([^&]+)/);
   return m ? decodeURIComponent(m[1]) : null;
+}
+// A deep-linked viewer link carries the same #data=<token> plus two more
+// &-joined params on the same hash -- the existing regex above already
+// tolerates other params sharing the fragment, so this needed no new URL
+// scheme. Phase id isn't carried separately; it's found by searching once
+// the program resolves, since a section only ever belongs to one phase.
+function githubViewerDeepLinkFromUrl(){
+  const h = location.hash || '';
+  const progM = h.match(/(?:^#|&)prog=([^&]+)/);
+  const secM = h.match(/(?:^#|&)sec=([^&]+)/);
+  if(!progM || !secM) return null;
+  return { progId: decodeURIComponent(progM[1]), secId: decodeURIComponent(secM[1]) };
 }
 function githubEditorToken(){
   try{ return localStorage.getItem(GITHUB_EDITOR_KEY) || ''; }catch(e){ return ''; }
@@ -1968,6 +1986,41 @@ async function connectGithubEditor(){
   }catch(e){ await appAlert('Could not save: '+e.message); return; }
   await appAlert((v.trim()?'GitHub editor connected.':'GitHub editor disconnected.')+' Reloading to apply.');
   location.reload();
+}
+// Same prompt pattern as connectGithubEditor() above, but this token never
+// affects how THIS browser boots -- it's only remembered so "Copy link to
+// this page" can build a full viewer link without asking every time.
+async function connectGithubViewerToken(){
+  const cur = (function(){ try{ return localStorage.getItem(GITHUB_VIEWER_LINK_KEY)||''; }catch(e){ return ''; } })();
+  const v = await appPrompt('Paste the GitHub viewer personal access token (fine-grained, scoped to the content repo, Contents: Read-only) you want "Copy link to this page" to use. Stored only in this browser -- leave blank and confirm to clear it:', cur);
+  if(v === null) return; // cancelled
+  try{
+    if(v.trim()) localStorage.setItem(GITHUB_VIEWER_LINK_KEY, v.trim());
+    else localStorage.removeItem(GITHUB_VIEWER_LINK_KEY);
+  }catch(e){ await appAlert('Could not save: '+e.message); return; }
+  toast(v.trim() ? 'Viewer link token saved.' : 'Viewer link token cleared.');
+}
+// Tools -> Copy link to this page. Builds a deep link to whatever section
+// is currently open (openProgram()/goTo()'s own curProgId/curSection),
+// prompting for a viewer token only the first time -- reuses whatever's
+// already saved on every later click, on any page.
+async function copyViewerLinkForCurrentPage(){
+  if(viewerModeForced) return; // belt-and-suspenders -- this menu item is already hidden for viewers
+  if(!curProgId || !curSection){ await appAlert('Open a program and section first.'); return; }
+  let token; try{ token = localStorage.getItem(GITHUB_VIEWER_LINK_KEY)||''; }catch(e){ token=''; }
+  if(!token){
+    const v = await appPrompt('Paste the GitHub viewer personal access token (fine-grained, scoped to the content repo, Contents: Read-only) to use for viewer links. Stored only in this browser:', '');
+    if(v === null || !v.trim()){ await appAlert('No viewer token saved -- link not copied.'); return; }
+    token = v.trim();
+    try{ localStorage.setItem(GITHUB_VIEWER_LINK_KEY, token); }catch(e){}
+  }
+  const url = location.origin+location.pathname+'#data='+encodeURIComponent(token)+'&prog='+encodeURIComponent(curProgId)+'&sec='+encodeURIComponent(curSection);
+  try{
+    await navigator.clipboard.writeText(url);
+    toast('Viewer link copied to clipboard.');
+  }catch(e){
+    await appAlert('Could not copy automatically. Here is the link:\n\n'+url);
+  }
 }
 
 function setHubSyncStatus(mode){
@@ -9764,6 +9817,19 @@ async function init(){
   // (this is per-browser local state, so it only ever reflects your own editing history).
   if(!viewerModeForced && uiState.lastProg && programs.some(p=>p.id===uiState.lastProg)) openProgram(uiState.lastProg);
   if(viewerModeForced){
+    // A deep-linked viewer link points at one specific page. A stale link
+    // (the program got renamed/deleted, or the section moved/was removed)
+    // fails silently back to the normal Hub landing -- the shared content
+    // itself loaded fine, only the deep-link target didn't resolve, and
+    // that's not worth surfacing as an error.
+    const deepLink = githubViewerDeepLinkFromUrl();
+    if(deepLink){
+      const p = programs.find(x=>x.id===deepLink.progId);
+      if(p){
+        const ph = phasesOf(p).find(x=>x.sections.some(s=>s.id===deepLink.secId));
+        if(ph){ openProgram(deepLink.progId); goTo(ph.id, deepLink.secId); }
+      }
+    }
     // Belt-and-suspenders on top of the token itself only ever being
     // read-only server-side: lock the UI into view-mode. The actual chrome-hiding
     // (topbar cluster + Hub actions) already happened at the top of init(), the
