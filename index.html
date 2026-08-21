@@ -2983,7 +2983,15 @@ let uiState={lastLoc:{},openPhases:{}};
 try{ uiState=Object.assign(uiState,JSON.parse(localStorage.getItem('sdi_ui_state')||'{}')); }catch(e){}
 function saveUIState(){ try{ localStorage.setItem('sdi_ui_state',JSON.stringify(uiState)); }catch(e){} }
 
-function openProgram(id){
+// forceLoc, when given, skips the last-visited/first-available logic below
+// entirely and goes straight there -- for callers (a deep link) that already
+// know exactly which section they want, so it isn't navigated to once by
+// this function's own default, then again by the caller correcting it. That
+// redundant first hop cost a wasted loadContent()/render cycle on every
+// deep-link boot -- not a second network fetch (ensureProgramLoaded()
+// already dedupes overlapping calls for the same program), but pure waste
+// worth cutting anyway.
+function openProgram(id, forceLoc){
   saveCurrentBlocks();
   curProgId = id;
   const p = programs.find(x=>x.id===id);
@@ -3000,6 +3008,7 @@ function openProgram(id){
   btn.textContent = s.lbl; btn.style.background=s.bg; btn.style.color=s.color;
   renderSidebar();
   uiState.lastProg=id; saveUIState();
+  if(forceLoc){ goTo(forceLoc.phid, forceLoc.sid); return; }
   const last=uiState.lastLoc[id];
   if(last){
     const ph=PHASES.find(p=>p.id===last.phid);
@@ -9827,7 +9836,7 @@ async function init(){
       const p = programs.find(x=>x.id===deepLink.progId);
       if(p){
         const ph = phasesOf(p).find(x=>x.sections.some(s=>s.id===deepLink.secId));
-        if(ph){ openProgram(deepLink.progId); goTo(ph.id, deepLink.secId); }
+        if(ph){ openProgram(deepLink.progId, {phid: ph.id, sid: deepLink.secId}); }
       }
     }
     // Belt-and-suspenders on top of the token itself only ever being
