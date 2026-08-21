@@ -7871,6 +7871,24 @@ const PM_PRIORITIES = [
 // 'medium' -- no migration needed, same fallback pattern as pmStatusOf().
 function pmPriorityOf(id){ return PM_PRIORITIES.find(p=>p.id===id) || PM_PRIORITIES[1]; }
 function pmEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Same status->percent convention already used to seed a linked task's
+// initial progress (pmNewTaskFor) -- reused here as the rollup's fallback
+// weight for any task that has no real progress slider of its own.
+const PM_PROGRESS_WEIGHT = {'done':100, 'working':50, 'review':50};
+// Group-level rollup: a manual task (has a real progress slider) contributes
+// its own value; a linked or milestone task (no slider ever rendered for
+// either) contributes the status-weight fallback above. One shared formula
+// used by the group header, the Gantt group row, and the Portfolio
+// Dashboard's program rollup, so all three always agree with each other.
+function pmGroupProgress(tasks){
+  if(!tasks.length) return 0;
+  const sum = tasks.reduce((a,t)=>{
+    const usesSlider = !t.sectionId && !t.isMilestone;
+    const v = usesSlider ? (+t.progress||0) : (PM_PROGRESS_WEIGHT[t.status]||0);
+    return a+v;
+  }, 0);
+  return Math.round(sum/tasks.length);
+}
 let pmProgId=null, pmView='table', pmFilter='', pmOrigin='hub', pmOpenDetail=null;
 let pmDashExpanded = {overdue:false, stuck:false, upcoming:false};
 // pmPanelOpen is true when the PM board is the docked side panel next to an
@@ -8234,6 +8252,7 @@ function renderPMBody(){
     const all=board.tasks.filter(inGroup);
     const tasks=all.filter(pmMatches);
     const done=all.filter(t=>t.status==='done').length;
+    const groupPct = pmGroupProgress(all);
     const collapsed=!!board.collapsed[g.id];
     html+=`<div class="pm-group" data-gid="${g.id}">
       <div class="pm-ghead" onclick="pmToggleGroup('${g.id}')">
@@ -8241,6 +8260,7 @@ function renderPMBody(){
         <span class="pm-gbar" style="background:${g.color}"></span>
         <span class="pm-gname" contenteditable="${g.id==='__other'?'false':'true'}" spellcheck="false" onclick="event.stopPropagation()" onblur="pmRenameGroup('${g.id}',this.textContent)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${pmEsc(g.name)}</span>
         <span class="pm-gcount">${all.length} task${all.length===1?'':'s'} · ${done} done</span>
+        ${all.length?`<span class="pm-prog-bar" style="${compact?'width:44px;':''}" onclick="event.stopPropagation()" title="Rolled up from every task in this group"><div style="width:${groupPct}%;background:${g.color}"></div></span><span class="pm-prog-pct">${groupPct}%</span>`:''}
         ${g.id==='__other'?'':`<span class="pm-gdel" title="Delete group" onclick="pmDelGroup(event,'${g.id}')">✕</span>`}
         <span class="pm-garrow">${collapsed?'▶':'▼'}</span>
       </div>`;
@@ -8466,8 +8486,11 @@ function renderPMGantt(root, board){
     const inGroup = t => g.id==='__other' ? !known.has(t.group) : t.group===g.id;
     const tasks = board.tasks.filter(inGroup).filter(pmMatches);
     if(!tasks.length) return;
+    // Rolled up from every task in the group, same as the table header --
+    // not just the ones the search filter currently matches.
+    const groupPct = pmGroupProgress(board.tasks.filter(inGroup));
     const collapsed = !!board.collapsed[g.id];
-    rows += `<div class="pm-gantt-row" style="background:${g.color}1a;cursor:pointer;" onclick="pmToggleGroup('${g.id}')"><div class="pm-glabel" style="${labelStyle}font-weight:800;color:${g.color};background:${g.color}1a;"><span class="pm-garrow" style="margin-left:0;margin-right:6px;">${collapsed?'▶':'▼'}</span>${pmEsc(g.name)}</div><div class="pm-gtrack" style="width:${totalWidth}px"></div></div>`;
+    rows += `<div class="pm-gantt-row" style="background:${g.color}1a;cursor:pointer;" onclick="pmToggleGroup('${g.id}')"><div class="pm-glabel" style="${labelStyle}font-weight:800;color:${g.color};background:${g.color}1a;"><span class="pm-garrow" style="margin-left:0;margin-right:6px;">${collapsed?'▶':'▼'}</span>${pmEsc(g.name)} <span style="font-weight:600;opacity:0.7;">(${groupPct}%)</span></div><div class="pm-gtrack" style="width:${totalWidth}px"></div></div>`;
     if(collapsed) return;
     tasks.forEach(t=>{
       const st=pmStatusOf(t.status);
@@ -8722,7 +8745,7 @@ function pmAllStats(){
   programs.forEach(p=>{
     const b=pmStore[p.id]; if(!b) return;
     const total=b.tasks.length;
-    const pct= total ? Math.round(b.tasks.reduce((a,t)=>a+(+t.progress||0),0)/total) : 0;
+    const pct = pmGroupProgress(b.tasks);
     rows.push({p, pct, total, done:b.tasks.filter(t=>t.status==='done').length});
     b.tasks.forEach(t=>{
       counts[t.status]=(counts[t.status]||0)+1;
