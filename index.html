@@ -1731,10 +1731,14 @@ async function githubReadFileStatus(path){
   const token = githubActiveToken();
   if(!token || !GITHUB_OWNER || !GITHUB_CONTENT_REPO) return { status:'error' };
   try{
-    const metaResp = await fetch(githubRepoUrl('/contents/'+path+'?ref='+GITHUB_BRANCH), { headers: githubHeaders(token) });
+    // no-store: this same path can be re-read multiple times in a row (retry
+    // loops, the migration's rebase check) -- see the matching note in
+    // githubCommitFile for why a cached, stale response here is a real bug,
+    // not just a wasted request.
+    const metaResp = await fetch(githubRepoUrl('/contents/'+path+'?ref='+GITHUB_BRANCH), { headers: githubHeaders(token), cache:'no-store' });
     if(!metaResp.ok) return { status: metaResp.status===404 ? 'not_found' : 'error' };
     const meta = await metaResp.json();
-    const blobResp = await fetch(githubRepoUrl('/git/blobs/'+meta.sha), { headers: githubHeaders(token) });
+    const blobResp = await fetch(githubRepoUrl('/git/blobs/'+meta.sha), { headers: githubHeaders(token), cache:'no-store' });
     if(!blobResp.ok) return { status:'error' };
     const blob = await blobResp.json();
     return { status:'ok', json: JSON.parse(base64ToUtf8(blob.content)), sha: meta.sha };
@@ -1780,11 +1784,20 @@ async function githubCommitFile(path, jsonObj, message){
     const newBlobSha = (await blobPutResp.json()).sha;
 
     for(let attempt=1; attempt<=MAX_ATTEMPTS; attempt++){
-      const refResp = await fetch(githubRepoUrl('/git/refs/heads/'+GITHUB_BRANCH), { headers: githubHeaders(token) });
+      // cache:'no-store' on both reads below -- this same ref URL is fetched
+      // repeatedly (every program in a migration run, every retry attempt),
+      // and the browser's HTTP cache was found to silently serve back a
+      // stale parentCommitSha after the first read instead of hitting GitHub
+      // again. That made every write after the first look like a real
+      // non-fast-forward conflict (422) even though nothing had actually
+      // raced -- retrying against the same stale cache just failed the same
+      // way every time. A fresh read on every attempt is required for the
+      // conflict-detection logic below to mean anything.
+      const refResp = await fetch(githubRepoUrl('/git/refs/heads/'+GITHUB_BRANCH), { headers: githubHeaders(token), cache:'no-store' });
       if(!refResp.ok) return false; // 401/403/404 -- not a race, retrying won't help
       const parentCommitSha = (await refResp.json()).object.sha;
 
-      const commitResp = await fetch(githubRepoUrl('/git/commits/'+parentCommitSha), { headers: githubHeaders(token) });
+      const commitResp = await fetch(githubRepoUrl('/git/commits/'+parentCommitSha), { headers: githubHeaders(token), cache:'no-store' });
       if(!commitResp.ok) return false;
       const baseTreeSha = (await commitResp.json()).tree.sha;
 
