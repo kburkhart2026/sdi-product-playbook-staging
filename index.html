@@ -9776,8 +9776,12 @@ async function init(){
     hideEditorChromeForViewer();
     // Content can be several MB, so this can take a few seconds -- without this,
     // the screen just sits there looking stuck rather than obviously working.
+    // Same rotating-message style as the per-program spinner below (not the
+    // old fixed "Loading shared content..." text) so a deep link that jumps
+    // straight into a program right after this doesn't visibly swap from one
+    // loading-message style to a completely different one mid-boot.
     const grid=document.getElementById('prog-grid');
-    if(grid) grid.innerHTML='<div class="viewer-loading"><span class="viewer-spinner"></span>Loading shared content&hellip; this can take several seconds for a large Playbook.</div>';
+    if(grid) grid.innerHTML='<div class="viewer-loading"><span class="viewer-spinner"></span>'+randomProgramLoadingMessage()+'</div>';
     const manifest = await probeManifest();
     if(manifest && manifest.v === 3 && (manifest.programs||[]).length > 0){
       manifestMode = true;
