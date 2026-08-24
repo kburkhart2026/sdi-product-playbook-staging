@@ -324,11 +324,15 @@ body.view-mode .tbl-rowops,.section-locked .tbl-rowops{display:none!important;}
 .tl-body{flex:1;}
 .tl-mrow{display:flex;align-items:flex-start;gap:6px;}
 .tl-m{flex:1;font-size:14px;font-weight:500;color:var(--txt);outline:none;}
-.tl-d{display:flex;align-items:center;gap:8px;margin-top:2px;flex-wrap:wrap;}
-.tl-date-input{font-size:12px;color:var(--mut);border:1px solid transparent;background:transparent;font-family:inherit;border-radius:3px;padding:2px 2px;cursor:pointer;outline:none;}
-.tl-date-input:hover,.tl-date-input:focus{border-color:var(--bdr);background:#fff;}
-.tl-d.no-date .tl-date-input{color:#aab;}
-.tl-nodate-lbl{font-size:12px;color:#aab;font-style:italic;display:none;}
+.tl-d{display:flex;align-items:center;gap:4px;margin-top:2px;flex-wrap:wrap;}
+.tl-date-month,.tl-date-year{font-size:12px;color:var(--mut);border:1px solid transparent;background:transparent;font-family:inherit;border-radius:3px;padding:2px 1px;cursor:pointer;outline:none;}
+.tl-date-month:hover,.tl-date-month:focus,.tl-date-year:hover,.tl-date-year:focus{border-color:var(--bdr);background:#fff;}
+.tl-d.no-date .tl-date-month,.tl-d.no-date .tl-date-year{color:#aab;}
+.tl-date-clear{border:none;background:transparent;color:#aab;cursor:pointer;font-size:11px;padding:2px 3px;border-radius:3px;opacity:0;transition:opacity .15s;}
+.tl-item:hover .tl-date-clear{opacity:1;}
+.tl-date-clear:hover{color:#dc2626;background:#fee2e2;}
+.tl-d.no-date .tl-date-clear{display:none;}
+.tl-nodate-lbl{font-size:12px;color:#aab;font-style:italic;display:none;margin-right:2px;}
 .tl-d.no-date .tl-nodate-lbl{display:inline;}
 .tl-note{font-size:12px;color:var(--mut);outline:none;}
 .tl-note:empty:before{content:attr(data-ph);color:#c4c8cd;}
@@ -569,6 +573,7 @@ body.view-mode #comments-area,
 body.view-mode .vid-change-bar,
 body.view-mode .tl-add-btn,
 body.view-mode .tl-del,
+body.view-mode .tl-date-clear,
 body.view-mode .tbl-add-row,
 body.view-mode .tbl-toolbar,
 body.view-mode .swot-add,
@@ -601,7 +606,8 @@ body.view-mode .pm-del-row{visibility:hidden;}
    viewing/navigation and are deliberately left untouched here. */
 body.view-mode .pm-date,
 body.view-mode .pm-subcheck,
-body.view-mode .tl-date-input{pointer-events:none;}
+body.view-mode .tl-date-month,
+body.view-mode .tl-date-year{pointer-events:none;}
 
 /* Margin Calculator is not offered to viewers at all -- unlike PM Board,
    Karen decided it doesn't need a side-by-side (or any) viewer experience.
@@ -702,7 +708,7 @@ body.view-mode .mg2-gened-check input[type=checkbox]{pointer-events:none;}
 .locked-banner{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;margin-bottom:16px;display:none;}
 .section-locked .locked-banner{display:block;}
 .section-locked .add-block-area{display:none!important;}
-.section-locked .bctrl,.section-locked .swot-add,.section-locked .tbl-toolbar,.section-locked .tbl-gear,.section-locked .tbl-rowops,.section-locked .tbl-row-del,.section-locked .tl-add-btn,.section-locked .tl-del,.section-locked .tbl-add-row,.section-locked .dl-add,.section-locked .ap-add{display:none!important;}
+.section-locked .bctrl,.section-locked .swot-add,.section-locked .tbl-toolbar,.section-locked .tbl-gear,.section-locked .tbl-rowops,.section-locked .tbl-row-del,.section-locked .tl-add-btn,.section-locked .tl-del,.section-locked .tl-date-clear,.section-locked .tbl-add-row,.section-locked .dl-add,.section-locked .ap-add{display:none!important;}
 .section-locked #page-title{pointer-events:none;}
 
 /* block tags */
@@ -768,7 +774,7 @@ body.view-mode .mg2-gened-check input[type=checkbox]{pointer-events:none;}
 @media print{
   #hub-view,#prog-view .sidebar,.topbar,.add-block-area,.bctrl,.add-sec,.block-picker,
   #imgLightbox,#save-alarm,.swot-add,.prog-banner,
-  .tbl-gear,.tbl-toolbar,.tbl-rowops,.tbl-row-del,.tbl-add-row,.tl-add-btn,.tl-del,.dl-add,.ap-add,
+  .tbl-gear,.tbl-toolbar,.tbl-rowops,.tbl-row-del,.tbl-add-row,.tl-add-btn,.tl-del,.tl-date-clear,.dl-add,.ap-add,
   .vid-change-bar,.block-tag,.wysiwyg-bar,.btool-tag,.btool-copy,.bdel,.bdrag,
   .cost-add,.cost-clear,.cost-foot-bar,.cost-rowdrag,
   .tbl-rowops,
@@ -3563,17 +3569,35 @@ function makeBlock(data){
   return wrap;
 }
 
+const TL_MONTH_OPTS=[['01','Jan'],['02','Feb'],['03','Mar'],['04','Apr'],['05','May'],['06','Jun'],['07','Jul'],['08','Aug'],['09','Sep'],['10','Oct'],['11','Nov'],['12','Dec']];
+// Plain month+year <select> pair, not a native <input type=month> -- that
+// input type turned out to silently fall back to an unvalidated plain text
+// box in some browsers (no picker, no real value ever produced), which is
+// why a "date" set through it could look fine on screen and still save as
+// nothing. Two <select>s are universally supported with no fallback risk.
+function tlDateSelectsHTML(date){
+  const parts=(date||'').split('-');
+  const mVal=(parts[0]&&parts[1])?parts[1]:'';
+  const yVal=(parts[0]&&parts[1])?parts[0]:'';
+  const nowY=new Date().getFullYear();
+  const years=new Set(); for(let y=nowY-1;y<=nowY+6;y++) years.add(y);
+  if(yVal) years.add(parseInt(yVal,10));
+  const sortedYears=[...years].sort((a,b)=>a-b);
+  const mOpts='<option value=""'+(mVal?'':' selected')+'>Month</option>'+TL_MONTH_OPTS.map(([v,l])=>`<option value="${v}"${v===mVal?' selected':''}>${l}</option>`).join('');
+  const yOpts='<option value=""'+(yVal?'':' selected')+'>Year</option>'+sortedYears.map(y=>`<option value="${y}"${String(y)===yVal?' selected':''}>${y}</option>`).join('');
+  return `<select class="tl-date-month" onchange="onTimelineDateChange(this)">${mOpts}</select><select class="tl-date-year" onchange="onTimelineDateChange(this)">${yOpts}</select>`;
+}
 // date is a real "YYYY-MM" value (or '') driving sort order -- always exactly
-// that shape or empty, since it only ever comes from an <input type=month>'s
-// own .value or the migration parser below, so it's safe in an attribute
-// with no separate escaping. note is optional freeform text for anything
-// that isn't a clean date (see parseLooseMilestoneDate).
+// that shape or empty, since it only ever comes from the month/year selects
+// above or the migration parser below, so it's safe in an attribute with no
+// separate escaping. note is optional freeform text for anything that isn't
+// a clean date (see parseLooseMilestoneDate).
 function tlItem(m,date,note){
   date=date||''; note=note||'';
   const noDate=!date;
   return `<div class="tl-item"><div class="tl-l"><div class="tl-dot"></div><div class="tl-line"></div></div><div class="tl-body">`
     +`<div class="tl-mrow"><div class="tl-m" contenteditable="true" spellcheck="false">${m}</div><button class="tl-del" title="Delete milestone" onclick="delMilestone(this)">✕</button></div>`
-    +`<div class="tl-d ${noDate?'no-date':'has-date'}"><input type="month" class="tl-date-input" value="${date}" onchange="onTimelineDateChange(this)"><span class="tl-nodate-lbl">No date set</span><span class="tl-note" contenteditable="true" spellcheck="false" data-ph="Add a note (optional)">${note}</span></div>`
+    +`<div class="tl-d ${noDate?'no-date':'has-date'}" data-date="${date}">${tlDateSelectsHTML(date)}<button class="tl-date-clear" title="Clear date" onclick="clearTimelineDate(this)">✕</button><span class="tl-nodate-lbl">No date set</span><span class="tl-note" contenteditable="true" spellcheck="false" data-ph="Add a note (optional)">${note}</span></div>`
     +`</div></div>`;
 }
 // Stable sort by date ascending -- items sharing a month/year, or multiple
@@ -3590,14 +3614,16 @@ function tlSortItems(items){
     return a.idx-b.idx;
   }).map(x=>x.it);
 }
-// Same sort, applied directly to an already-rendered .tl-list's DOM children
-// (each carries its own date via its .tl-date-input) -- re-appending each in
-// sorted order moves it to the end of the list one at a time, which is all
-// that's needed to reorder the whole list.
+// Same sort, applied directly to an already-rendered .tl-list's DOM children.
+// Reads each item's date from .tl-d's data-date attribute -- the actual
+// source of truth (see onTimelineDateChange) -- never from the selects'
+// own live state directly. Re-appending each in sorted order moves it to
+// the end of the list one at a time, which is all that's needed to reorder
+// the whole list.
 function sortTimelineListDom(list){
   if(!list) return;
   const withKey=[...list.querySelectorAll(':scope > .tl-item')].map((el,idx)=>({
-    el, idx, date:(el.querySelector('.tl-date-input')||{}).value||''
+    el, idx, date:(el.querySelector('.tl-d')||{}).getAttribute ? (el.querySelector('.tl-d').getAttribute('data-date')||'') : ''
   }));
   withKey.sort((a,b)=>{
     if(a.date && b.date) return a.date<b.date?-1:a.date>b.date?1:a.idx-b.idx;
@@ -3607,20 +3633,38 @@ function sortTimelineListDom(list){
   });
   withKey.forEach(x=>list.appendChild(x.el));
 }
-function onTimelineDateChange(input){
-  // The value HTML ATTRIBUTE (not just the live .value property) has to be
-  // kept in sync by hand -- saveCurrentBlocks() persists a section by
-  // cloning its DOM and reading .innerHTML, and .innerHTML/.outerHTML only
-  // ever serialize an <input>'s value ATTRIBUTE, never whatever the native
-  // picker just set on the live .value property. Without this, a date you
-  // just picked displays correctly in this tab (reading .value still works)
-  // but silently reverts to the old/blank attribute for anyone who loads
-  // this section fresh afterward -- including a viewer, or this same editor
-  // on a future reload.
-  input.setAttribute('value', input.value);
-  const wrap=input.closest('.tl-d');
-  if(wrap){ wrap.classList.toggle('no-date', !input.value); wrap.classList.toggle('has-date', !!input.value); }
-  sortTimelineListDom(input.closest('.tl-list'));
+function onTimelineDateChange(sel){
+  const wrap=sel.closest('.tl-d');
+  if(!wrap) return;
+  const mSel=wrap.querySelector('.tl-date-month'), ySel=wrap.querySelector('.tl-date-year');
+  // Each <option>'s selected ATTRIBUTE has to be kept in sync by hand, same
+  // reason as any other form control here: saveCurrentBlocks() persists a
+  // section by cloning its DOM and reading .innerHTML, which only ever
+  // serializes whichever <option> has the selected ATTRIBUTE baked in, never
+  // whichever one the live UI just picked. Without this, a choice looks
+  // right on screen but silently reverts for anyone loading this section
+  // fresh afterward -- a viewer, or this same editor on a future reload.
+  [mSel,ySel].forEach(s=>{
+    [...s.options].forEach(o=>o.removeAttribute('selected'));
+    if(s.selectedIndex>=0) s.options[s.selectedIndex].setAttribute('selected','');
+  });
+  const date=(mSel.value && ySel.value) ? (ySel.value+'-'+mSel.value) : '';
+  wrap.setAttribute('data-date', date);
+  wrap.classList.toggle('no-date', !date);
+  wrap.classList.toggle('has-date', !!date);
+  sortTimelineListDom(wrap.closest('.tl-list'));
+  scheduleSave();
+}
+function clearTimelineDate(btn){
+  const wrap=btn.closest('.tl-d');
+  if(!wrap) return;
+  wrap.querySelectorAll('select').forEach(sel=>{
+    [...sel.options].forEach(o=>o.removeAttribute('selected'));
+    sel.selectedIndex=0; sel.options[0].setAttribute('selected','');
+  });
+  wrap.setAttribute('data-date','');
+  wrap.classList.add('no-date'); wrap.classList.remove('has-date');
+  sortTimelineListDom(wrap.closest('.tl-list'));
   scheduleSave();
 }
 async function delMilestone(btn){
@@ -6967,17 +7011,37 @@ function upgradeBlocks(root){
   // Timeline milestones used to be two plain contenteditable fields -- a
   // label and a free-text "date" with no real value behind it, so nothing
   // could ever be sorted or reliably re-dated. Upgraded to a real month/year
-  // date (drives auto-sort) plus an optional note for whatever didn't parse
-  // as one. Detected by the absence of the new date input, so this only
-  // ever touches genuinely old items and never re-runs on ones already
-  // upgraded (idempotent, same as every other self-heal above).
+  // date (drives auto-sort, stored in .tl-d's data-date attribute) plus an
+  // optional note for whatever didn't parse as one. Detected by the absence
+  // of that attribute, so this only ever touches genuinely un-upgraded items
+  // and never re-runs on ones already on the current shape (idempotent,
+  // same as every other self-heal above).
+  //
+  // There's also a SECOND legacy shape to handle here, not just the
+  // original one: an earlier version of this upgrade used a single
+  // <input type=month"> per milestone, which turned out to silently fall
+  // back to an unvalidated plain text box in some browsers -- no picker, no
+  // real value ever produced there, so any date "set" through it in one of
+  // those browsers was never actually captured. Carry over whatever value
+  // and note text did survive from that shape; don't invent one that wasn't
+  // really there.
   root.querySelectorAll('.block-timeline .tl-item').forEach(item=>{
-    if(item.querySelector('.tl-date-input')) return;
-    const mEl=item.querySelector('.tl-m'), dEl=item.querySelector('.tl-d');
+    if(item.querySelector('.tl-d[data-date]')) return; // already on the current shape
+    const mEl=item.querySelector('.tl-m');
     const label=mEl?mEl.innerHTML:'';
-    const parsed=parseLooseMilestoneDate(dEl?dEl.textContent:'');
+    let date='', note='';
+    const oldInput=item.querySelector('.tl-date-input');
+    if(oldInput){
+      date=oldInput.getAttribute('value')||'';
+      const noteEl=item.querySelector('.tl-note');
+      note=noteEl?noteEl.textContent:'';
+    } else {
+      const dEl=item.querySelector('.tl-d');
+      const parsed=parseLooseMilestoneDate(dEl?dEl.textContent:'');
+      date=parsed.date; note=parsed.note;
+    }
     const fresh=document.createElement('div');
-    fresh.innerHTML=tlItem(label, parsed.date, parsed.note);
+    fresh.innerHTML=tlItem(label, date, note);
     item.replaceWith(fresh.firstElementChild);
   });
   root.querySelectorAll('.block-timeline .tl-list').forEach(sortTimelineListDom);
