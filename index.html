@@ -3608,6 +3608,16 @@ function sortTimelineListDom(list){
   withKey.forEach(x=>list.appendChild(x.el));
 }
 function onTimelineDateChange(input){
+  // The value HTML ATTRIBUTE (not just the live .value property) has to be
+  // kept in sync by hand -- saveCurrentBlocks() persists a section by
+  // cloning its DOM and reading .innerHTML, and .innerHTML/.outerHTML only
+  // ever serialize an <input>'s value ATTRIBUTE, never whatever the native
+  // picker just set on the live .value property. Without this, a date you
+  // just picked displays correctly in this tab (reading .value still works)
+  // but silently reverts to the old/blank attribute for anyone who loads
+  // this section fresh afterward -- including a viewer, or this same editor
+  // on a future reload.
+  input.setAttribute('value', input.value);
   const wrap=input.closest('.tl-d');
   if(wrap){ wrap.classList.toggle('no-date', !input.value); wrap.classList.toggle('has-date', !!input.value); }
   sortTimelineListDom(input.closest('.tl-list'));
