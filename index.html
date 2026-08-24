@@ -322,8 +322,19 @@ body.view-mode .tbl-rowops,.section-locked .tbl-rowops{display:none!important;}
 .tl-line{flex:1;width:2px;background:var(--bdr);margin-top:4px;}
 .tl-item:last-child .tl-line{display:none;}
 .tl-body{flex:1;}
-.tl-m{font-size:14px;font-weight:500;color:var(--txt);outline:none;}
-.tl-d{font-size:12px;color:var(--mut);margin-top:1px;outline:none;}
+.tl-mrow{display:flex;align-items:flex-start;gap:6px;}
+.tl-m{flex:1;font-size:14px;font-weight:500;color:var(--txt);outline:none;}
+.tl-d{display:flex;align-items:center;gap:8px;margin-top:2px;flex-wrap:wrap;}
+.tl-date-input{font-size:12px;color:var(--mut);border:1px solid transparent;background:transparent;font-family:inherit;border-radius:3px;padding:2px 2px;cursor:pointer;outline:none;}
+.tl-date-input:hover,.tl-date-input:focus{border-color:var(--bdr);background:#fff;}
+.tl-d.no-date .tl-date-input{color:#aab;}
+.tl-nodate-lbl{font-size:12px;color:#aab;font-style:italic;display:none;}
+.tl-d.no-date .tl-nodate-lbl{display:inline;}
+.tl-note{font-size:12px;color:var(--mut);outline:none;}
+.tl-note:empty:before{content:attr(data-ph);color:#c4c8cd;}
+.tl-del{flex-shrink:0;border:none;background:transparent;color:var(--mut);cursor:pointer;font-size:13px;line-height:1;padding:2px 4px;border-radius:4px;opacity:0;transition:opacity .15s;}
+.tl-item:hover .tl-del{opacity:1;}
+.tl-del:hover{color:#dc2626;background:#fee2e2;}
 .tl-add-btn{display:flex;align-items:center;gap:6px;padding:8px 0 0;font-size:13px;color:var(--mut);cursor:pointer;border:none;background:transparent;}
 .tl-add-btn:hover{color:var(--acc);}
 
@@ -557,6 +568,7 @@ body.view-mode .ph-del,
 body.view-mode #comments-area,
 body.view-mode .vid-change-bar,
 body.view-mode .tl-add-btn,
+body.view-mode .tl-del,
 body.view-mode .tbl-add-row,
 body.view-mode .tbl-toolbar,
 body.view-mode .swot-add,
@@ -588,7 +600,8 @@ body.view-mode .pm-del-row{visibility:hidden;}
    disabled -- the expand-detail toggle and section-link preview are pure
    viewing/navigation and are deliberately left untouched here. */
 body.view-mode .pm-date,
-body.view-mode .pm-subcheck{pointer-events:none;}
+body.view-mode .pm-subcheck,
+body.view-mode .tl-date-input{pointer-events:none;}
 
 /* Margin Calculator is not offered to viewers at all -- unlike PM Board,
    Karen decided it doesn't need a side-by-side (or any) viewer experience.
@@ -689,7 +702,7 @@ body.view-mode .mg2-gened-check input[type=checkbox]{pointer-events:none;}
 .locked-banner{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;margin-bottom:16px;display:none;}
 .section-locked .locked-banner{display:block;}
 .section-locked .add-block-area{display:none!important;}
-.section-locked .bctrl,.section-locked .swot-add,.section-locked .tbl-toolbar,.section-locked .tbl-gear,.section-locked .tbl-rowops,.section-locked .tbl-row-del,.section-locked .tl-add-btn,.section-locked .tbl-add-row,.section-locked .dl-add,.section-locked .ap-add{display:none!important;}
+.section-locked .bctrl,.section-locked .swot-add,.section-locked .tbl-toolbar,.section-locked .tbl-gear,.section-locked .tbl-rowops,.section-locked .tbl-row-del,.section-locked .tl-add-btn,.section-locked .tl-del,.section-locked .tbl-add-row,.section-locked .dl-add,.section-locked .ap-add{display:none!important;}
 .section-locked #page-title{pointer-events:none;}
 
 /* block tags */
@@ -755,7 +768,7 @@ body.view-mode .mg2-gened-check input[type=checkbox]{pointer-events:none;}
 @media print{
   #hub-view,#prog-view .sidebar,.topbar,.add-block-area,.bctrl,.add-sec,.block-picker,
   #imgLightbox,#save-alarm,.swot-add,.prog-banner,
-  .tbl-gear,.tbl-toolbar,.tbl-rowops,.tbl-row-del,.tbl-add-row,.tl-add-btn,.dl-add,.ap-add,
+  .tbl-gear,.tbl-toolbar,.tbl-rowops,.tbl-row-del,.tbl-add-row,.tl-add-btn,.tl-del,.dl-add,.ap-add,
   .vid-change-bar,.block-tag,.wysiwyg-bar,.btool-tag,.btool-copy,.bdel,.bdrag,
   .cost-add,.cost-clear,.cost-foot-bar,.cost-rowdrag,
   .tbl-rowops,
@@ -796,7 +809,7 @@ body.view-mode .wysiwyg-bar{display:none!important;}
    Headings & table headers keep the condensed brand display face. */
 .block-text,.block-text *,.ct,.ct *,
 .block-table td,.block-table td *,
-.tl-m,.tl-m *,.tl-d,.tl-d *,
+.tl-m,.tl-m *,.tl-note,.tl-note *,
 .dl-table td,.dl-table td *,
 .ap-name,.ap-name *,.ap-desc,.ap-desc *,
 #page-title *{font-family:var(--font-body)!important;}
@@ -3465,7 +3478,7 @@ function makeBlock(data){
       break;}
     case 'timeline':{
       const lid='tl-'+(++uid);
-      const items=(data.items||[]).map(i=>tlItem(i.m,i.d)).join('');
+      const items=tlSortItems(data.items||[]).map(i=>tlItem(i.m,i.date,i.note)).join('');
       wrap.innerHTML=ctrl+`<div class="block-timeline"><div class="tl-lbl">${data.lbl||'Timeline'}</div><div class="tl-list" id="${lid}">${items}</div><button class="tl-add-btn" onclick="addMilestone('${lid}')">+ Add milestone</button></div>`;
       break;}
     case 'decision':{
@@ -3550,8 +3563,105 @@ function makeBlock(data){
   return wrap;
 }
 
-function tlItem(m,d){
-  return `<div class="tl-item"><div class="tl-l"><div class="tl-dot"></div><div class="tl-line"></div></div><div class="tl-body"><div class="tl-m" contenteditable="true" spellcheck="false">${m}</div><div class="tl-d" contenteditable="true" spellcheck="false">${d}</div></div></div>`;
+// date is a real "YYYY-MM" value (or '') driving sort order -- always exactly
+// that shape or empty, since it only ever comes from an <input type=month>'s
+// own .value or the migration parser below, so it's safe in an attribute
+// with no separate escaping. note is optional freeform text for anything
+// that isn't a clean date (see parseLooseMilestoneDate).
+function tlItem(m,date,note){
+  date=date||''; note=note||'';
+  const noDate=!date;
+  return `<div class="tl-item"><div class="tl-l"><div class="tl-dot"></div><div class="tl-line"></div></div><div class="tl-body">`
+    +`<div class="tl-mrow"><div class="tl-m" contenteditable="true" spellcheck="false">${m}</div><button class="tl-del" title="Delete milestone" onclick="delMilestone(this)">✕</button></div>`
+    +`<div class="tl-d ${noDate?'no-date':'has-date'}"><input type="month" class="tl-date-input" value="${date}" onchange="onTimelineDateChange(this)"><span class="tl-nodate-lbl">No date set</span><span class="tl-note" contenteditable="true" spellcheck="false" data-ph="Add a note (optional)">${note}</span></div>`
+    +`</div></div>`;
+}
+// Stable sort by date ascending -- items sharing a month/year, or multiple
+// undated ones, keep their existing relative order rather than jumping
+// around. Undated (date==='') always sorts last. Used both for a
+// freshly-created block's initial data.items and, via sortTimelineListDom
+// below, for the live DOM after an add/edit/migration.
+function tlSortItems(items){
+  return items.map((it,idx)=>({it,idx})).sort((a,b)=>{
+    const ad=a.it.date||'', bd=b.it.date||'';
+    if(ad && bd) return ad<bd?-1:ad>bd?1:a.idx-b.idx;
+    if(ad && !bd) return -1;
+    if(!ad && bd) return 1;
+    return a.idx-b.idx;
+  }).map(x=>x.it);
+}
+// Same sort, applied directly to an already-rendered .tl-list's DOM children
+// (each carries its own date via its .tl-date-input) -- re-appending each in
+// sorted order moves it to the end of the list one at a time, which is all
+// that's needed to reorder the whole list.
+function sortTimelineListDom(list){
+  if(!list) return;
+  const withKey=[...list.querySelectorAll(':scope > .tl-item')].map((el,idx)=>({
+    el, idx, date:(el.querySelector('.tl-date-input')||{}).value||''
+  }));
+  withKey.sort((a,b)=>{
+    if(a.date && b.date) return a.date<b.date?-1:a.date>b.date?1:a.idx-b.idx;
+    if(a.date && !b.date) return -1;
+    if(!a.date && b.date) return 1;
+    return a.idx-b.idx;
+  });
+  withKey.forEach(x=>list.appendChild(x.el));
+}
+function onTimelineDateChange(input){
+  const wrap=input.closest('.tl-d');
+  if(wrap){ wrap.classList.toggle('no-date', !input.value); wrap.classList.toggle('has-date', !!input.value); }
+  sortTimelineListDom(input.closest('.tl-list'));
+  scheduleSave();
+}
+async function delMilestone(btn){
+  const item=btn.closest('.tl-item');
+  if(item && await appConfirm('Delete this milestone?')){ item.remove(); scheduleSave(); }
+}
+// Best-effort: pulls a sortable "YYYY-MM" out of the loose, human-written
+// date text this block always used before ("May 2026", "Mid-August 2026",
+// "Q1 2027"...). Whatever doesn't fit into that becomes the note instead of
+// being silently dropped; text that doesn't parse at all is left undated
+// (sorts last, flagged "No date set") rather than guessed at.
+const TL_MONTHS=['january','february','march','april','may','june','july','august','september','october','november','december'];
+const TL_MONTH_ABBR={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,sept:8,oct:9,nov:10,dec:11};
+function parseLooseMilestoneDate(text){
+  const raw=(text||'').trim();
+  if(!raw) return {date:'',note:''};
+  const monthNames=TL_MONTHS.concat(Object.keys(TL_MONTH_ABBR)).join('|');
+  // Optional day (with ordinal suffix and/or a comma) between the month and
+  // year -- "March 29, 2027" needs to match just as well as "March 2027";
+  // the day itself is discarded either way, only month/year precision is kept.
+  const re=new RegExp('\\b('+monthNames+')\\.?\\s+(?:\\d{1,2}(?:st|nd|rd|th)?,?\\s+)?(\\d{4})\\b','i');
+  const m=raw.match(re);
+  if(m){
+    const name=m[1].toLowerCase();
+    const monthIdx=TL_MONTHS.indexOf(name)>=0?TL_MONTHS.indexOf(name):TL_MONTH_ABBR[name];
+    const date=m[2]+'-'+String(monthIdx+1).padStart(2,'0');
+    let leftover=raw.slice(0,m.index)+raw.slice(m.index+m[0].length);
+    // A leading qualifier ("Mid-", "Early ", "Beginning of ") only modified
+    // the month we already captured -- drop it rather than keeping it as a
+    // note fragment with nothing left to attach to.
+    leftover=leftover.replace(/^\s*(mid|early|late)[\s-]*$/i,'').replace(/^\s*(beginning of|end of)\s*$/i,'');
+    leftover=leftover.replace(/^[\s\-–—,]+|[\s\-–—,]+$/g,'');
+    return {date, note:leftover};
+  }
+  const qm=raw.match(/\bQ([1-4])\s*(\d{4})\b/i);
+  if(qm){
+    const monthIdx=(parseInt(qm[1],10)-1)*3;
+    const date=qm[2]+'-'+String(monthIdx+1).padStart(2,'0');
+    let leftover=raw.slice(0,qm.index)+raw.slice(qm.index+qm[0].length);
+    leftover=leftover.replace(/^[\s\-–—,]+|[\s\-–—,]+$/g,'');
+    return {date, note:leftover};
+  }
+  const sm=raw.match(/\b(spring|summer|fall|autumn|winter)\s+(\d{4})\b/i);
+  if(sm){
+    const seasonMonth={spring:2,summer:5,fall:8,autumn:8,winter:11}[sm[1].toLowerCase()];
+    const date=sm[2]+'-'+String(seasonMonth+1).padStart(2,'0');
+    // A season->month mapping is a guess, not a fact -- keep the full
+    // original text visible as the note too, not just the derived date.
+    return {date, note:raw};
+  }
+  return {date:'', note:raw};
 }
 
 function dlRow(i){
@@ -3768,9 +3878,10 @@ async function delTblCol(id){
 function addMilestone(lid){
   const list=document.getElementById(lid);
   const d=document.createElement('div');
-  d.innerHTML=tlItem('New milestone','Date');
+  d.innerHTML=tlItem('New milestone','','');
   const item=d.firstElementChild;
   list.appendChild(item);
+  sortTimelineListDom(list); // undated, so this stays at the end today -- keeps behavior correct if that ever changes
   item.querySelector('.tl-m').focus();
   scheduleSave();
 }
@@ -6843,6 +6954,23 @@ function upgradeBlocks(root){
       m.insertAdjacentHTML('beforeend', '<div class="mscn-foot"><button class="mscn-btn mscn-refresh-btn" onclick="refreshMarginScenario(this)">\u{1F504} Refresh</button><button class="mscn-btn" onclick="openMarginCalc(\''+pid+'\',\''+sid+'\')">↗ Open in Calculator</button></div>');
     }
   });
+  // Timeline milestones used to be two plain contenteditable fields -- a
+  // label and a free-text "date" with no real value behind it, so nothing
+  // could ever be sorted or reliably re-dated. Upgraded to a real month/year
+  // date (drives auto-sort) plus an optional note for whatever didn't parse
+  // as one. Detected by the absence of the new date input, so this only
+  // ever touches genuinely old items and never re-runs on ones already
+  // upgraded (idempotent, same as every other self-heal above).
+  root.querySelectorAll('.block-timeline .tl-item').forEach(item=>{
+    if(item.querySelector('.tl-date-input')) return;
+    const mEl=item.querySelector('.tl-m'), dEl=item.querySelector('.tl-d');
+    const label=mEl?mEl.innerHTML:'';
+    const parsed=parseLooseMilestoneDate(dEl?dEl.textContent:'');
+    const fresh=document.createElement('div');
+    fresh.innerHTML=tlItem(label, parsed.date, parsed.note);
+    item.replaceWith(fresh.firstElementChild);
+  });
+  root.querySelectorAll('.block-timeline .tl-list').forEach(sortTimelineListDom);
 }
 
 // ==================== TABLE: MOVE ROWS / COLUMNS ====================
