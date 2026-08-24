@@ -654,6 +654,23 @@ body.view-mode .mg2-scn-name,
 body.view-mode .mg2-course-row input[type=checkbox],
 body.view-mode .mg2-gened-check input[type=checkbox]{pointer-events:none;}
 
+/* knowledge base */
+.kb-cat{margin-bottom:22px;}
+.kb-cat-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid var(--bdr);padding-bottom:8px;margin-bottom:10px;}
+.kb-cat-lbl{font-family:var(--font-cond);text-transform:uppercase;letter-spacing:0.08em;font-weight:700;font-size:13px;color:var(--ink);}
+.kb-cat-desc{font-size:12px;color:var(--mut);margin-top:2px;}
+.kb-add{flex:0 0 auto;}
+.kb-item{border:1px solid var(--bdr);border-radius:6px;padding:10px 12px;margin-bottom:8px;background:#fff;}
+.kb-item-head{display:flex;align-items:center;gap:8px;}
+.kb-title{flex:1;min-width:0;border:1px solid transparent;background:transparent;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--txt);padding:3px 4px;border-radius:4px;outline:none;}
+.kb-title:hover,.kb-title:focus{border-color:var(--bdr);background:#fff;}
+.kb-body-input{width:100%;box-sizing:border-box;margin-top:6px;min-height:60px;resize:vertical;border:1px solid var(--bdr);border-radius:4px;padding:7px 8px;font-family:inherit;font-size:13px;line-height:1.55;color:var(--txt);outline:none;}
+.kb-body-input:focus{border-color:var(--acc);}
+.kb-del{flex:0 0 auto;border:none;background:transparent;color:var(--mut);cursor:pointer;font-size:13px;padding:3px 6px;border-radius:4px;}
+.kb-del:hover{color:#dc2626;background:#fee2e2;}
+.cp-grounding{font-size:11.5px;line-height:1.5;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:7px 9px;margin-top:8px;}
+.cp-grounding.empty{color:#92400e;background:#fffbeb;border-color:#fde68a;}
+
 /* claude panel */
 .claude-toggle{background:linear-gradient(135deg,#7c3aed,#4f8ef7);color:#fff;border:none;padding:5px 13px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity 0.12s;}
 .claude-toggle:hover{opacity:0.88;}
@@ -1376,6 +1393,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); pmOpenSmart();">📋 PM Board</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); marginOpenSmart();">💲 Margin Calculator</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); togglePanel();">✦ Ask Claude</div>
+                <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); openKnowledgeBase();">🧠 Knowledge Base</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); copyViewerLinkForCurrentPage();">🔗 Copy link to this page</div>
               </div>
             </div>
@@ -1516,6 +1534,20 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
       </div>
     </div>
     <div id="margin-body"></div>
+  </div>
+</div>
+
+<!-- ========== KNOWLEDGE BASE (grounding for every AI action) ========== -->
+<div id="kb-view" style="display:none">
+  <div class="pm-shell">
+    <div class="pm-head">
+      <div class="pm-back" onclick="kbBack()">&#8592; Back</div>
+      <div>
+        <div class="pm-title">Playbook Knowledge Base</div>
+        <div class="pm-sub">What Claude should always know about SDI &mdash; applied to every draft and review</div>
+      </div>
+    </div>
+    <div id="kb-body"></div>
   </div>
 </div>
 <input type="file" id="margin-import-file-input" accept="application/json,.json" style="display:none" onchange="marginHandleImportFile(this)">
@@ -1953,7 +1985,7 @@ async function ensureProgramLoaded(progId){
 async function pushLocalContentToGithub(){
   if(githubMode() !== 'editor'){ await appAlert('Connect an editor GitHub token first (Export ▾ → Connect to GitHub).'); return; }
   saveCurrentBlocks();
-  const state = { programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, v:2, ts: Date.now() };
+  const state = { programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, v:2, ts: Date.now() };
   const ok = await githubCommitFile(GITHUB_CONTENT_PATH, state, 'Push local content');
   if(ok) await appAlert('Current content pushed to GitHub ✓');
   else await appAlert('Push failed. Check that your editor token is still valid and scoped to '+(GITHUB_CONTENT_REPO||'the content repo')+'.');
@@ -2184,6 +2216,21 @@ const DEFAULT_CONTENT = {
 let programs = [];
 let pmStore = {}; // PM Space: progId -> {tasks:[], collapsed:{}}
 let marginStore = { courses: [], scenariosByProgram: {} }; // shared course library + progId -> [scenario,...]
+// Persistent grounded context for every AI action -- the thing that stops
+// generated content reading like generic AI. Stores only what a human
+// AUTHORS here (voice, compliance rules, competitors, personas, notes);
+// anything the app already holds as real data -- the course/cost model in
+// marginStore, decisions in Decision Log blocks, program structure, section
+// prose -- is DERIVED at grounding time instead of being copied in, so there
+// is never a second stale copy to keep in sync.
+let knowledgeStore = { entries: [] }; // [{id, cat, title, body, updated}]
+const KB_CATS = [
+  { id:'voice',      lbl:'Voice & style',        desc:'How SDI writes. Applied to every draft.' },
+  { id:'compliance', lbl:'Compliance & approval', desc:'DEAC, state, FSA/VA, catalog cycle rules.' },
+  { id:'audience',   lbl:'Audience & personas',   desc:'Who the programs are for.' },
+  { id:'competitor', lbl:'Competitors & market',  desc:'Named competitors and positioning facts.' },
+  { id:'note',       lbl:'Other context',         desc:'Anything else Claude should always know.' }
+];
 let curProgId = null;
 let curPhase = 'strategy';
 let curSection = 's-market';
@@ -2207,7 +2254,7 @@ const dirtyPrograms = new Set(); // progId's with real content changes since the
 // fields can hold bulk HTML/images.
 function buildManifest(){
   return { v:3, ts: Date.now(), programs, phases: clonePhases(PHASES), sectionStatus, sectionLocks,
-           sectionComments, sectionUpdated, blockTags, pmStore, marginStore };
+           sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore };
 }
 // Just one program's slice of blockStore, same key shape as the global
 // object (progId:sectionId) so merging it back in is a zero-transform
@@ -2478,6 +2525,8 @@ function applyState(s){
   blockTags = s.blockTags || {};
   pmStore = s.pmStore || (function(){ try{ return JSON.parse(localStorage.getItem('sdi_pm_mirror')||'{}'); }catch(e){ return {}; } })();
   marginStore = s.marginStore || { courses: [], scenariosByProgram: {} };
+  knowledgeStore = (s.knowledgeStore && Array.isArray(s.knowledgeStore.entries))
+    ? s.knowledgeStore : { entries: [] };
   // Per-program tabs migration: any program without its own phases inherits a copy
   // of the old shared structure (or the defaults)
   const shared = (s.phases && s.phases.length) ? s.phases : DEFAULT_PHASES;
@@ -2513,7 +2562,7 @@ function persistLocalNow(){
   if(window.__skipPersist) return; // guard during restore/reload
   saveCurrentBlocks();
   try{
-    const state = { programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, v:2, ts: Date.now() };
+    const state = { programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, v:2, ts: Date.now() };
     const {lean,assets}=dehydrateState(state);
     let ok=false;
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(lean)); ok=true; }catch(e){ console.warn('local mirror failed:',e); }
@@ -2635,7 +2684,7 @@ async function persist(){
 async function doPersist(){
   saveCurrentBlocks();
   pushUndo();
-  const state = { programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, v:2, ts: Date.now() };
+  const state = { programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, v:2, ts: Date.now() };
   const ind = document.getElementById('save-ind');
 
   // Always keep a local backup (IndexedDB primary, localStorage mirror).
@@ -5345,6 +5394,7 @@ function renderPanel(){
   // sandbox). On the hosted app it doesn't, so say what actually happens --
   // the button copies a prompt and the answer comes back through the paste
   // box below -- rather than promising in-panel drafting that can't run here.
+  const grounding = buildGroundedContext(curProgId);
   const liveHint = claudeAvailable()
     ? 'Claude checks live web sources, drafts in this panel, and cites what it finds — you review and approve before anything is inserted.'
     : 'This copies a ready-made prompt to your clipboard. Paste it into Claude (Cowork or a chat), then bring the answer back with the box below.';
@@ -5371,6 +5421,7 @@ function renderPanel(){
       <div class="cp-lbl">Optional: source document or notes</div>
       <textarea class="cp-paste" id="cp-paste" placeholder="Paste an interview transcript, worksheet, research notes, or raw text for Claude to work from..."></textarea>
       <button class="cp-copy-btn" id="cp-run-btn" onclick="draftLive()">${runLbl}</button>
+      <div class="cp-grounding${grounding.counts.knowledge?'':' empty'}">🧠 ${groundingSummary(grounding)}${grounding.counts.knowledge?'':' <a href="#" onclick="event.preventDefault();togglePanel();openKnowledgeBase();" style="color:inherit;text-decoration:underline;">Open the Knowledge Base</a>'}</div>
       <div class="cp-hint" id="cp-fallback">${liveHint}</div>
       <div id="cp-draft" style="display:none;margin-top:12px;"></div>
     </div>
@@ -5398,6 +5449,107 @@ function selectPrompt(btn, task){
 
 function modeFromLabel(lbl){ return /(^\s*review|^\s*check|risk|gap)/i.test(lbl||'') ? 'review' : 'draft'; }
 
+// ==================== KNOWLEDGE BASE: GROUNDING ====================
+// Assembles the persistent context every AI action should carry, and reports
+// exactly what went in so the UI can show it and so a generated claim can be
+// traced back to its source. Authored knowledge comes from knowledgeStore;
+// everything else is DERIVED live from data the app already holds, so there
+// is no second copy to go stale.
+//
+// Returns { text, sources:[{key,label}], counts:{...} } -- `text` is prompt
+// -ready, `sources` is what to display as the grounding receipt.
+function buildGroundedContext(progId, opts){
+  opts = opts || {};
+  const lines = [], sources = [];
+  const counts = { knowledge:0, courses:0, decisions:0, siblings:0 };
+  const p = programs.find(x=>x.id===progId);
+
+  // --- 1. Authored knowledge, grouped by category, in KB_CATS order ---
+  const entries = (knowledgeStore.entries||[]).filter(e=>e && (e.title||e.body));
+  if(entries.length){
+    lines.push('## SDI standing knowledge');
+    KB_CATS.forEach(cat=>{
+      const inCat = entries.filter(e=>e.cat===cat.id);
+      if(!inCat.length) return;
+      lines.push('', '### '+cat.lbl);
+      inCat.forEach(e=>{
+        const key = 'K'+(counts.knowledge+1);
+        counts.knowledge++;
+        sources.push({key, label:(e.title||'(untitled)')+' — '+cat.lbl});
+        lines.push('['+key+'] '+(e.title||'(untitled)')+': '+String(e.body||'').trim());
+      });
+    });
+  }
+
+  // --- 2. Course & cost model, derived from marginStore (never duplicated) ---
+  if(p){
+    const pm = (typeof programMargin==='function') ? programMargin(p) : null;
+    const ids = pm ? [].concat(pm.coreCourseIds||[], pm.electiveCourseIds||[]) : [];
+    const courses = ids.map(id=>(typeof marginCourse==='function') ? marginCourse(id) : null).filter(Boolean);
+    if(courses.length){
+      lines.push('', '## Course & cost model for this program (authoritative — do not invent courses or costs)');
+      courses.forEach(c=>{
+        const cost = (typeof marginCourseTotalCost==='function') ? marginCourseTotalCost(c) : null;
+        const isCore = pm && (pm.coreCourseIds||[]).includes(c.id);
+        lines.push('- '+(c.code||c.id)+' ('+(isCore?'core':'elective')+', '+(c.creditHours||0)+' cr'
+          + (cost!=null ? ', material cost $'+Number(cost).toFixed(2) : '') + ')');
+      });
+      counts.courses = courses.length;
+      sources.push({key:'COURSES', label:courses.length+' courses from the margin course library'});
+    }
+  }
+
+  // --- 3. Decision history, derived from Decision Log blocks in this program ---
+  if(p){
+    const decisions = [];
+    Object.keys(blockStore).forEach(k=>{
+      if(k.indexOf(progId+':') !== 0) return;
+      const html = blockStore[k]; if(!html || html.indexOf('dl-table')<0) return;
+      try{
+        const doc = new DOMParser().parseFromString('<div>'+html+'</div>','text/html');
+        doc.querySelectorAll('.dl-table tbody tr').forEach(tr=>{
+          const c = [...tr.children].map(td=>td.textContent.trim());
+          if(c[0]) decisions.push({dec:c[0], date:c[1]||'', by:c[2]||'', rat:c[3]||'', status:c[4]||''});
+        });
+      }catch(e){}
+    });
+    if(decisions.length){
+      lines.push('', '## Decisions already made on this program (do not contradict these)');
+      decisions.slice(0,25).forEach((d,i)=>{
+        const key='DEC'+(i+1);
+        lines.push('['+key+'] '+d.dec+(d.date?' ('+d.date+')':'')+(d.status?' — '+d.status:'')
+          +(d.rat?' Rationale: '+d.rat:''));
+      });
+      counts.decisions = Math.min(decisions.length,25);
+      sources.push({key:'DEC', label:counts.decisions+' logged decision(s) on this program'});
+    }
+  }
+
+  // --- 4. Sibling section titles, so a draft knows what belongs elsewhere ---
+  if(p && typeof phasesOf==='function'){
+    const titles = [];
+    phasesOf(p).forEach(ph=>(ph.sections||[]).forEach(s=>{ titles.push(ph.name+' > '+s.name); }));
+    if(titles.length){
+      lines.push('', '## Other sections of this program (stay in scope — do not write their content here)');
+      lines.push(titles.join(' | '));
+      counts.siblings = titles.length;
+      sources.push({key:'STRUCT', label:titles.length+' sibling sections for scope'});
+    }
+  }
+
+  return { text: lines.join('\n').trim(), sources, counts };
+}
+// One-line receipt for the panel: what this prompt is actually grounded in.
+function groundingSummary(g){
+  if(!g) return 'Not grounded.';
+  const bits = [];
+  if(g.counts.knowledge) bits.push(g.counts.knowledge+' knowledge item'+(g.counts.knowledge!==1?'s':''));
+  if(g.counts.courses)   bits.push(g.counts.courses+' course'+(g.counts.courses!==1?'s':''));
+  if(g.counts.decisions) bits.push(g.counts.decisions+' decision'+(g.counts.decisions!==1?'s':''));
+  if(g.counts.siblings)  bits.push('program structure');
+  return bits.length ? 'Grounded in '+bits.join(', ')+'.' : 'No standing knowledge yet — add some so drafts stop reading generic.';
+}
+
 function buildCoworkPrompt(){
   const progName  = document.getElementById('prog-nm')?.textContent?.trim() || 'this program';
   const phaseName = document.getElementById('bc-phase')?.textContent || '';
@@ -5406,8 +5558,12 @@ function buildCoworkPrompt(){
   const blocksEl  = document.getElementById('blocks-root');
   const secText   = blocksEl ? blocksEl.innerText.replace(/\n{3,}/g,'\n\n').trim() : '';
   const task      = selectedTask || DEFAULT_PROMPTS[0].task;
+  const g         = buildGroundedContext(curProgId);
 
   let prompt = `I am working on the "${progName}" educational program at SDI.\nSection: ${phaseName} > ${secName}\n`;
+  // Standing context first: it's the most stable part of the prompt, and it's
+  // what makes the answer specific to SDI rather than generic.
+  if(g.text) prompt += `\n${g.text}\n\nWhen you rely on a numbered item above, cite it inline like [K2] or [DEC1].\n`;
   if(secText) prompt += `\nCurrent section content:\n---\n${secText}\n---\n`;
   prompt += `\nTask: ${task}`;
   if(docText) prompt += `\n\nSource document or notes:\n---\n${docText}\n---`;
@@ -6642,7 +6798,7 @@ function buildBackupJSON(){
   // stale, and reading it would export old work while looking successful.
   try{
     saveCurrentBlocks();
-    space={ programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, v:2, ts: Date.now() };
+    space={ programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, v:2, ts: Date.now() };
   }catch(e){ space=null; }
   if(!space){ try{ space=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'); }catch(e){} }
   try{ tmpls=JSON.parse(localStorage.getItem('sdi_templates')||'[]'); }catch(e){}
@@ -6909,10 +7065,17 @@ async function mergeBundledSnapshot(banner){
       scenarios.forEach(s=>{ if(!existingIds.has(s.id)) marginStore.scenariosByProgram[pid].push(s); });
     });
   }
+  // 6. knowledge base: gap-fill entries by id, never overwrite an existing one --
+  // same non-destructive merge rule as the margin store above.
+  if(snap.knowledgeStore && Array.isArray(snap.knowledgeStore.entries)){
+    if(!knowledgeStore || !Array.isArray(knowledgeStore.entries)) knowledgeStore = { entries: [] };
+    const kbIds = new Set(knowledgeStore.entries.map(e=>e.id));
+    snap.knowledgeStore.entries.forEach(e=>{ if(!kbIds.has(e.id)){ knowledgeStore.entries.push(e); kbIds.add(e.id); } });
+  }
 
   try{
     await saveSpace({ programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks,
-      sectionComments, sectionUpdated, blockTags, pmStore, marginStore, v:2, ts: Date.now() });
+      sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, v:2, ts: Date.now() });
   }catch(err){ await appAlert('Restore failed while writing to browser storage: '+err.message); return; }
   window.__skipPersist=true;
   await appAlert('Restored '+addedBlocks+' section(s), '+addedSecs+' new section entr(ies) and '+addedProgs+
@@ -9375,6 +9538,85 @@ function marginBack(){
   else if(marginOrigin==='dash'){ document.getElementById('pm-dash-view').style.display='block'; renderPMDash(); }
   else { document.getElementById('hub-view').style.display='block'; renderHub(); }
 }
+// ==================== KNOWLEDGE BASE: VIEW ====================
+// Full-screen tool, same open/back convention as PM Board and the Margin
+// Calculator (remember where we came from, restore it on Back).
+let kbOrigin = 'hub';
+function openKnowledgeBase(){
+  if(viewerModeForced) return; // editor-only: it defines how drafts get written
+  kbOrigin = document.getElementById('prog-view').style.display !== 'none' ? 'prog'
+           : (document.getElementById('pm-dash-view').style.display !== 'none' ? 'dash' : 'hub');
+  document.getElementById('prog-view').style.display='none';
+  document.getElementById('hub-view').style.display='none';
+  const dash=document.getElementById('pm-dash-view'); if(dash) dash.style.display='none';
+  document.getElementById('kb-view').style.display='block';
+  renderKnowledgeBase();
+}
+function kbBack(){
+  document.getElementById('kb-view').style.display='none';
+  if(kbOrigin==='prog') document.getElementById('prog-view').style.display='block';
+  else if(kbOrigin==='dash'){ document.getElementById('pm-dash-view').style.display='block'; renderPMDash(); }
+  else { document.getElementById('hub-view').style.display='block'; renderHub(); }
+}
+function kbEntriesIn(cat){ return (knowledgeStore.entries||[]).filter(e=>e.cat===cat); }
+function renderKnowledgeBase(){
+  const root=document.getElementById('kb-body'); if(!root) return;
+  const total=(knowledgeStore.entries||[]).length;
+  const intro = '<div style="background:#FAF6ED;border:1px solid var(--bdr);border-radius:8px;padding:14px 16px;margin-bottom:18px;font-size:13px;line-height:1.6;color:var(--txt);">'
+    + '<strong>Everything here is sent with every draft and review.</strong> It is how Claude knows SDI’s voice, '
+    + 'your accreditation constraints, and who your programs are for — instead of starting from scratch each time. '
+    + 'Your course library, logged decisions and program structure are pulled in automatically and don’t need re-entering here.'
+    + '</div>';
+  const cats = KB_CATS.map(cat=>{
+    const items = kbEntriesIn(cat.id);
+    const rows = items.length ? items.map(e=>`
+      <div class="kb-item" data-id="${e.id}">
+        <div class="kb-item-head">
+          <input class="kb-title" type="text" value="${escapeHtml(e.title||'')}" placeholder="Short label (e.g. DEAC submission window)"
+                 oninput="kbEdit('${e.id}','title',this.value)">
+          <button class="kb-del" title="Delete this item" onclick="kbDelete('${e.id}')">✕</button>
+        </div>
+        <textarea class="kb-body-input" placeholder="The fact, rule, or guidance Claude should always apply…"
+                  oninput="kbEdit('${e.id}','body',this.value)">${escapeHtml(e.body||'')}</textarea>
+      </div>`).join('')
+      : '<div style="font-size:12.5px;color:var(--mut);padding:6px 0 10px;">Nothing here yet.</div>';
+    return `
+      <div class="kb-cat">
+        <div class="kb-cat-head">
+          <div>
+            <div class="kb-cat-lbl">${cat.lbl}</div>
+            <div class="kb-cat-desc">${cat.desc}</div>
+          </div>
+          <button class="mg2-btn kb-add" onclick="kbAdd('${cat.id}')">+ Add</button>
+        </div>
+        ${rows}
+      </div>`;
+  }).join('');
+  root.innerHTML = intro
+    + `<div style="font-size:12px;color:var(--mut);margin-bottom:10px;">${total} item${total!==1?'s':''} in the knowledge base.</div>`
+    + cats;
+}
+function kbAdd(cat){
+  if(viewerModeForced) return;
+  knowledgeStore.entries.push({ id:'kb-'+Date.now()+'-'+Math.random().toString(36).slice(2,6), cat, title:'', body:'', updated:Date.now() });
+  scheduleSave(); renderKnowledgeBase();
+  const items=document.querySelectorAll('.kb-item'); const last=items[items.length-1];
+  const f=last && last.querySelector('.kb-title'); if(f) f.focus();
+}
+function kbEdit(id, field, value){
+  if(viewerModeForced) return;
+  const e=(knowledgeStore.entries||[]).find(x=>x.id===id); if(!e) return;
+  e[field]=value; e.updated=Date.now();
+  scheduleSave();
+}
+async function kbDelete(id){
+  if(viewerModeForced) return;
+  const e=(knowledgeStore.entries||[]).find(x=>x.id===id); if(!e) return;
+  const label=(e.title||'').trim();
+  if(!await appConfirm('Delete '+(label?'"'+label+'"':'this item')+' from the knowledge base?')) return;
+  knowledgeStore.entries = knowledgeStore.entries.filter(x=>x.id!==id);
+  scheduleSave(); renderKnowledgeBase();
+}
 function marginGoLibrary(){ marginView='library'; renderMargin(); }
 function marginOpenProgram(progId){ marginView='program'; marginCurProgId=progId; marginDrafts={}; renderMargin(); }
 // Docked-panel counterparts to renderPMBody()'s root switch and
@@ -10202,7 +10444,7 @@ async function init(){
   // An unconditional write here re-stamped and re-flattened whatever was loaded,
   // which turned any bad read into a permanent overwrite.
   if(seededThisBoot)
-  try{ await saveSpace({ programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, v:2, ts: Date.now() }); }catch(e){ console.warn('seed persist failed:', e); }
+  try{ await saveSpace({ programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, v:2, ts: Date.now() }); }catch(e){ console.warn('seed persist failed:', e); }
 
   renderHub();
   // Reopen the program you were working in last session -- never for a real viewer, who
