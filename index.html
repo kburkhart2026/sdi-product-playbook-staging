@@ -24,12 +24,19 @@
 :root{
   --sw:260px;--sbg:#3B0A10;--shov:#5A1219;--sact:#6B1720;--stxt:#F3EDE3;--smut:#C9B79C;
   --acc:#D50032;--acc-dark:#A50029;--ink:#101820;--maroon:#4F0A12;--tan:#C9B79C;--bone:#ECE6DB;
-  --cbg:#F5F3EE;--white:#ffffff;--txt:#101820;--mut:#5B6470;--bdr:#E3DFD5;
+  --cbg:#F5F3EE;--white:#ffffff;--txt:#101820;--mut:#5B6470;--bdr:#DAD5C9;
+  /* The page ground. Deliberately SEPARATE from --cbg: that token is also the
+     hover/subtle fill on ~20 controls (menu rows, toolbar buttons, table
+     headers, the block picker), so turning --cbg white would make every one
+     of those hover states invisible. --bdr also warmed one step
+     (#E3DFD5 -> #DAD5C9) because cards no longer get separation from a cream
+     ground and have to carry it on their own edge. */
+  --page:#ffffff;
   --font-body:"proxima-nova","Mulish",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --font-cond:"proxima-nova-condensed","Saira Condensed","Arial Narrow",sans-serif;
   --font-collegiate:"prohibition","Saira Condensed",sans-serif;
 }
-body{font-family:var(--font-body);background:var(--cbg);color:var(--txt);height:100vh;overflow:hidden;}
+body{font-family:var(--font-body);background:var(--page);color:var(--txt);height:100vh;overflow:hidden;}
 
 /* ===== HUB ===== */
 #hub-view{height:100vh;overflow-y:auto;background:#f0f4fa;}
@@ -77,6 +84,48 @@ body{font-family:var(--font-body);background:var(--cbg);color:var(--txt);height:
 
 /* ===== SIDEBAR ===== */
 .sidebar{width:var(--sw);background:var(--sbg);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;}
+.sidebar{transition:width 0.2s ease;}
+.sb-railrow{display:flex;justify-content:flex-end;padding:8px 10px 0;}
+.sb-rail-btn{width:26px;height:26px;flex:0 0 auto;border-radius:5px;border:1px solid var(--tan);background:rgba(201,183,156,0.16);color:var(--stxt);cursor:pointer;font-size:13px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;font-family:inherit;}
+.sb-rail-btn:hover{background:var(--tan);color:var(--sbg);}
+.sb-rail-btn:focus-visible{outline:2px solid var(--tan);outline-offset:2px;}
+
+/* ---- Rail mode -------------------------------------------------------
+   Driven by re-pointing --sw, which .sidebar already uses for its width,
+   so the whole layout (including the docked PM Board / Margin panels that
+   share .main) reflows off one token instead of bespoke rules. */
+body.sb-rail{--sw:52px;}
+body.sb-rail .sb-logo-area,
+body.sb-rail .sb-back,
+body.sb-rail .sb-header,
+body.sb-rail .sb-search-wrap,
+body.sb-rail .sb-collapse-row,
+body.sb-rail .add-phase-btn,
+body.sb-rail .ph-nm,
+body.sb-rail .ph-arr,
+body.sb-rail .ph-del,
+body.sb-rail .dph,
+body.sb-rail .ph-secs{display:none!important;}
+body.sb-rail .sb-railrow{justify-content:center;padding:9px 0 2px;}
+body.sb-rail .phases-nav{padding:6px 0;overflow:visible;}
+body.sb-rail .phase-hdr{justify-content:center;padding:9px 0;margin-bottom:2px;gap:0;}
+/* At 52px the dots are the only navigation left, so they read as targets. */
+body.sb-rail .ph-dot{width:11px;height:11px;box-shadow:0 0 0 3px rgba(255,255,255,0.10);}
+body.sb-rail .phase-hdr:hover .ph-dot{box-shadow:0 0 0 3px rgba(201,183,156,0.45);}
+
+/* ---- Phase flyout (rail mode only) ----------------------------------
+   Clicking a rail dot opens just that phase's sections next to the rail,
+   so navigating never costs back the width the rail just reclaimed. */
+#ph-flyout{position:fixed;z-index:320;min-width:210px;max-width:280px;background:var(--sbg);border:1px solid rgba(255,255,255,0.14);border-radius:8px;box-shadow:0 10px 34px rgba(0,0,0,0.42);padding:8px;display:none;}
+#ph-flyout.show{display:block;}
+.pf-head{display:flex;align-items:center;gap:8px;padding:4px 8px 8px;border-bottom:1px solid rgba(255,255,255,0.10);margin-bottom:6px;}
+.pf-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.pf-nm{font-family:var(--font-cond);text-transform:uppercase;letter-spacing:0.09em;font-size:12px;font-weight:700;color:var(--stxt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pf-list{max-height:60vh;overflow-y:auto;}
+.pf-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:5px;font-size:12.5px;color:var(--smut);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pf-item:hover{background:var(--shov);color:var(--stxt);}
+.pf-item.active{background:var(--sact);color:#fff;font-weight:700;}
+.pf-empty{padding:8px 9px;font-size:12px;color:var(--smut);font-style:italic;}
 .sb-logo-area{display:flex;justify-content:center;align-items:center;padding:16px 16px 8px;border-bottom:1px solid rgba(255,255,255,0.08);}
 .sb-logo-area svg{filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));}
 .sb-back{display:flex;align-items:center;gap:8px;padding:10px 16px 6px;cursor:pointer;font-size:12px;color:var(--smut);border-bottom:1px solid rgba(255,255,255,0.06);transition:color 0.12s;}
@@ -903,7 +952,7 @@ body.view-mode .wysiwyg-bar{display:none!important;}
    SDI BRAND SKIN -- final cascade layer (Sonoran Desert Institute)
    Crimson action, maroon anchors, warm bone surfaces, condensed caps.
    ============================================================ */
-#hub-view{background:var(--cbg);}
+#hub-view{background:var(--page);}
 .hub-title{font-family:var(--font-cond);text-transform:uppercase;letter-spacing:0.14em;font-size:15px;font-weight:700;color:var(--tan);}
 .hub-section-label{font-family:var(--font-cond);letter-spacing:0.16em;font-size:12px;color:#8A8377;}
 .hub-new-btn{border-radius:3px;font-family:var(--font-cond);text-transform:uppercase;letter-spacing:0.06em;font-weight:700;font-size:14px;}
@@ -1348,6 +1397,9 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
         <img src="SDI-logo.png" alt="SDI" style="height:58px;width:auto;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
         <div style="display:none;width:58px;height:58px;background:#0d0d0d;border-radius:8px;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:#f0ebe2;letter-spacing:-1px;font-family:Impact,Arial Black">SDI</div>
       </div>
+      <div class="sb-railrow">
+        <button class="sb-rail-btn" id="sb-rail-btn" onclick="toggleSidebarRail()" title="Collapse sidebar (Cmd/Ctrl + \)" aria-label="Collapse sidebar">&#171;</button>
+      </div>
       <div class="sb-back" onclick="goHub()">&#8592; All Programs</div>
       <div class="sb-header">
         <div class="prog-lbl">Program</div>
@@ -1537,6 +1589,9 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
   </div>
 </div>
 
+<!-- ========== PHASE FLYOUT (sidebar rail mode) ========== -->
+<div id="ph-flyout"></div>
+
 <!-- ========== KNOWLEDGE BASE (grounding for every AI action) ========== -->
 <div id="kb-view" style="display:none">
   <div class="pm-shell">
@@ -1620,6 +1675,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
       <tr><td>Cmd/Ctrl + Z</td><td>Undo</td></tr>
       <tr><td>Cmd/Ctrl + Shift + Z</td><td>Redo</td></tr>
       <tr><td>[ / ]</td><td>Previous / Next section</td></tr>
+      <tr><td>Cmd/Ctrl + \</td><td>Collapse / expand the sidebar</td></tr>
       <tr><td>Escape</td><td>Close search or modal</td></tr>
       <tr><td>?</td><td>Show this help</td></tr>
     </table>
@@ -3162,7 +3218,7 @@ function renderSidebar(){
         <span class="sec-del" title="Delete section" onclick="deleteSection('${ph.id}','${s.id}',event)">✕</span>
       </div>`;}).join('');
     grp.innerHTML = `
-      <div class="phase-hdr" onclick="togglePh('${ph.id}')">
+      <div class="phase-hdr" title="${escapeHtml(ph.name)}" onclick="togglePh('${ph.id}')">
         <span class="dph" title="Drag">⠿</span>
         <span class="ph-dot" style="background:${ph.color}"></span>
         <span class="ph-nm">${ph.name}</span>
@@ -3210,6 +3266,9 @@ function renderSidebar(){
 }
 
 function togglePh(pid){
+  // In rail mode the section list is hidden, so expanding it in place would do
+  // nothing visible -- show the flyout beside the rail instead.
+  if(document.body.classList.contains('sb-rail')){ openPhaseFlyout(pid); return; }
   const open=document.getElementById('secs-'+pid).classList.toggle('open');
   document.getElementById('arr-'+pid).classList.toggle('open');
   if(curProgId){
@@ -3218,6 +3277,80 @@ function togglePh(pid){
     saveUIState();
   }
 }
+
+// ==================== SIDEBAR RAIL + PHASE FLYOUT ====================
+// Collapsing is navigation, not editing, so this is available to viewers too.
+function applySidebarRail(){
+  const rail = !!uiState.sbRail;
+  document.body.classList.toggle('sb-rail', rail);
+  const btn = document.getElementById('sb-rail-btn');
+  if(btn){
+    btn.innerHTML = rail ? '&#187;' : '&#171;';
+    const lbl = (rail ? 'Expand' : 'Collapse') + ' sidebar (Cmd/Ctrl + \\)';
+    btn.title = lbl; btn.setAttribute('aria-label', lbl);
+  }
+  if(!rail) closePhaseFlyout();
+}
+function toggleSidebarRail(){
+  uiState.sbRail = !uiState.sbRail;
+  saveUIState();
+  applySidebarRail();
+}
+function openPhaseFlyout(pid){
+  const ph = PHASES.find(p=>p.id===pid);
+  const fly = document.getElementById('ph-flyout');
+  if(!ph || !fly) return;
+  if(fly.classList.contains('show') && fly.dataset.pid === pid){ closePhaseFlyout(); return; }
+  const items = (ph.sections||[]).map(s=>
+    `<div class="pf-item ${s.id===curSection?'active':''}" onclick="goToFromFlyout('${ph.id}','${s.id}')">${escapeHtml(s.name)}</div>`
+  ).join('') || '<div class="pf-empty">No sections yet.</div>';
+  fly.dataset.pid = pid;
+  fly.innerHTML = `<div class="pf-head"><span class="pf-dot" style="background:${ph.color}"></span><span class="pf-nm">${escapeHtml(ph.name)}</span></div><div class="pf-list">${items}</div>`;
+  fly.classList.add('show');
+  // Anchor to the dot that was clicked, then pull back on-screen if the list
+  // would run past the bottom of the window.
+  const hdr = document.querySelector('.phase-group[data-pid="'+pid+'"] .phase-hdr');
+  const r = hdr ? hdr.getBoundingClientRect() : {top:80, right:52};
+  fly.style.left = (r.right + 8) + 'px';
+  fly.style.top = r.top + 'px';
+  const fr = fly.getBoundingClientRect();
+  if(fr.bottom > window.innerHeight - 10){
+    fly.style.top = Math.max(8, window.innerHeight - fr.height - 10) + 'px';
+  }
+}
+function closePhaseFlyout(){
+  const fly = document.getElementById('ph-flyout');
+  if(fly){ fly.classList.remove('show'); fly.removeAttribute('data-pid'); }
+}
+function goToFromFlyout(pid, sid){
+  closePhaseFlyout();
+  goTo(pid, sid);
+}
+// Close on an outside click, but never on a click inside the flyout or on the
+// rail itself (the rail's own handler decides whether to toggle).
+document.addEventListener('click', e=>{
+  const fly = document.getElementById('ph-flyout');
+  if(!fly || !fly.classList.contains('show')) return;
+  if(e.target.closest('#ph-flyout') || e.target.closest('.sidebar')) return;
+  closePhaseFlyout();
+}, true);
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape'){ closePhaseFlyout(); return; }
+  // Cmd/Ctrl + \ toggles the rail. NOT a bare "[" -- that key is already
+  // bound to previous-section navigation (see KEYBOARD SHORTCUTS below), and
+  // the modifier form is the conventional sidebar toggle anyway, so it also
+  // stays safe to press while typing.
+  if(e.key !== '\\' || !(e.metaKey || e.ctrlKey)) return;
+  e.preventDefault();
+  toggleSidebarRail();
+});
+// Double-clicking the empty rail expands it -- a large, forgiving target.
+document.addEventListener('dblclick', e=>{
+  if(!document.body.classList.contains('sb-rail')) return;
+  const nav = e.target.closest('.phases-nav');
+  if(!nav || e.target.closest('.phase-hdr')) return;
+  toggleSidebarRail();
+});
 
 // ==================== NAVIGATION ====================
 function goTo(phid,sid){
@@ -10446,6 +10579,7 @@ async function init(){
   if(seededThisBoot)
   try{ await saveSpace({ programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, v:2, ts: Date.now() }); }catch(e){ console.warn('seed persist failed:', e); }
 
+  applySidebarRail(); // restore collapsed/expanded from this browser's own preference
   renderHub();
   // Reopen the program you were working in last session -- never for a real viewer, who
   // should always land on the main Portfolio screen, not wherever YOU last happened to be
