@@ -1598,7 +1598,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
         <div id="cc-panel" style="display:none">
           <div class="pmp-head">
             <div class="pmp-title">Consistency</div>
-            <button class="pmp-dashbtn" onclick="ccRefresh()" title="Run the checks again">&#8635; Re-check</button>
+            <button class="pmp-dashbtn" onclick="ccRecheck(this)" title="Run the checks again">&#8635; Re-check</button>
             <button class="pmp-iconbtn" onclick="ccPanelFullScreen()" title="Open full screen">&#8599;</button>
             <button class="pmp-iconbtn" onclick="ccPanelClose()" title="Close panel">&#10005;</button>
           </div>
@@ -1673,7 +1673,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
         <div class="pm-title">Consistency</div>
         <div class="pm-sub">Where the same thing is written two different ways &mdash; across programs and within one</div>
       </div>
-      <div style="margin-left:auto"><button class="mg2-btn" onclick="ccRefresh()">&#8635; Re-check</button></div>
+      <div style="margin-left:auto"><button class="mg2-btn" onclick="ccRecheck(this)">&#8635; Re-check</button></div>
     </div>
     <div id="cc-body"></div>
   </div>
@@ -6009,7 +6009,8 @@ function ccReplaceInBlock(sectionKey, blockId, from, to, mode){
   return n;
 }
 
-let ccLast = null; // last check result, so the view can re-render without re-running
+let ccLast = null;      // last check result, so the view can re-render without re-running
+let ccLastRunAt = 0;    // when the checks last actually ran -- shown in the UI
 
 async function ccApplyFix(key, onlyFirst){
   if(viewerModeForced) return;
@@ -6179,7 +6180,32 @@ async function ccRunAndRender(){
   }
   ccRefresh();
 }
-function ccRefresh(){ ccLast = ccRunChecks(); renderConsistency(); }
+function ccRefresh(){ ccLast = ccRunChecks(); ccLastRunAt = Date.now(); renderConsistency(); }
+
+// The button the user presses. ccRefresh() alone was invisible: when nothing has
+// changed the re-render is byte-identical, so a click looked like it did nothing.
+// This makes the run observable -- a busy state, a fresh "last checked" time, and
+// a toast saying what was found -- and re-loads any program that isn't in memory
+// so "Re-check" really does check everything.
+async function ccRecheck(btn){
+  if(viewerModeForced) return;
+  const el = btn || document.querySelector('#cc-panel .pmp-dashbtn') || null;
+  const original = el ? el.innerHTML : null;
+  if(el){ el.disabled = true; el.innerHTML = 'Checking\u2026'; }
+  try{
+    // The checks are fast enough to finish in a few milliseconds, which made the
+    // button appear inert. Hold the busy state briefly so the click is always
+    // acknowledged -- the delay is for the eye, not the work.
+    await Promise.all([
+      ccRunAndRender(),                                   // loads any missing programs, then refreshes
+      new Promise(res=>setTimeout(res, 280))
+    ]);
+    const n = ccLast ? ccLast.findings.length : 0;
+    toast(n ? (n+' item'+(n!==1?'s':'')+' need attention') : 'No inconsistencies found \u2713');
+  } finally {
+    if(el){ el.disabled = false; el.innerHTML = original; }
+  }
+}
 
 function ccSevMeta(s){
   return s==='hi' ? {lbl:'Decide', cls:'hi'} : s==='md' ? {lbl:'Look', cls:'md'} : {lbl:'Info', cls:'lo'};
@@ -6196,6 +6222,7 @@ function renderConsistency(){
     + (r.skipped.length ? ' · <b style="color:var(--acc)">not checked: '+r.skipped.join(', ')+'</b>'
                         : ' · every program was loaded, so nothing was skipped')
     + (ignoredCount ? ' · <a href="#" onclick="event.preventDefault();ccUnignoreAll();">'+ignoredCount+' dismissed — restore</a>' : '')
+    + (ccLastRunAt ? ' · <span style="white-space:nowrap">checked '+new Date(ccLastRunAt).toLocaleTimeString()+'</span>' : '')
     + '</div>';
 
   const stats = '<div class="cc-summary">'
