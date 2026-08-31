@@ -6011,19 +6011,57 @@ function ccReplaceInBlock(sectionKey, blockId, from, to, mode){
 
 let ccLast = null; // last check result, so the view can re-render without re-running
 
-function ccApplyFix(key, onlyFirst){
+async function ccApplyFix(key, onlyFirst){
   if(viewerModeForced) return;
   const f = (ccLast && ccLast.findings || []).find(x=>x.key===key);
   if(!f || !f.fixTo) return;
   const places = onlyFirst ? (f.places||[]).slice(0,1) : (f.places||[]);
+
+  // A locked section is protection against ACCIDENTAL edits. This fix is the
+  // opposite of accidental: one named value, reviewed, applied deliberately.
+  // So rather than making you unlock 25 sections by hand, offer to lift the
+  // locks for the duration of this one change and put them back exactly as
+  // they were. Net effect on your locks: none.
+  const lockedKeys = [...new Set(places.map(pl=>pl.progId+':'+pl.sectionId)
+                                       .filter(k=>sectionLocks[k]))];
+  const restore = {};
+  if(lockedKeys.length){
+    const names = lockedKeys.map(k=>{
+      const i = k.indexOf(':');
+      return '• '+ccProgLabel(k.slice(0,i))+' › '+ccSectionName(k.slice(0,i), k.slice(i+1));
+    });
+    const shown = names.slice(0,10).join('\n')
+                + (names.length>10 ? '\n• …and '+(names.length-10)+' more' : '');
+    const ok = await appConfirm(
+      lockedKeys.length+' of the '+places.length+' place(s) to fix are in locked sections:\n\n'
+      + shown
+      + '\n\nUnlock them just for this change, apply it, then re-lock them exactly as they are now?\n\n'
+      + 'Only the “'+f.found+'” → “'+f.fixTo+'” replacement is made. Nothing else in those sections is touched, '
+      + 'and your locks end up unchanged.',
+      'Unlock, fix, re-lock', 'Cancel');
+    if(!ok) return;
+    // Deliberately NOT going through toggleLock(): that also calls
+    // pmOnSectionLocked(), which flips the linked PM task between done and
+    // working. Since the lock state is restored unchanged, the PM board should
+    // see nothing happen at all.
+    lockedKeys.forEach(k=>{ restore[k] = sectionLocks[k]; delete sectionLocks[k]; });
+  }
+
   let changed = 0, blocked = [];
-  places.forEach(pl=>{
-    const secKey = pl.progId+':'+pl.sectionId;
-    if(sectionLocks[secKey]){ blocked.push(ccSectionName(pl.progId, pl.sectionId)); return; }
-    if(ccNormText(pl.text) === ccNormText(f.fixTo)) return; // already correct
-    changed += ccReplaceInBlock(secKey, pl.blockId, pl.text, f.fixTo,
-                                f.fixField === 'text' ? 'text' : 'cell');
-  });
+  try{
+    places.forEach(pl=>{
+      const secKey = pl.progId+':'+pl.sectionId;
+      if(sectionLocks[secKey]){ blocked.push(ccSectionName(pl.progId, pl.sectionId)); return; }
+      if(ccNormText(pl.text) === ccNormText(f.fixTo)) return; // already correct
+      changed += ccReplaceInBlock(secKey, pl.blockId, pl.text, f.fixTo,
+                                  f.fixField === 'text' ? 'text' : 'cell');
+    });
+  } finally {
+    // Restore in a finally so a thrown replacement can never leave a section
+    // unlocked behind your back.
+    Object.keys(restore).forEach(k=>{ sectionLocks[k] = restore[k]; });
+    try{ if(typeof applyLockState==='function') applyLockState(); }catch(e){}
+  }
   // Accepting a program-name fix also records the standard, so it stops recurring.
   if(f.acceptAlt && !standardsStore.progAbbrev[f.acceptAlt]){
     standardsStore.progAbbrev[f.acceptAlt] = { abbrev: f.fixTo, alts: [], confirmed: true };
@@ -6035,8 +6073,15 @@ function ccApplyFix(key, onlyFirst){
     renderedKey = null; loadContent(curSection);
   }
   ccRefresh();
-  if(blocked.length) appAlert('Skipped '+blocked.length+' locked section(s):\n\n'+blocked.join('\n')+'\n\nUnlock them (🔒 in the toolbar) to fix.');
-  else toast(changed ? ('Fixed '+changed+' place'+(changed!==1?'s':'')+' ✓') : 'Nothing needed changing.');
+  const relocked = Object.keys(restore).length;
+  if(blocked.length){
+    await appAlert('Skipped '+blocked.length+' locked section(s):\n\n'+blocked.join('\n')+'\n\nUnlock them (🔒 in the toolbar) to fix.');
+  } else if(changed){
+    toast('Fixed '+changed+' place'+(changed!==1?'s':'')
+      + (relocked ? ' ✓ — '+relocked+' section'+(relocked!==1?'s':'')+' re-locked' : ' ✓'));
+  } else {
+    toast('Nothing needed changing.');
+  }
 }
 function ccIgnore(key){
   if(viewerModeForced) return;
