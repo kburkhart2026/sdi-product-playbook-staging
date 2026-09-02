@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "alg": "AES-GCM",
+  "kdf": "PBKDF2-SHA256",
+  "iterations": 4000000,
+  "salt": "cvf/70nQrKxNlkZIhzJw+Q==",
+  "iv": "PRsPOr8juOd8vf13",
+  "ciphertext": "JSWfDgJr2RY39dvYvli3Z4EVMwem5Tu7tUdodM5J0sVFpIcKe/O/SuerS1eFW+35beVrqtno2wvuXu5YzVq6biCXha5nvJXKOazLeI6B3q+SWTh1WVsetGn/lBI1gdr7tZnpqZE4tuxjaZNiZw==",
+  "created": "2026-09-02T15:44:19.579Z"
+}
