@@ -251,6 +251,54 @@ body.sb-rail .phase-hdr:hover .ph-dot{box-shadow:0 0 0 3px rgba(201,183,156,0.45
 /* ===== PM SIDE PANEL ===== */
 .pm-panel-handle{flex:0 0 6px;cursor:col-resize;background:var(--bdr);}
 .pm-panel-handle:hover,.pm-panel-handle.dragging{background:var(--acc);}
+/* ---------- Course table / card blocks ---------- */
+.block-course-table,.block-course-card{background:#fff;border:1px solid var(--bdr);border-radius:8px;overflow:hidden;}
+.crs-tbl-scroll{overflow-x:auto;}
+table.crs-tbl{width:100%;border-collapse:collapse;font-size:13.5px;}
+table.crs-tbl th{font-family:var(--font-cond);font-size:11px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--mut);text-align:left;padding:8px 10px;
+  background:#F6F3F1;border-bottom:2px solid var(--bdr);white-space:nowrap;}
+table.crs-tbl th[data-course-field]{color:#2F6B4F;}
+table.crs-tbl td{padding:6px 10px;border-bottom:1px solid var(--bdr);color:var(--ink);vertical-align:top;}
+table.crs-tbl td[data-course-field="code"]{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12.5px;font-weight:600;white-space:nowrap;}
+table.crs-tbl td:not([data-course-field]){background:#F7FAFC;}
+table.crs-tbl tr.crs-tr-group td{background:var(--sbg,#3B0A10);color:#fff;font-family:var(--font-cond);
+  font-size:11.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;padding:5px 10px;}
+table.crs-tbl tr.crs-tr-sub td{background:#F1EEEC;font-family:var(--font-cond);font-weight:700;
+  font-size:12.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);}
+.crs-tbl-foot{display:flex;align-items:center;gap:9px;padding:6px 10px;background:#F6F3F1;
+  border-top:1px solid var(--bdr);font-size:11.5px;color:var(--mut);}
+.crs-card-h{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;padding:9px 12px;
+  border-bottom:1px solid var(--bdr);border-left:3px solid var(--acc);}
+.crs-card-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;font-weight:600;}
+.crs-card-t{font-family:var(--font-cond);font-size:15px;font-weight:700;}
+.crs-card-meta{margin-left:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:11px;color:var(--mut);}
+.crs-card-sec{padding:8px 12px;border-bottom:1px solid var(--bdr);}
+.crs-card-sec-t{font-family:var(--font-cond);font-size:10.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--mut);margin-bottom:3px;}
+.crs-card-missing{padding:12px;color:var(--mut);font-size:13px;}
+body.view-mode .crs-tbl-refresh,.section-locked .crs-tbl-refresh{display:none!important;}
+/* ---------- insert dialog ---------- */
+.dlg-box-wide{max-width:560px;width:92vw;}
+.dlg-title{font-family:var(--font-cond);font-size:17px;font-weight:700;margin-bottom:12px;}
+.dlg-body{max-height:60vh;overflow-y:auto;}
+.crs-dlg{display:flex;flex-direction:column;gap:9px;text-align:left;}
+.crs-dlg-r{display:flex;align-items:center;gap:10px;}
+.crs-dlg-r label{flex:0 0 108px;font-family:var(--font-cond);font-size:11px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--mut);}
+.crs-dlg-r select,.crs-dlg-r input{flex:1;min-width:0;padding:5px 8px;border:1px solid var(--bdr);
+  border-radius:4px;font-size:13px;font-family:inherit;background:#fff;color:var(--ink);}
+.crs-dlg-f label{display:block;font-family:var(--font-cond);font-size:11px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:5px;}
+.crs-dlg-chks{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;}
+@media (max-width:520px){.crs-dlg-chks{grid-template-columns:1fr;}}
+.crs-dlg-chk{display:flex!important;align-items:center;gap:6px;font-size:12.5px;
+  text-transform:none!important;letter-spacing:0!important;font-family:inherit!important;
+  font-weight:400!important;color:var(--ink)!important;margin:0!important;}
+.crs-dlg-chk i{color:var(--mut);font-size:11px;}
+.crs-dlg-note{font-size:12px;color:var(--mut);line-height:1.5;margin:2px 0 0;}
 /* ---------- Course Database ---------- */
 #course-panel-body,#course-body{flex:1;min-height:0;overflow-y:auto;}
 #course-body{padding:0 4px;}
@@ -318,7 +366,8 @@ body.sb-rail .phase-hdr:hover .ph-dot{box-shadow:0 0 0 3px rgba(201,183,156,0.45
   border-radius:3px;padding:1px 7px;font-size:10.5px;font-weight:600;cursor:pointer;
   font-family:var(--font-cond);letter-spacing:.05em;text-transform:uppercase;}
 .crs-review{font-size:12px;color:#8A6A22;background:#FBF3E6;border:1px solid #E3D5B4;
-  border-radius:4px;padding:7px 10px;}
+  border-radius:4px;padding:7px 10px;line-height:1.5;}
+.crs-conflict{color:#D50032;font-weight:700;}
 .crs-fields{display:flex;flex-direction:column;gap:7px;}
 .crs-f{display:flex;flex-direction:column;gap:2px;}
 .crs-f-l{font-family:var(--font-cond);font-size:11px;font-weight:700;letter-spacing:.07em;
@@ -1631,6 +1680,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); openKnowledgeBase();">🧠 Knowledge Base</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); ccOpenSmart();">🔍 Consistency</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); crsOpenSmart();">📚 Course Database</div>
+                <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); crsInsertTableDialog();">📋 Insert course table…</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); copyViewerLinkForCurrentPage();">🔗 Copy link to this page</div>
               </div>
             </div>
@@ -1732,6 +1782,8 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
           <div class="pmp-head">
             <div class="pmp-title">Course Database</div>
             <button class="pmp-dashbtn" onclick="crsAddPrompt()" title="Add a course">&#43; Course</button>
+            <button class="pmp-dashbtn" onclick="crsLinkMarginAction()" title="Match costing lines to courses">&#128279; Link</button>
+            <button class="pmp-dashbtn" onclick="crsExportDialog()" title="Export the database">&#8681;</button>
             <button class="pmp-iconbtn" onclick="crsPanelFullScreen()" title="Open full screen">&#8599;</button>
             <button class="pmp-iconbtn" onclick="crsPanelClose()" title="Close panel">&#10005;</button>
           </div>
@@ -1823,6 +1875,9 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
       <div style="margin-left:auto;display:flex;gap:8px">
         <button class="mg2-btn" onclick="crsAddPrompt()">&#43; Add course</button>
         <button class="mg2-btn" onclick="crsImportFromRepo()">&#8681; Import catalog edition</button>
+        <button class="mg2-btn" onclick="crsLinkMarginAction()">&#128279; Link to Margin Calculator</button>
+        <button class="mg2-btn" onclick="crsFillSchoolsFromMargin()">&#127979; Fill schools</button>
+        <button class="mg2-btn" onclick="crsExportDialog()">&#8681; Export…</button>
       </div>
     </div>
     <div id="course-body"></div>
@@ -1867,6 +1922,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
   <div class="pk-item" onclick="addBlock('callout')"><div class="pk-ico">💡</div><div><div class="pk-lbl">Callout</div><div class="pk-desc">Highlight a key insight</div></div></div>
   <div class="pk-item" onclick="addBlock('table')"><div class="pk-ico">📊</div><div><div class="pk-lbl">Table</div><div class="pk-desc">Grid, comparison, matrix</div></div></div>
   <div class="pk-item" onclick="addBlock('costtable')"><div class="pk-ico">🧮</div><div><div class="pk-lbl">Cost / COGS Table</div><div class="pk-desc">Auto-calculates totals &amp; program sum</div></div></div>
+  <div class="pk-item" onclick="document.getElementById('block-picker').classList.remove('show'); crsInsertTableDialog()"><div class="pk-ico">📋</div><div><div class="pk-lbl">Course Table</div><div class="pk-desc">Built from the Course Database &mdash; pick any fields, refreshes</div></div></div>
   <div class="pk-item" onclick="document.getElementById('block-picker').classList.remove('show'); openMarginCalc(curProgId);"><div class="pk-ico">📈</div><div><div class="pk-lbl">Margin Calculator</div><div class="pk-desc">Course library, scenarios &amp; margin comparison</div></div></div>
   <div class="pk-item" onclick="addBlock('swot')"><div class="pk-ico">🧭</div><div><div class="pk-lbl">SWOT Analysis</div><div class="pk-desc">Strengths, weaknesses, opportunities, threats</div></div></div>
   <div class="pk-item" onclick="addBlock('timeline')"><div class="pk-ico">📅</div><div><div class="pk-lbl">Timeline</div><div class="pk-desc">Milestones and key dates</div></div></div>
@@ -2739,7 +2795,7 @@ let standardsStore = { courseTitles: {}, progAbbrev: {}, ignored: {} };
 // unique -- the five general-education courses and SDI 101 each run in a
 // 5-week and an 8-week format and are separate records -- so everything that
 // joins to a course joins on `id`, never on `code`.
-let courseStore = { courses: [], presets: [], editions: [], categories: [] };
+let courseStore = { courses: [], presets: [], editions: [], categories: [], schools: [] };
 
 // ==================== COURSE DATABASE ====================
 // Field definitions drive the picker, the table columns, the card and every
@@ -2761,6 +2817,14 @@ const CRS_FIELDS = [
   { key:'catalogEdition',     label:'Catalog Edition',     short:'Edition', type:'text',  numeric:false },
 ];
 const CRS_FIELD = {}; CRS_FIELDS.forEach(f=>{ CRS_FIELD[f.key]=f; });
+const CRS_SCHOOLS = [
+  { id:'SUT',    label:'SUT — Uncrewed' },
+  { id:'SFT',    label:'SFT — Firearms' },
+  // The Margin Calculator's course library has grouped by these three since it
+  // was built ('SUT','SFT','Geneds'), and 5 courses already carry Geneds --
+  // so it belongs in the list rather than being invented as a new category.
+  { id:'Geneds', label:'Geneds — General Education' },
+];
 const CRS_STATUSES = [
   { id:'active',  label:'Active',  hint:'In a published catalog edition' },
   { id:'draft',   label:'Draft',   hint:'Ideated here; not yet in the catalog' },
@@ -2872,11 +2936,25 @@ async function crsDelete(id){
         +  '\n\nThose blocks stay exactly as they are — but they will no longer refresh, '
         +  'because the course they point at will be gone.';
   }
+  const mLines = crsMarginEntries(id), mScen = crsScenariosUsing(id);
+  if(mLines.length){
+    msg += '\n\nIt is linked to '+mLines.length+' costing line'+(mLines.length===1?'':'s')+
+           ' in the Margin Calculator ('+mLines.map(m=>m.code).join(', ')+').'+
+           '\nThose stay — only the link is lost.';
+  }
+  if(mScen.length){
+    msg += '\nUsed in '+mScen.length+' margin scenario'+(mScen.length===1?'':'s')+': '+
+           mScen.slice(0,4).map(x=>x.progName+' → '+x.scenarioName).join('; ')+
+           (mScen.length>4?'; …':'');
+  }
   if(c.siblingDeliveries && c.siblingDeliveries.length){
     msg += '\n\nThe other delivery of this course ('+c.siblingDeliveries.join(', ')+') is NOT deleted.';
   }
   msg += '\n\nThis cannot be undone from here.';
   if(!await appConfirm(msg, 'Delete course', 'Cancel')) return false;
+  (marginStore.courses||[]).forEach(m=>{
+    if(m.courseIds) m.courseIds = m.courseIds.filter(cid=>cid!==id);
+  });
   courseStore.courses = crsAll().filter(x=>x.id!==id);
   crsAll().forEach(x=>{
     if(x.siblingDeliveries) x.siblingDeliveries = x.siblingDeliveries.filter(sid=>sid!==id);
@@ -2896,6 +2974,645 @@ function crsPromoteToActive(id, edition){
   scheduleSave();
   return true;
 }
+// ==================== LINK TO THE MARGIN CALCULATOR ====================
+// Many-to-many, joined by id. One course has several costing lines
+// (FTE 217 has three kit options); one costing line serves both deliveries of
+// a course (Eng 101 is costed once but runs 5-week and 8-week). Neither side
+// is keyed by code, because code is not unique.
+function crsMarginEntries(courseId){
+  const c = crsById(courseId); if(!c) return [];
+  const ids = new Set(c.marginCourseIds||[]);
+  return (marginStore.courses||[]).filter(m=>ids.has(m.id));
+}
+function crsCoursesForMarginEntry(marginId){
+  const m = (marginStore.courses||[]).find(x=>x.id===marginId);
+  const ids = new Set((m && m.courseIds) || []);
+  return crsAll().filter(c=>ids.has(c.id));
+}
+function crsCostTotal(courseId){
+  return crsMarginEntries(courseId).reduce((n,m)=>n+marginCourseTotalCost(m), 0);
+}
+// Which margin scenarios include this course, via its costing lines.
+function crsScenariosUsing(courseId){
+  const mids = new Set(crsMarginEntries(courseId).map(m=>m.id));
+  if(!mids.size) return [];
+  const out = [];
+  Object.keys(marginStore.scenariosByProgram||{}).forEach(pid=>{
+    const prog = programs.find(x=>x.id===pid);
+    const pm = prog && prog.margin;
+    const inProgram = pm ? [].concat(pm.coreCourseIds||[], pm.electiveCourseIds||[]) : [];
+    (marginStore.scenariosByProgram[pid]||[]).forEach(sc=>{
+      const used = new Set([].concat(inProgram, sc.selectedElectiveCourseIds||[]));
+      if([...mids].some(id=>used.has(id)))
+        out.push({ progId:pid, progName: prog?prog.name:pid, scenarioId:sc.id,
+                   scenarioName: sc.name||'Untitled', isPrimary: !!sc.isPrimary });
+    });
+  });
+  return out;
+}
+// Exact normalised-code matching only. The costing variants
+// ("FTE 217 (opt AR15)") and the four costed-but-unpublished courses are
+// deliberately LEFT for review rather than guessed at.
+function crsLinkAuto(){
+  const byCode = {};
+  crsAll().forEach(c=>{ (byCode[ccNormCode(c.code)] = byCode[ccNormCode(c.code)] || []).push(c); });
+  const rep = { linked:[], variants:[], unmatched:[], alreadyLinked:0 };
+  crsAll().forEach(c=>{ c.marginCourseIds = []; });
+  (marginStore.courses||[]).forEach(m=>{
+    m.courseIds = [];
+    const n = ccNormCode(m.code||'');
+    const hit = byCode[n];
+    if(hit && hit.length){
+      hit.forEach(c=>{ c.marginCourseIds.push(m.id); m.courseIds.push(c.id); });
+      rep.linked.push({ margin:m.code, courses:hit.map(c=>c.id) });
+      return;
+    }
+    // "FTE 217 (opt AR15)" -> the base code is still a real course
+    const base = /^([A-Z]{2,4} \d{3})/.exec(n);
+    if(base && byCode[base[1]]) rep.variants.push({ margin:m.code, base:base[1] });
+    else rep.unmatched.push(m.code);
+  });
+  scheduleSave();
+  return rep;
+}
+// Confirm the costing variants belong to their base course.
+function crsLinkVariants(){
+  const byCode = {};
+  crsAll().forEach(c=>{ (byCode[ccNormCode(c.code)] = byCode[ccNormCode(c.code)] || []).push(c); });
+  let n = 0;
+  (marginStore.courses||[]).forEach(m=>{
+    if((m.courseIds||[]).length) return;
+    const base = /^([A-Z]{2,4} \d{3})/.exec(ccNormCode(m.code||''));
+    const hit = base && byCode[base[1]];
+    if(!hit) return;
+    m.courseIds = hit.map(c=>c.id);
+    hit.forEach(c=>{ if(!(c.marginCourseIds||[]).includes(m.id)) (c.marginCourseIds=c.marginCourseIds||[]).push(m.id); });
+    n++;
+  });
+  scheduleSave();
+  return n;
+}
+// Credit hours live in BOTH stores today. This reports every disagreement and
+// changes nothing -- the numbers feed real revenue arithmetic, so moving one
+// is a decision, not a cleanup.
+function crsCreditConflicts(){
+  const out = [];
+  (marginStore.courses||[]).forEach(m=>{
+    const linked = crsCoursesForMarginEntry(m.id);
+    if(!linked.length || m.creditHours==null) return;
+    const cat = [...new Set(linked.map(c=>c.credits).filter(v=>v!=null))];
+    if(cat.length && !cat.includes(Number(m.creditHours)))
+      out.push({ marginId:m.id, code:m.code, margin:Number(m.creditHours),
+                 catalog:cat, courseIds:linked.map(c=>c.id) });
+  });
+  return out;
+}
+// Fill School from the costing library, where all 37 entries already carry one.
+async function crsFillSchoolsFromMargin(){
+  if(viewerModeForced) return;
+  const plan = [];
+  crsAll().forEach(c=>{
+    if(c.school) return;
+    const sch = [...new Set(crsMarginEntries(c.id).map(m=>m.school).filter(Boolean))];
+    if(sch.length===1) plan.push({ id:c.id, code:crsDisplay(c), school:sch[0] });
+  });
+  if(!plan.length){ await appAlert('Nothing to fill — every linked course already has a school.'); return; }
+  const preview = plan.slice(0,14).map(x=>'  '+x.code+'  →  '+x.school).join('\n')
+                + (plan.length>14 ? '\n  …and '+(plan.length-14)+' more' : '');
+  if(!await appConfirm('Set School on '+plan.length+' course'+(plan.length===1?'':'s')+
+      ' from the Margin Calculator’s course library?\n\n'+preview+
+      '\n\nOnly courses with no school set are touched.', 'Set schools', 'Cancel')) return;
+  plan.forEach(x=>{ const c=crsById(x.id); if(c){ c.school=x.school; c.updated=Date.now(); } });
+  scheduleSave(); crsRender();
+  toast('School set on '+plan.length+' course'+(plan.length===1?'':'s'));
+}
+async function crsLinkMarginAction(){
+  if(viewerModeForced) return;
+  const rep = crsLinkAuto();
+  const conflicts = crsCreditConflicts();
+  let msg = 'Linked the Course Database to the Margin Calculator.\n\n'
+    + rep.linked.length+' costing line'+(rep.linked.length===1?'':'s')+' matched a course by code\n'
+    + rep.variants.length+' look like costing variants of a course\n'
+    + rep.unmatched.length+' matched nothing\n';
+  if(rep.variants.length)
+    msg += '\nVariants (one course, several costing lines):\n  '
+        +  rep.variants.map(v=>v.margin+'  →  '+v.base).join('\n  ')
+        +  '\nThese are NOT linked yet — confirm them below.';
+  if(rep.unmatched.length)
+    msg += '\n\nNo match: '+rep.unmatched.join(', ')
+        +  '\nThese are costed but not in the catalog — add them as draft courses if they are real.';
+  if(conflicts.length)
+    msg += '\n\n⚠ Credit hours disagree on '+conflicts.length+':\n  '
+        +  conflicts.map(c=>c.code+' — margin says '+c.margin+', catalog says '+c.catalog.join('/')).join('\n  ')
+        +  '\nNothing was changed. Fix whichever is wrong.';
+  await appAlert(msg);
+  if(rep.variants.length){
+    if(await appConfirm('Link the '+rep.variants.length+' costing variant'+(rep.variants.length===1?'':'s')+
+        ' to their base course?\n\n'+rep.variants.map(v=>'  '+v.margin+'  →  '+v.base).join('\n')+
+        '\n\nEach stays a separate costing line; they just point at the same course record.',
+        'Link variants', 'Leave unlinked')){
+      const n = crsLinkVariants();
+      toast('Linked '+n+' costing variant'+(n===1?'':'s'));
+    }
+  }
+  crsRender();
+}
+
+// ==================== COURSE TABLE / CARD BLOCKS ====================
+// A bound cell carries data-course-field AND data-db-value. Comparing the
+// cell's text to data-db-value is how a hand edit is detected -- no event
+// handlers needed, and the mark survives save/reload because it is an
+// attribute, not runtime state. Free columns have no data-course-field and are
+// never touched.
+function crsCellText(c, key){
+  const v = crsFieldText(c, key);
+  return v === '' ? '—' : v;
+}
+function crsRowsFor(spec){
+  let rows = [];
+  if(spec.source === 'program' && spec.program){
+    rows = crsAll().filter(c=>(c.catalogPrograms||[]).indexOf(spec.program)>=0);
+  } else if(spec.source === 'ids'){
+    rows = (spec.ids||[]).map(id=>crsById(id)).filter(Boolean);
+  } else if(spec.source === 'status'){
+    rows = crsAll().filter(c=>c.status===spec.status);
+  } else {
+    rows = crsAll().slice();
+  }
+  return rows.sort((a,b)=> a.code===b.code ? (a.weeks||0)-(b.weeks||0) : (a.code<b.code?-1:1));
+}
+function crsTableBlockHTML(data){
+  const fields = (data.fields||['code','title','credits','weeks','prereqs']).filter(k=>CRS_FIELD[k]);
+  const free   = data.free || [];
+  const groupBy= data.groupBy || '';
+  const spec   = { source:data.source||'all', program:data.program||'', ids:data.ids||[], status:data.status||'' };
+  const rows   = crsRowsFor(spec);
+  const ed     = data.edition || (courseStore.editions||[]).slice(-1).map(e=>e.label)[0] || '';
+  const numericFields = fields.filter(k=>CRS_FIELD[k].numeric);
+
+  const th = fields.map(k=>'<th data-course-field="'+k+'" contenteditable="true" spellcheck="false"'
+        + (CRS_FIELD[k].numeric?' style="text-align:right"':'') + '>'
+        + escapeHtml(CRS_FIELD[k].short) + '</th>').join('')
+    + free.map(f=>'<th contenteditable="true" spellcheck="false">'+escapeHtml(f)+'</th>').join('');
+
+  const cell = (c,k)=>'<td data-course-field="'+k+'" data-db-value="'+escapeHtml(crsCellText(c,k))+'"'
+        + (CRS_FIELD[k].numeric?' style="text-align:right"':'')
+        + ' contenteditable="true" spellcheck="false">'+escapeHtml(crsCellText(c,k))+'</td>';
+  const rowHTML = c => '<tr data-course-id="'+c.id+'">'
+        + fields.map(k=>cell(c,k)).join('')
+        + free.map(()=>'<td contenteditable="true" spellcheck="false"></td>').join('')
+        + '</tr>';
+  const subtotal = (label, group) => {
+    let h = '<tr class="crs-tr-sub" data-course-subtotal="'+escapeHtml(label)+'">';
+    fields.forEach((k,i)=>{
+      if(i===0) h += '<td colspan="1">'+escapeHtml('Total '+label.toLowerCase())+'</td>';
+      else if(CRS_FIELD[k].numeric){
+        const sum = group.reduce((n,c)=>n+(Number(c[k])||0),0);
+        h += '<td data-course-subtotal-field="'+k+'" style="text-align:right">'+sum+'</td>';
+      } else h += '<td></td>';
+    });
+    free.forEach(()=>{ h += '<td></td>'; });
+    return h + '</tr>';
+  };
+
+  let body = '';
+  if(groupBy){
+    const groups = {};
+    rows.forEach(c=>{ const g = crsFieldText(c, groupBy) || '(none)'; (groups[g]=groups[g]||[]).push(c); });
+    Object.keys(groups).sort().forEach(g=>{
+      body += '<tr class="crs-tr-group"><td colspan="'+(fields.length+free.length)+'">'+escapeHtml(g)+'</td></tr>';
+      groups[g].forEach(c=>{ body += rowHTML(c); });
+      if(numericFields.length) body += subtotal(g, groups[g]);
+    });
+    if(numericFields.length && Object.keys(groups).length>1) body += subtotal('program', rows);
+  } else {
+    rows.forEach(c=>{ body += rowHTML(c); });
+    if(numericFields.length && rows.length>1) body += subtotal('program', rows);
+  }
+  if(!rows.length) body = '<tr><td colspan="'+(fields.length+free.length)+'" style="color:#8A7B7C">'
+    + 'No courses match this table’s source. Use ↻ Refresh after adding some.</td></tr>';
+
+  return '<div class="block-course-table" data-course-table="1"'
+    + ' data-course-source="'+escapeHtml(spec.source)+'"'
+    + ' data-course-program="'+escapeHtml(spec.program)+'"'
+    + ' data-course-status="'+escapeHtml(spec.status)+'"'
+    + ' data-course-ids="'+escapeHtml((spec.ids||[]).join(','))+'"'
+    + ' data-course-group="'+escapeHtml(groupBy)+'"'
+    + ' data-course-edition="'+escapeHtml(ed)+'">'
+    + '<div class="crs-tbl-scroll"><table class="crs-tbl"><thead><tr>'+th+'</tr></thead><tbody>'+body+'</tbody></table></div>'
+    + '<div class="crs-tbl-foot">'
+    + '<button class="mscn-btn crs-tbl-refresh" onclick="crsRefreshTable(this)">↻ Refresh</button>'
+    + '<span>from the Course Database'+(ed?' · catalog '+escapeHtml(ed):'')+'</span>'
+    + '</div></div>';
+}
+
+// The refresh contract. Six rules, and it always reports what it did.
+async function crsRefreshTable(btn){
+  if(viewerModeForced) return;
+  const box = btn.closest('.block-course-table'); if(!box) return;
+  const table = box.querySelector('table.crs-tbl'); if(!table) return;
+  const heads = [...table.querySelectorAll('thead th')];
+  const bound = heads.map(h=>h.getAttribute('data-course-field')||null);
+  const rep = { updated:[], keptYours:[], unknown:[], missing:[], freeCols:bound.filter(b=>!b).length };
+
+  [...table.querySelectorAll('tbody tr')].forEach(tr=>{
+    if(tr.classList.contains('crs-tr-group') || tr.classList.contains('crs-tr-sub')) return;
+    const id = tr.getAttribute('data-course-id');
+    if(!id){ rep.unknown.push('(row you added)'); return; }
+    const c = crsById(id);
+    if(!c){ rep.unknown.push(id); return; }
+    [...tr.children].forEach(td=>{
+      const key = td.getAttribute('data-course-field');
+      if(!key) return;                                  // free column: never touched
+      const was = td.getAttribute('data-db-value');
+      const now = td.textContent.trim();
+      const fresh = crsCellText(c, key);
+      if(was !== null && now !== was){                  // you edited this cell
+        if(fresh !== now) rep.keptYours.push(crsDisplay(c)+' · '+(CRS_FIELD[key]||{}).short);
+        return;
+      }
+      if(now !== fresh){
+        td.textContent = fresh;
+        rep.updated.push(crsDisplay(c)+' · '+(CRS_FIELD[key]||{}).short);
+      }
+      td.setAttribute('data-db-value', fresh);
+    });
+  });
+
+  // recompute every subtotal from the rows above it
+  [...table.querySelectorAll('tbody tr.crs-tr-sub')].forEach(sub=>{
+    const cells = [...sub.querySelectorAll('[data-course-subtotal-field]')];
+    if(!cells.length) return;
+    const label = sub.getAttribute('data-course-subtotal');
+    let group = [];
+    if(label === 'program'){
+      group = [...table.querySelectorAll('tbody tr[data-course-id]')];
+    } else {
+      let n = sub.previousElementSibling;
+      while(n && n.hasAttribute('data-course-id')){ group.unshift(n); n = n.previousElementSibling; }
+    }
+    cells.forEach(td=>{
+      const key = td.getAttribute('data-course-subtotal-field');
+      const idx = [...sub.children].indexOf(td);
+      const sum = group.reduce((acc,tr)=>{
+        const cell = tr.children[idx];
+        return acc + (Number((cell?cell.textContent:'').replace(/[^0-9.-]/g,'')) || 0);
+      }, 0);
+      const before = td.textContent.trim();
+      td.textContent = String(sum);
+      if(before !== String(sum)) rep.updated.push('subtotal · '+label);
+    });
+  });
+
+  // courses that belong to this table's source but are not in it
+  const spec = { source:box.getAttribute('data-course-source')||'all',
+                 program:box.getAttribute('data-course-program')||'',
+                 status:box.getAttribute('data-course-status')||'',
+                 ids:(box.getAttribute('data-course-ids')||'').split(',').filter(Boolean) };
+  const present = new Set([...table.querySelectorAll('tbody tr[data-course-id]')].map(tr=>tr.getAttribute('data-course-id')));
+  const should  = crsRowsFor(spec).filter(c=>!present.has(c.id));
+  rep.missing = should;
+
+  scheduleSave();
+  await appAlert(crsRefreshReport(rep));
+  if(rep.missing.length){
+    if(await appConfirm('Add '+rep.missing.length+' missing course row'+(rep.missing.length===1?'':'s')+
+        ' to the bottom of this table?\n\n'+rep.missing.slice(0,10).map(c=>'  '+crsDisplay(c)+' — '+(c.title||'')).join('\n')+
+        (rep.missing.length>10?'\n  …':''), 'Add rows', 'Leave them out')){
+      const tbody = table.querySelector('tbody');
+      const fields = bound.filter(Boolean);
+      rep.missing.forEach(c=>{
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-course-id', c.id);
+        heads.forEach(h=>{
+          const key = h.getAttribute('data-course-field');
+          const td = document.createElement('td');
+          td.setAttribute('contenteditable','true'); td.setAttribute('spellcheck','false');
+          if(key){
+            td.setAttribute('data-course-field', key);
+            const v = crsCellText(c,key);
+            td.setAttribute('data-db-value', v); td.textContent = v;
+            if(CRS_FIELD[key].numeric) td.style.textAlign='right';
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      scheduleSave();
+      toast('Added '+rep.missing.length+' row'+(rep.missing.length===1?'':'s'));
+    }
+  }
+}
+function crsRefreshReport(rep){
+  const L = ['Refresh complete.', ''];
+  L.push(rep.updated.length+' cell'+(rep.updated.length===1?'':'s')+' updated from the database'
+         + (rep.updated.length ? ':\n  ' + [...new Set(rep.updated)].slice(0,8).join('\n  ')
+            + (rep.updated.length>8?'\n  …':'') : '.'));
+  if(rep.keptYours.length){
+    L.push('');
+    const k = rep.keptYours.length;
+    L.push(k+' cell'+(k===1?'':'s')+' you had edited '+(k===1?'was':'were')+
+           ' LEFT AS IT '+(k===1?'IS':'THEY ARE')+':\n  '+[...new Set(rep.keptYours)].slice(0,8).join('\n  '));
+  }
+  if(rep.freeCols){
+    L.push('');
+    L.push(rep.freeCols+' column'+(rep.freeCols===1?'':'s')+' of your own were not touched.');
+  }
+  if(rep.unknown.length){
+    L.push('');
+    const u = rep.unknown.length;
+    L.push(u+' row'+(u===1?'':'s')+' not linked to a course '+(u===1?'was':'were')+
+           ' left exactly as typed.');
+  }
+  if(rep.missing.length){
+    L.push('');
+    const m = rep.missing.length;
+    L.push(m+' course'+(m===1?'':'s')+(m===1?' belongs':' belong')+
+           ' to this table but '+(m===1?'is':'are')+' not in it yet.');
+  }
+  return L.join('\n');
+}
+
+// ---- the single-course card ----------------------------------------------
+function crsCardBlockHTML(data){
+  const c = crsById(data.courseId);
+  if(!c) return '<div class="block-course-card"><div class="crs-card-missing">'
+    + 'That course is no longer in the Course Database.</div></div>';
+  const fields = (data.fields||['credits','weeks','prereqs','description']).filter(k=>CRS_FIELD[k]);
+  const ed = c.catalogEdition || '';
+  const meta = fields.filter(k=>!CRS_FIELD[k] || CRS_FIELD[k].type!=='longtext')
+    .map(k=>{ const v=crsFieldText(c,k); return v ? escapeHtml(CRS_FIELD[k].short)+' '+escapeHtml(v) : ''; })
+    .filter(Boolean).join(' &middot; ');
+  const longs = fields.filter(k=>CRS_FIELD[k].type==='longtext')
+    .map(k=>{ const v=crsFieldText(c,k);
+      // an empty field renders as nothing at all -- no heading, no blank row
+      if(!v) return '';
+      return '<div class="crs-card-sec"><div class="crs-card-sec-t">'+escapeHtml(CRS_FIELD[k].label)+'</div>'
+           + '<div contenteditable="true" spellcheck="false">'+escapeHtml(v)+'</div></div>'; })
+    .join('');
+  return '<div class="block-course-card" data-course-card="1" data-course-id="'+escapeHtml(c.id)+'">'
+    + '<div class="crs-card-h">'
+    + '<span class="crs-card-code">'+escapeHtml(c.code)+'</span>'
+    + (c.deliveryLabel ? '<span class="crs-dl crs-dl-'+(c.weeks||'x')+'">'+escapeHtml(c.deliveryLabel)+'</span>' : '')
+    + '<span class="crs-card-t" contenteditable="true" spellcheck="false">'+escapeHtml(c.title||'')+'</span>'
+    + (meta ? '<span class="crs-card-meta">'+meta+'</span>' : '')
+    + '</div>'
+    + longs
+    + '<div class="crs-tbl-foot">'
+    + '<button class="mscn-btn crs-tbl-refresh" onclick="crsRefreshCard(this)">↻ Refresh</button>'
+    + '<span>from the Course Database'+(ed?' · catalog '+escapeHtml(ed):'')+'</span>'
+    + '</div></div>';
+}
+async function crsRefreshCard(btn){
+  if(viewerModeForced) return;
+  const box = btn.closest('.block-course-card'); if(!box) return;
+  const c = crsById(box.getAttribute('data-course-id'));
+  if(!c){ await appAlert('That course is no longer in the Course Database, so there is nothing to refresh from.'); return; }
+  const fresh = document.createElement('div');
+  fresh.innerHTML = crsCardBlockHTML({ courseId:c.id });
+  box.replaceWith(fresh.firstElementChild);
+  scheduleSave();
+  toast('Card refreshed from '+crsDisplay(c));
+}
+
+// ---- insert into a section ----------------------------------------------
+let crsInsertPick = { fields:['code','title','credits','weeks','prereqs'], free:[], groupBy:'' };
+
+async function crsInsertTableDialog(){
+  if(viewerModeForced) return;
+  if(!curProgId){ await appAlert('Open a program first — the table is inserted into the section you are viewing.'); return; }
+  if(!crsAll().length){ await appAlert('The Course Database is empty. Import a catalog edition first.'); return; }
+  const progs = [...new Set(crsAll().flatMap(c=>c.catalogPrograms||[]))].sort();
+  const presets = courseStore.presets||[];
+  const groupables = ['','category','program','status','school','genEdArea'];
+
+  const body = '<div class="crs-dlg">'
+    + (presets.length ? '<div class="crs-dlg-r"><label>Saved layout</label>'
+        + '<select id="crs-i-preset" onchange="crsApplyPresetToDialog(this.value)">'
+        + '<option value="">— choose —</option>'
+        + presets.map((pr,i)=>'<option value="'+i+'">'+escapeHtml(pr.name)+'</option>').join('')
+        + '</select></div>' : '')
+    + '<div class="crs-dlg-r"><label>Rows from</label><select id="crs-i-source">'
+        + '<option value="all">Every course</option>'
+        + (progs.length?'<option value="program">One catalog program</option>':'')
+        + '<option value="status">One status</option>'
+      + '</select></div>'
+    + (progs.length ? '<div class="crs-dlg-r"><label>Program</label><select id="crs-i-program">'
+        + progs.map(x=>'<option value="'+escapeHtml(x)+'">'+escapeHtml(x)+'</option>').join('')
+        + '</select></div>' : '')
+    + '<div class="crs-dlg-r"><label>Status</label><select id="crs-i-status">'
+        + CRS_STATUSES.map(x=>'<option value="'+x.id+'">'+x.label+'</option>').join('')
+      + '</select></div>'
+    + '<div class="crs-dlg-r"><label>Group by</label><select id="crs-i-group">'
+        + groupables.map(g=>'<option value="'+g+'">'+(g?escapeHtml((CRS_FIELD[g]||{}).label||g):'No grouping')+'</option>').join('')
+      + '</select></div>'
+    + '<div class="crs-dlg-f"><label>Columns from the database</label><div class="crs-dlg-chks">'
+        + CRS_FIELDS.map(f=>'<label class="crs-dlg-chk"><input type="checkbox" value="'+f.key+'"'
+            + (crsInsertPick.fields.indexOf(f.key)>=0?' checked':'')+'> '+escapeHtml(f.label)
+            + (f.key==='learningObjectives'?' <i>(empty for now)</i>':'')+'</label>').join('')
+      + '</div></div>'
+    + '<div class="crs-dlg-r"><label>Your own columns</label>'
+        + '<input type="text" id="crs-i-free" placeholder="Term, Delivery, Approval — comma separated">'
+      + '</div>'
+    + '<p class="crs-dlg-note">Database columns refresh; your own columns never do. '
+      + 'Everything lands as a normal block you can edit, move and delete.</p>'
+    + '</div>';
+
+  const ok = await appFormDialog('Insert a course table', body, 'Insert', 'Cancel');
+  if(!ok) return;
+  const g = id => document.getElementById(id);
+  const fields = [...document.querySelectorAll('.crs-dlg-chks input:checked')].map(x=>x.value);
+  if(!fields.length){ await appAlert('Pick at least one database column.'); return; }
+  const free = (g('crs-i-free').value||'').split(',').map(x=>x.trim()).filter(Boolean);
+  const spec = { t:'courseTable', fields, free, groupBy:g('crs-i-group').value,
+                 source:g('crs-i-source').value,
+                 program:g('crs-i-program')?g('crs-i-program').value:'',
+                 status:g('crs-i-status').value,
+                 edition:(courseStore.editions||[]).slice(-1).map(e=>e.label)[0]||'' };
+  crsInsertPick = { fields, free, groupBy:spec.groupBy };
+  const node = makeBlock(spec);
+  document.getElementById('blocks-root').appendChild(node);
+  initBlockSort();
+  scheduleSave();
+  const n = crsRowsFor(spec).length;
+  toast('Inserted '+n+' course row'+(n===1?'':'s')+' — editable and movable like any block');
+  if(await appConfirm('Save these columns as a reusable layout?','Save layout','No thanks')){
+    const name = await appPrompt('Name this layout (e.g. DEAC course map):','');
+    if(name && name.trim()){
+      if(!courseStore.presets) courseStore.presets = [];
+      courseStore.presets.push({ id:'pre-'+Date.now(), name:name.trim(), fields, free, groupBy:spec.groupBy });
+      scheduleSave();
+      toast('Saved “'+name.trim()+'”');
+    }
+  }
+}
+function crsApplyPresetToDialog(i){
+  const pr = (courseStore.presets||[])[Number(i)];
+  if(!pr) return;
+  document.querySelectorAll('.crs-dlg-chks input').forEach(x=>{ x.checked = (pr.fields||[]).indexOf(x.value)>=0; });
+  const fr = document.getElementById('crs-i-free'); if(fr) fr.value = (pr.free||[]).join(', ');
+  const gp = document.getElementById('crs-i-group'); if(gp) gp.value = pr.groupBy||'';
+}
+async function crsInsertCardDialog(id){
+  if(viewerModeForced) return;
+  const c = crsById(id || crsSelectedId);
+  if(!c){ await appAlert('Open a course in the database first, then insert its card.'); return; }
+  if(!curProgId){ await appAlert('Open a program first — the card is inserted into the section you are viewing.'); return; }
+  const body = '<div class="crs-dlg"><div class="crs-dlg-f"><label>Include</label><div class="crs-dlg-chks">'
+    + CRS_FIELDS.filter(f=>['credits','weeks','prereqs','category','genEdArea','school','description','learningObjectives'].indexOf(f.key)>=0)
+        .map(f=>'<label class="crs-dlg-chk"><input type="checkbox" value="'+f.key+'"'
+          + (['credits','weeks','prereqs','description'].indexOf(f.key)>=0?' checked':'')+'> '
+          + escapeHtml(f.label)+(crsFieldText(c,f.key)?'':' <i>(empty)</i>')+'</label>').join('')
+    + '</div></div><p class="crs-dlg-note">Empty fields are left out entirely rather than '
+    + 'rendered as a blank heading.</p></div>';
+  if(!await appFormDialog('Insert '+crsDisplay(c), body, 'Insert', 'Cancel')) return;
+  const fields = [...document.querySelectorAll('.crs-dlg-chks input:checked')].map(x=>x.value);
+  const node = makeBlock({ t:'courseCard', courseId:c.id, fields });
+  document.getElementById('blocks-root').appendChild(node);
+  initBlockSort();
+  scheduleSave();
+  toast('Inserted '+crsDisplay(c));
+}
+
+// ==================== COURSE DATABASE EXPORTS ====================
+// One scope selector, one row builder, four outputs. Viewers get exports (the
+// same line the rest of the app draws: taking a copy is not editing).
+const CRS_EXPORT_FIELDS = ['code','deliveryLabel','title','credits','weeks','prereqs',
+  'category','genEdArea','school','status','description','learningObjectives','catalogEdition'];
+
+function crsExportScope(scope, program){
+  if(scope==='program' && program) return crsAll().filter(c=>(c.catalogPrograms||[]).indexOf(program)>=0);
+  if(scope==='active')  return crsAll().filter(c=>c.status==='active');
+  if(scope==='draft')   return crsAll().filter(c=>c.status==='draft');
+  return crsAll().slice();
+}
+function crsExportRows(list){
+  return list.slice().sort((a,b)=> a.code===b.code ? (a.weeks||0)-(b.weeks||0) : (a.code<b.code?-1:1))
+    .map(c=>CRS_EXPORT_FIELDS.map(k=>crsFieldText(c,k)));
+}
+function crsCsvEscape(v){
+  const t = String(v==null?'':v);
+  return /[",\n]/.test(t) ? '"'+t.replace(/"/g,'""')+'"' : t;
+}
+function crsExportCSV(scope, program){
+  const list = crsExportScope(scope, program);
+  const head = CRS_EXPORT_FIELDS.map(k=>(CRS_FIELD[k]||{}).label||k);
+  const csv = [head, ...crsExportRows(list)].map(r=>r.map(crsCsvEscape).join(',')).join('\r\n');
+  downloadBlob(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}),
+    'SDI-Courses-'+scope+'-'+new Date().toISOString().slice(0,10)+'.csv');
+  toast(list.length+' course'+(list.length===1?'':'s')+' exported to CSV ✓');
+}
+function crsExportExcel(scope, program){
+  const list = crsExportScope(scope, program);
+  const head = CRS_EXPORT_FIELDS.map(k=>'<th>'+escapeHtml((CRS_FIELD[k]||{}).label||k)+'</th>').join('');
+  const body = crsExportRows(list).map(r=>'<tr>'+r.map(v=>'<td>'+escapeHtml(v)+'</td>').join('')+'</tr>').join('');
+  const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">'
+    + '<head><meta charset="utf-8"><style>table{border-collapse:collapse;}td,th{border:1px solid #bbb;'
+    + 'padding:4pt 6pt;font-family:Calibri,sans-serif;font-size:10pt;vertical-align:top;}'
+    + 'th{background:#f0f0f0;font-weight:bold;}</style></head><body>'
+    + '<table><thead><tr>'+head+'</tr></thead><tbody>'+body+'</tbody></table></body></html>';
+  downloadBlob(new Blob([html],{type:'application/vnd.ms-excel'}),
+    'SDI-Courses-'+scope+'-'+new Date().toISOString().slice(0,10)+'.xls');
+  toast(list.length+' course'+(list.length===1?'':'s')+' exported to Excel ✓');
+}
+function crsExportJSON(scope, program){
+  const list = crsExportScope(scope, program);
+  const payload = { edition:(courseStore.editions||[]).slice(-1).map(e=>e.label)[0]||'',
+                    exportedAt:new Date().toISOString(), scope, program:program||null,
+                    keyedBy:'id (code is NOT unique -- one record per delivery)',
+                    courses:list };
+  downloadBlob(new Blob([JSON.stringify(payload,null,1)],{type:'application/json'}),
+    'SDI-Courses-'+scope+'-'+new Date().toISOString().slice(0,10)+'.json');
+  toast(list.length+' course'+(list.length===1?'':'s')+' exported as JSON ✓');
+}
+// The catalog document: what compliance and DEAC actually read.
+function crsExportWord(scope, program){
+  const list = crsExportScope(scope, program);
+  const byCat = {};
+  list.forEach(c=>{ const g=c.category||'Other'; (byCat[g]=byCat[g]||[]).push(c); });
+  let body = '<h1>SDI Course Catalog</h1>'
+    + '<p>'+escapeHtml(scope==='program'?program:({all:'All courses',active:'Active courses',draft:'Courses in development'}[scope]||scope))
+    + ' &mdash; '+list.length+' record'+(list.length===1?'':'s')+', generated '
+    + new Date().toLocaleDateString()+'.</p>';
+  Object.keys(byCat).sort().forEach(g=>{
+    body += '<h2>'+escapeHtml(g)+'</h2>';
+    byCat[g].slice().sort((a,b)=>a.code<b.code?-1:1).forEach(c=>{
+      const bits = [];
+      if(c.credits!=null) bits.push(c.credits+' semester credit hour'+(c.credits===1?'':'s'));
+      if(c.weeks!=null)   bits.push(c.weeks+' weeks');
+      if((c.prereqs||[]).length) bits.push('Prerequisite: '+c.prereqs.join(', '));
+      else if(c.prereqNote)      bits.push('Prerequisite: '+c.prereqNote);
+      body += '<h3>'+escapeHtml(c.code)+(c.deliveryLabel?' ('+escapeHtml(c.deliveryLabel)+')':'')
+           +  ': '+escapeHtml(c.title||'')+'</h3>';
+      if(bits.length) body += '<p><i>'+escapeHtml(bits.join(' &middot; ').replace(/&middot;/g,'·'))+'</i></p>';
+      if(c.description) body += '<p>'+escapeHtml(c.description)+'</p>';
+      // an empty learningObjectives prints nothing at all -- no orphan heading
+      if(c.learningObjectives) body += '<p><b>Learning objectives:</b> '+escapeHtml(c.learningObjectives)+'</p>';
+    });
+  });
+  downloadBlob(_buildDocx(body), 'SDI-Course-Catalog-'+scope+'-'+new Date().toISOString().slice(0,10)+'.docx');
+  toast(list.length+' course'+(list.length===1?'':'s')+' exported to Word ✓');
+}
+// What has changed since a named catalog edition. Nothing else can produce this.
+function crsChangeRows(){
+  const out = [];
+  crsAll().forEach(c=>{
+    const diffs = crsDiffs(c);
+    diffs.forEach(k=>out.push([ c.code, c.deliveryLabel||'', (CRS_FIELD[k]||{}).label||k,
+                                String(c.catalogValue[k]), crsFieldText(c,k),
+                                c.catalogEdition||'', c.status ]));
+    if(c.status==='draft') out.push([ c.code, c.deliveryLabel||'', 'Whole record',
+                                      '(not in the catalog)', 'Draft in the Playbook', '', 'draft' ]);
+  });
+  return out;
+}
+async function crsExportChangeReport(){
+  const rows = crsChangeRows();
+  if(!rows.length){ await appAlert('Nothing differs from the catalog, and there are no draft courses. No report to produce.'); return; }
+  const ed = (courseStore.editions||[]).slice(-1).map(e=>e.label)[0]||'the imported edition';
+  let body = '<h1>Course changes since catalog '+escapeHtml(ed)+'</h1>'
+    + '<p>'+rows.length+' change'+(rows.length===1?'':'s')+', generated '+new Date().toLocaleDateString()+'.</p>'
+    + '<table><thead><tr><th>Code</th><th>Delivery</th><th>Field</th><th>Catalog</th><th>Now</th><th>Status</th></tr></thead><tbody>'
+    + rows.map(r=>'<tr>'+[r[0],r[1],r[2],r[3],r[4],r[6]].map(v=>'<td>'+escapeHtml(v)+'</td>').join('')+'</tr>').join('')
+    + '</tbody></table>';
+  downloadBlob(_buildDocx(body), 'SDI-Course-Changes-'+new Date().toISOString().slice(0,10)+'.docx');
+  const csv = [['Code','Delivery','Field','Catalog','Now','Edition','Status'], ...rows]
+    .map(r=>r.map(crsCsvEscape).join(',')).join('\r\n');
+  downloadBlob(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}),
+    'SDI-Course-Changes-'+new Date().toISOString().slice(0,10)+'.csv');
+  toast(rows.length+' change'+(rows.length===1?'':'s')+' exported (Word + CSV) ✓');
+}
+async function crsExportDialog(){
+  const progs = [...new Set(crsAll().flatMap(c=>c.catalogPrograms||[]))].sort();
+  if(!crsAll().length){ await appAlert('The Course Database is empty — nothing to export yet.'); return; }
+  const body = '<div class="crs-dlg">'
+    + '<div class="crs-dlg-r"><label>Scope</label><select id="crs-x-scope">'
+      + '<option value="all">Whole database ('+crsAll().length+')</option>'
+      + '<option value="active">Active only ('+crsStats().active+')</option>'
+      + '<option value="draft">Drafts only ('+crsStats().draft+')</option>'
+      + (progs.length?'<option value="program">One catalog program</option>':'')
+      + '</select></div>'
+    + (progs.length?'<div class="crs-dlg-r"><label>Program</label><select id="crs-x-prog">'
+      + progs.map(x=>'<option value="'+escapeHtml(x)+'">'+escapeHtml(x)+'</option>').join('')
+      + '</select></div>':'')
+    + '<div class="crs-dlg-f"><label>Format</label><div class="crs-dlg-chks" style="grid-template-columns:1fr">'
+      + '<label class="crs-dlg-chk"><input type="radio" name="crsx" value="xls" checked> Excel — one row per course, for the registrar</label>'
+      + '<label class="crs-dlg-chk"><input type="radio" name="crsx" value="csv"> CSV — the same, plain text</label>'
+      + '<label class="crs-dlg-chk"><input type="radio" name="crsx" value="docx"> Word — a formatted catalog document, for compliance</label>'
+      + '<label class="crs-dlg-chk"><input type="radio" name="crsx" value="json"> JSON — machine-readable</label>'
+      + '<label class="crs-dlg-chk"><input type="radio" name="crsx" value="change"> Change report — what differs from the catalog (Word + CSV)</label>'
+      + '</div></div></div>';
+  if(!await appFormDialog('Export the Course Database', body, 'Export', 'Cancel')) return;
+  const scope = document.getElementById('crs-x-scope') ? document.getElementById('crs-x-scope').value : 'all';
+  const prog  = document.getElementById('crs-x-prog') ? document.getElementById('crs-x-prog').value : '';
+  const fmt   = (document.querySelector('input[name="crsx"]:checked')||{}).value || 'xls';
+  if(fmt==='csv')    crsExportCSV(scope, prog);
+  else if(fmt==='docx') crsExportWord(scope, prog);
+  else if(fmt==='json') crsExportJSON(scope, prog);
+  else if(fmt==='change') await crsExportChangeReport();
+  else crsExportExcel(scope, prog);
+}
+
 function crsStats(){
   const cs = crsAll();
   return {
@@ -3369,8 +4086,9 @@ function applyState(s){
     ? { courses:    Array.isArray(s.courseStore.courses)    ? s.courseStore.courses    : [],
         presets:    Array.isArray(s.courseStore.presets)    ? s.courseStore.presets    : [],
         editions:   Array.isArray(s.courseStore.editions)   ? s.courseStore.editions   : [],
-        categories: Array.isArray(s.courseStore.categories) ? s.courseStore.categories : [] }
-    : { courses: [], presets: [], editions: [], categories: [] };
+        categories: Array.isArray(s.courseStore.categories) ? s.courseStore.categories : [],
+        schools:    Array.isArray(s.courseStore.schools)    ? s.courseStore.schools    : [] }
+    : { courses: [], presets: [], editions: [], categories: [], schools: [] };
   standardsStore = (s.standardsStore && typeof s.standardsStore==='object')
     ? { courseTitles: s.standardsStore.courseTitles || {},
         progAbbrev:   s.standardsStore.progAbbrev   || {},
@@ -4570,6 +5288,12 @@ function makeBlock(data){
       const pm=programMargin(p);
       const t=marginScenarioTotals(p, scenario);
       wrap.innerHTML=ctrl+marginScenarioBlockInnerHtml(p, pm, scenario, t, data.savedAt||new Date().toISOString());
+      break;}
+    case 'courseTable':{
+      wrap.innerHTML=ctrl+crsTableBlockHTML(data);
+      break;}
+    case 'courseCard':{
+      wrap.innerHTML=ctrl+crsCardBlockHTML(data);
       break;}
     case 'divider':
       wrap.innerHTML=ctrl+`<hr class="block-divider">`;
@@ -8283,6 +9007,32 @@ function appDialog(opts){
     document.addEventListener('keydown',onKey,true);
   });
 }
+// A dialog that can hold a real form. appDialog() sets its message with
+// textContent (deliberately -- it takes untrusted strings), so it cannot host
+// markup; this reuses the same .dlg-ov/.dlg-box styling for the cases where
+// the caller is supplying its own, trusted HTML.
+function appFormDialog(title, bodyHTML, okLabel, cancelLabel){
+  return new Promise(resolve=>{
+    const old=document.getElementById('app-dialog-ov'); if(old) old.remove();
+    const ov=document.createElement('div'); ov.id='app-dialog-ov'; ov.className='dlg-ov';
+    ov.innerHTML='<div class="dlg-box dlg-box-wide" role="dialog" aria-modal="true">'+
+      '<div class="dlg-title"></div><div class="dlg-body"></div>'+
+      '<div class="dlg-btns"><button class="dlg-btn dlg-cancel"></button>'+
+      '<button class="dlg-btn dlg-ok"></button></div></div>';
+    ov.querySelector('.dlg-title').textContent = title||'';
+    ov.querySelector('.dlg-body').innerHTML = bodyHTML||'';
+    ov.querySelector('.dlg-ok').textContent = okLabel||'OK';
+    ov.querySelector('.dlg-cancel').textContent = cancelLabel||'Cancel';
+    document.body.appendChild(ov);
+    function done(v){ document.removeEventListener('keydown',onKey,true); ov.remove(); resolve(v); }
+    function onKey(e){ if(e.key==='Escape'){ e.stopPropagation(); e.preventDefault(); done(false); } }
+    ov.querySelector('.dlg-ok').onclick=()=>done(true);
+    ov.querySelector('.dlg-cancel').onclick=()=>done(false);
+    ov.onclick=e=>{ if(e.target===ov) done(false); };
+    document.addEventListener('keydown',onKey,true);
+    setTimeout(()=>{ const f=ov.querySelector('select,input'); if(f) f.focus(); },30);
+  });
+}
 function appPrompt(msg,def){ return appDialog({msg:msg,input:true,def:def,showCancel:true}); }
 function appConfirm(msg,ok,cancel){ return appDialog({msg:msg,showCancel:true,ok:ok,cancel:cancel}); }
 function appAlert(msg){ return appDialog({msg:msg,showCancel:false}); }
@@ -9686,7 +10436,7 @@ const SAFE_ONCLICK_FNS = new Set(['addApItem','addCostRow','addDlRow','addMilest
   'addTblCol','addTblRow','annotateImage','changeEmbed','changeImage','clearCostTable',
   'copyBlockToProgram','cycleApStatus','cycleDlStatus','delBlock','delCostRow','delTblCol',
   'delTblRow','editFileLink','importTblFile','moveTblCol','moveTblRow','openTblFmt','pickTag',
-  'setEmbedHeight','tableToCSV','tblRowOp','toggleCogsLink','refreshMarginScenario','openMarginCalc']);
+  'setEmbedHeight','tableToCSV','tblRowOp','toggleCogsLink','refreshMarginScenario','openMarginCalc','crsRefreshTable','crsRefreshCard']);
 const SAFE_ONCLICK_ARG='(?:\'[^\'<>]*\'|"[^"<>]*"|-?\\d+(?:\\.\\d+)?|this|event)';
 const SAFE_ONCLICK_CALL_RE=new RegExp('^([A-Za-z_]\\w*)\\((?:'+SAFE_ONCLICK_ARG+'(?:,\\s*'+SAFE_ONCLICK_ARG+')*)?\\)$');
 const SAFE_ONCLICK_TOGGLE_RE=/^this\.closest\('[^'<>]*'\)\.classList\.toggle\('[^'<>]*'\)$/;
@@ -10588,6 +11338,7 @@ function crsDetailHTML(c){
     + (c.deliveryLabel ? '<span class="crs-dl crs-dl-'+(c.weeks||'x')+'">'+escapeHtml(c.deliveryLabel)+'</span>' : '')
     + '<span class="crs-badge crs-b-'+c.status+'">'+escapeHtml(c.status)+'</span>'
     + '<span style="flex:1"></span>'
+    + '<button class="crs-back" onclick="crsInsertCardDialog(\''+c.id+'\')" title="Insert this course into the open section">&#8595; Insert</button>'
     + '<button class="crs-del" onclick="crsDeleteFromPanel(\''+c.id+'\')" title="Delete this course">&#10005; Delete</button>'
     + '</div>';
 
@@ -10617,16 +11368,18 @@ function crsDetailHTML(c){
   h += '<div class="crs-fields">';
   CRS_FIELDS.forEach(f=>{
     if(f.key==='code' || f.key==='deliveryLabel') return;
-    if(f.key==='category' || f.key==='status'){
+    if(f.key==='category' || f.key==='status' || f.key==='school'){
       const opts = f.key==='status'
         ? CRS_STATUSES.map(x=>({v:x.id,l:x.label}))
-        : crsCategories().map(x=>({v:x,l:x}));
+        : (f.key==='school' ? crsSchools().map(x=>({v:x.id,l:x.label}))
+                            : crsCategories().map(x=>({v:x,l:x})));
       h += '<div class="crs-f"><div class="crs-f-l">'+escapeHtml(f.label)+'</div>'
         +  '<select class="crs-f-in" onchange="crsSelectChange(\''+c.id+'\',\''+f.key+'\',this)">'
-        +  (f.key==='category' ? '<option value="">— none —</option>' : '')
+        +  (f.key!=='status' ? '<option value="">— none —</option>' : '')
         +  opts.map(o=>'<option value="'+escapeHtml(o.v)+'"'
              +(String(c[f.key]||'')===o.v?' selected':'')+'>'+escapeHtml(o.l)+'</option>').join('')
         +  (f.key==='category' ? '<option value="__new__">+ New category…</option>' : '')
+        +  (f.key==='school'   ? '<option value="__new__">+ New school…</option>'   : '')
         +  '</select></div>';
       return;
     }
@@ -10664,6 +11417,48 @@ function crsDetailHTML(c){
     });
     h += '</table></div>';
   }
+  // ---- the costing side, via the margin link ----
+  const mEntries = crsMarginEntries(c.id);
+  const scen = crsScenariosUsing(c.id);
+  if(mEntries.length){
+    const conflict = crsCreditConflicts().filter(x=>x.courseIds.indexOf(c.id)>=0);
+    h += '<div class="crs-offer"><div class="crs-offer-t">Costing &amp; margin</div><table>'
+      +  '<tr><th>Costing line</th><th>School</th><th style="text-align:right">SCH</th><th style="text-align:right">Materials</th></tr>';
+    mEntries.forEach(m=>{
+      const bad = conflict.some(x=>x.marginId===m.id);
+      h += '<tr><td>'+escapeHtml(m.code||'')+'</td><td>'+escapeHtml(m.school||'—')+'</td>'
+        +  '<td style="text-align:right"'+(bad?' class="crs-conflict" title="Disagrees with the catalog"':'')+'>'
+        +  (m.creditHours!=null?m.creditHours:'')+'</td>'
+        +  '<td style="text-align:right">'+_costUSD(marginCourseTotalCost(m))+'</td></tr>';
+    });
+    if(mEntries.length>1)
+      h += '<tr><td colspan="3"><b>'+mEntries.length+' costing lines</b></td>'
+        +  '<td style="text-align:right"><b>'+_costUSD(crsCostTotal(c.id))+'</b></td></tr>';
+    h += '</table>';
+    if(conflict.length){
+      h += '<div class="crs-review">Credit hours disagree: the costing line says '
+        +  conflict[0].margin+', the catalog says '+conflict[0].catalog.join('/')
+        +  '. Nothing has been changed — revenue is calculated from the costing side, '
+        +  'so fix whichever is wrong.</div>';
+    }
+    h += '<table>';
+    if(scen.length){
+      h += '<tr><th>Used in scenario</th></tr>';
+      scen.slice(0,10).forEach(x=>{
+        h += '<tr><td><a onclick="crsOpenScenario(\''+x.progId+'\',\''+x.scenarioId+'\')">'
+          +  escapeHtml(x.progName)+' → '+escapeHtml(x.scenarioName)
+          +  (x.isPrimary?' ★':'')+'</a></td></tr>';
+      });
+    } else {
+      h += '<tr><td style="color:var(--mut)">Not in any margin scenario yet.</td></tr>';
+    }
+    h += '</table></div>';
+  } else if(crsAll().some(x=>(x.marginCourseIds||[]).length)){
+    h += '<div class="crs-review">No costing line is linked to this course. '
+      +  'Run <b>Link to Margin Calculator</b> from the Course Database header, '
+      +  'or add it to the course library in the Margin Calculator.</div>';
+  }
+
   const refs = crsReferences(c.id);
   if(refs.length){
     h += '<div class="crs-offer"><div class="crs-offer-t">Used in '+refs.length+' place'+(refs.length===1?'':'s')+'</div><table>';
@@ -10684,13 +11479,24 @@ function crsCategories(){
   (courseStore.categories||[]).forEach(x=>set.add(x));
   return [...set].sort();
 }
+// SUT and SFT are the two schools today; the list stays open because a third
+// would otherwise mean editing the app rather than the data.
+function crsSchools(){
+  const out = CRS_SCHOOLS.slice();
+  const seen = new Set(out.map(x=>x.id));
+  crsAll().forEach(c=>{ if(c.school && !seen.has(c.school)){ seen.add(c.school); out.push({id:c.school,label:c.school}); } });
+  (courseStore.schools||[]).forEach(x=>{ if(!seen.has(x)){ seen.add(x); out.push({id:x,label:x}); } });
+  return out;
+}
 async function crsSelectChange(id, key, sel){
   if(sel.value === '__new__'){
-    const v = await appPrompt('Name the new category:','');
+    const v = await appPrompt(key==='school' ? 'Name the new school (short code, e.g. SBT):'
+                                             : 'Name the new category:','');
     const c = crsById(id);
     if(v === null || !v.trim()){ sel.value = (c && c[key]) || ''; return; }
-    if(!courseStore.categories) courseStore.categories = [];
-    if(!courseStore.categories.includes(v.trim())) courseStore.categories.push(v.trim());
+    const bucket = key==='school' ? 'schools' : 'categories';
+    if(!courseStore[bucket]) courseStore[bucket] = [];
+    if(!courseStore[bucket].includes(v.trim())) courseStore[bucket].push(v.trim());
     crsSetField(id, key, v.trim());
   } else {
     crsSetField(id, key, sel.value);
@@ -10713,6 +11519,11 @@ async function crsAddPrompt(){
   const c = crsAdd({ code: ccNormCode(code) });
   crsOpenDetail(c.id);
   toast('Added '+crsDisplay(c)+' as a draft — fill in the rest below');
+}
+function crsOpenScenario(progId, scenarioId){
+  crsPanelClose();
+  document.getElementById('course-view').style.display='none';
+  openMarginCalc(progId, scenarioId);
 }
 // Navigate to a section that uses this course, leaving the panel docked.
 async function crsGoTo(progId, sectionId){
@@ -11842,7 +12653,18 @@ async function marginRemoveCourse(courseId){
 // disagree about what the correct title is.
 function ccStandardTitle(code){
   const rec = standardsStore.courseTitles[ccNormCode(code)];
-  return rec && rec.title ? rec.title : '';
+  if(rec && rec.title) return rec.title;
+  // Fall back to the Course Database, which knows every published title. This
+  // is what makes real course names appear in the Margin Calculator's library
+  // (it has no title field of its own) with no change to its markup.
+  if(typeof crsByCode === 'function'){
+    const hits = crsByCode(code);
+    // Deliveries of one course share a title, so any of them will do -- but if
+    // they ever disagree, say nothing rather than pick one.
+    const titles = [...new Set(hits.map(c=>c.title).filter(Boolean))];
+    if(titles.length === 1) return titles[0];
+  }
+  return '';
 }
 function ccSetTitleFromLibrary(courseId, value){
   if(viewerModeForced) return;
