@@ -254,9 +254,9 @@ body.sb-rail .phase-hdr:hover .ph-dot{box-shadow:0 0 0 3px rgba(201,183,156,0.45
 /* ---------- Course Database ---------- */
 #course-panel-body,#course-body{flex:1;min-height:0;overflow-y:auto;}
 #course-body{padding:0 4px;}
-.crs-wrap{display:flex;flex-direction:column;gap:12px;padding:12px 14px;}
-.crs-stats{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--mut);
-  padding-bottom:10px;border-bottom:1px solid var(--bdr);}
+.crs-wrap{display:flex;flex-direction:column;gap:9px;padding:10px 12px 22px;}
+.crs-stats{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--mut);
+  padding-bottom:7px;border-bottom:1px solid var(--bdr);}
 .crs-stats b{color:var(--ink);font-size:14px;font-family:var(--font-cond);}
 .crs-s-draft b{color:#1F5B7A;} .crs-s-flag b{color:#B4761A;}
 .crs-filters{display:flex;flex-wrap:wrap;gap:7px;align-items:center;}
@@ -266,7 +266,7 @@ body.sb-rail .phase-hdr:hover .ph-dot{box-shadow:0 0 0 3px rgba(201,183,156,0.45
 .crs-sel{padding:5px 7px;border:1px solid var(--bdr);border-radius:4px;font-size:12px;background:#fff;color:var(--ink);}
 .crs-chk{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mut);white-space:nowrap;cursor:pointer;}
 .crs-rows{display:flex;flex-direction:column;border:1px solid var(--bdr);border-radius:5px;overflow:hidden;}
-.crs-row{display:flex;align-items:baseline;gap:8px;padding:7px 10px;cursor:pointer;
+.crs-row{display:flex;align-items:baseline;gap:7px;padding:5px 9px;cursor:pointer;
   border-bottom:1px solid var(--bdr);background:#fff;}
 .crs-row:last-child{border-bottom:none;}
 .crs-row:hover{background:#FDF4F5;}
@@ -274,7 +274,12 @@ body.sb-rail .phase-hdr:hover .ph-dot{box-shadow:0 0 0 3px rgba(201,183,156,0.45
   white-space:nowrap;color:var(--ink);}
 .crs-code-lg{font-size:16px;}
 .crs-dl{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
-  color:#1F5B7A;background:#EAF2F7;border:1px solid #BFD9E8;border-radius:3px;padding:1px 5px;white-space:nowrap;}
+  border-radius:3px;padding:1px 5px;white-space:nowrap;
+  color:#5B4A6B;background:#F2EEF7;border:1px solid #D6CBE3;}
+/* The two delivery formats are the thing being compared, so they must be
+   distinguishable at a glance rather than by reading the text. */
+.crs-dl-5{color:#1F5B7A;background:#EAF2F7;border-color:#BFD9E8;}
+.crs-dl-8{color:#8A4C1F;background:#FBF0E6;border-color:#E8CFB4;}
 .crs-title{flex:1;min-width:0;font-size:13px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .crs-meta{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--mut);white-space:nowrap;}
 .crs-badge{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
@@ -287,8 +292,8 @@ body.sb-rail .phase-hdr:hover .ph-dot{box-shadow:0 0 0 3px rgba(201,183,156,0.45
 .crs-none,.crs-empty{padding:20px 4px;color:var(--mut);font-size:13px;text-align:center;}
 .crs-empty-t{font-family:var(--font-cond);font-size:17px;font-weight:700;color:var(--ink);margin-bottom:6px;}
 .crs-empty p{max-width:44ch;margin:0 auto 14px;line-height:1.55;}
-.crs-detail-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-  padding-bottom:10px;border-bottom:1px solid var(--bdr);}
+.crs-detail-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+  padding-bottom:8px;border-bottom:1px solid var(--bdr);}
 .crs-back{border:1px solid var(--bdr);background:#fff;border-radius:4px;padding:3px 8px;
   font-size:12px;cursor:pointer;color:var(--mut);font-family:inherit;}
 .crs-back:hover{border-color:var(--acc);color:var(--acc);}
@@ -314,16 +319,15 @@ body.sb-rail .phase-hdr:hover .ph-dot{box-shadow:0 0 0 3px rgba(201,183,156,0.45
   font-family:var(--font-cond);letter-spacing:.05em;text-transform:uppercase;}
 .crs-review{font-size:12px;color:#8A6A22;background:#FBF3E6;border:1px solid #E3D5B4;
   border-radius:4px;padding:7px 10px;}
-.crs-fields{display:flex;flex-direction:column;gap:10px;}
-.crs-f{display:flex;flex-direction:column;gap:3px;}
+.crs-fields{display:flex;flex-direction:column;gap:7px;}
+.crs-f{display:flex;flex-direction:column;gap:2px;}
 .crs-f-l{font-family:var(--font-cond);font-size:11px;font-weight:700;letter-spacing:.07em;
   text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:6px;}
 .crs-pv{font-size:9px;font-weight:700;letter-spacing:.05em;border-radius:3px;padding:0 4px;}
-.crs-pv-catalog{color:#2F6B4F;background:#EDF5F0;border:1px solid #BFDCCB;}
-.crs-pv-playbook{color:#1F5B7A;background:#EAF2F7;border:1px solid #BFD9E8;}
-.crs-pv-manual{color:#8A6A22;background:#FBF3E6;border:1px solid #E3D5B4;}
-.crs-f-in{width:100%;padding:6px 9px;border:1px solid var(--bdr);border-radius:4px;
-  font-size:13px;font-family:inherit;line-height:1.5;background:#fff;color:var(--ink);resize:vertical;}
+.crs-pv-edited{color:#8A6A22;background:#FBF3E6;border:1px solid #E3D5B4;}
+.crs-f-in{width:100%;box-sizing:border-box;padding:4px 8px;border:1px solid var(--bdr);
+  border-radius:4px;font-size:13px;font-family:inherit;line-height:1.45;background:#fff;
+  color:var(--ink);resize:vertical;}
 .crs-f-in:focus{outline:2px solid var(--acc);outline-offset:-1px;}
 .crs-f-in::placeholder{color:#B9AEAC;font-style:italic;}
 .crs-offer{border:1px solid var(--bdr);border-radius:5px;overflow:hidden;}
@@ -1281,7 +1285,7 @@ body.view-mode .wysiwyg-bar{display:none!important;}
 .cp-api-save{border-radius:3px;}
 
 /* ===== PM SPACE (Monday-style boards) ===== */
-#pm-view,#pm-dash-view,#margin-view{height:100vh;overflow-y:auto;background:#f4f5f7;}
+#pm-view,#pm-dash-view,#margin-view,#cc-view,#course-view{height:100vh;overflow-y:auto;background:#f4f5f7;}
 .pm-shell{max-width:1280px;margin:0 auto;padding:0 24px 60px;}
 .pm-head{display:flex;align-items:center;gap:14px;padding:18px 0 14px;border-bottom:3px solid var(--acc);margin-bottom:18px;flex-wrap:wrap;}
 .pm-back{cursor:pointer;font-size:13px;color:var(--mut);font-weight:600;white-space:nowrap;}
@@ -2735,7 +2739,7 @@ let standardsStore = { courseTitles: {}, progAbbrev: {}, ignored: {} };
 // unique -- the five general-education courses and SDI 101 each run in a
 // 5-week and an 8-week format and are separate records -- so everything that
 // joins to a course joins on `id`, never on `code`.
-let courseStore = { courses: [], presets: [], editions: [] };
+let courseStore = { courses: [], presets: [], editions: [], categories: [] };
 
 // ==================== COURSE DATABASE ====================
 // Field definitions drive the picker, the table columns, the card and every
@@ -3362,10 +3366,11 @@ function applyState(s){
   knowledgeStore = (s.knowledgeStore && Array.isArray(s.knowledgeStore.entries))
     ? s.knowledgeStore : { entries: [] };
   courseStore = (s.courseStore && typeof s.courseStore==='object')
-    ? { courses:  Array.isArray(s.courseStore.courses)  ? s.courseStore.courses  : [],
-        presets:  Array.isArray(s.courseStore.presets)  ? s.courseStore.presets  : [],
-        editions: Array.isArray(s.courseStore.editions) ? s.courseStore.editions : [] }
-    : { courses: [], presets: [], editions: [] };
+    ? { courses:    Array.isArray(s.courseStore.courses)    ? s.courseStore.courses    : [],
+        presets:    Array.isArray(s.courseStore.presets)    ? s.courseStore.presets    : [],
+        editions:   Array.isArray(s.courseStore.editions)   ? s.courseStore.editions   : [],
+        categories: Array.isArray(s.courseStore.categories) ? s.courseStore.categories : [] }
+    : { courses: [], presets: [], editions: [], categories: [] };
   standardsStore = (s.standardsStore && typeof s.standardsStore==='object')
     ? { courseTitles: s.standardsStore.courseTitles || {},
         progAbbrev:   s.standardsStore.progAbbrev   || {},
@@ -10548,7 +10553,7 @@ function crsListHTML(){
     const flags = (c.needsReview||[]).length;
     h += '<div class="crs-row" onclick="crsOpenDetail(\''+c.id+'\')">'
       +  '<span class="crs-code">'+escapeHtml(c.code)+'</span>'
-      +  (c.deliveryLabel ? '<span class="crs-dl">'+escapeHtml(c.deliveryLabel)+'</span>' : '')
+      +  (c.deliveryLabel ? '<span class="crs-dl crs-dl-'+(c.weeks||'x')+'">'+escapeHtml(c.deliveryLabel)+'</span>' : '')
       +  '<span class="crs-title">'+escapeHtml(c.title||'— untitled —')+'</span>'
       +  '<span class="crs-meta">'+(c.credits!=null?c.credits+'cr':'')+(c.weeks!=null?' · '+c.weeks+'wk':'')+'</span>'
       +  (c.status!=='active' ? '<span class="crs-badge crs-b-'+c.status+'">'+c.status+'</span>' : '')
@@ -10580,7 +10585,7 @@ function crsDetailHTML(c){
     + '<div class="crs-detail-head">'
     + '<button class="crs-back" onclick="crsBackToList()">&#8592; All courses</button>'
     + '<span class="crs-code crs-code-lg">'+escapeHtml(c.code)+'</span>'
-    + (c.deliveryLabel ? '<span class="crs-dl">'+escapeHtml(c.deliveryLabel)+'</span>' : '')
+    + (c.deliveryLabel ? '<span class="crs-dl crs-dl-'+(c.weeks||'x')+'">'+escapeHtml(c.deliveryLabel)+'</span>' : '')
     + '<span class="crs-badge crs-b-'+c.status+'">'+escapeHtml(c.status)+'</span>'
     + '<span style="flex:1"></span>'
     + '<button class="crs-del" onclick="crsDeleteFromPanel(\''+c.id+'\')" title="Delete this course">&#10005; Delete</button>'
@@ -10612,7 +10617,27 @@ function crsDetailHTML(c){
   h += '<div class="crs-fields">';
   CRS_FIELDS.forEach(f=>{
     if(f.key==='code' || f.key==='deliveryLabel') return;
-    const owner = (c.provenance||{})[f.key] || '';
+    if(f.key==='category' || f.key==='status'){
+      const opts = f.key==='status'
+        ? CRS_STATUSES.map(x=>({v:x.id,l:x.label}))
+        : crsCategories().map(x=>({v:x,l:x}));
+      h += '<div class="crs-f"><div class="crs-f-l">'+escapeHtml(f.label)+'</div>'
+        +  '<select class="crs-f-in" onchange="crsSelectChange(\''+c.id+'\',\''+f.key+'\',this)">'
+        +  (f.key==='category' ? '<option value="">— none —</option>' : '')
+        +  opts.map(o=>'<option value="'+escapeHtml(o.v)+'"'
+             +(String(c[f.key]||'')===o.v?' selected':'')+'>'+escapeHtml(o.l)+'</option>').join('')
+        +  (f.key==='category' ? '<option value="__new__">+ New category…</option>' : '')
+        +  '</select></div>';
+      return;
+    }
+    // A badge on every field is noise: on a new record everything is
+    // 'playbook', and on an imported one everything is 'catalog'. Show it only
+    // where it carries information -- a field whose value you have overridden
+    // away from what the catalog says.
+    const catHas = c.catalogValue && c.catalogValue[f.key] !== undefined
+                   && c.catalogValue[f.key] !== null && c.catalogValue[f.key] !== '';
+    const ownerRaw = (c.provenance||{})[f.key] || '';
+    const owner = (catHas && (ownerRaw==='playbook' || ownerRaw==='manual')) ? 'edited' : '';
     const val = crsFieldText(c, f.key);
     const long = f.type==='longtext';
     h += '<div class="crs-f'+(long?' crs-f-long':'')+'">'
@@ -10651,6 +10676,27 @@ function crsDetailHTML(c){
 }
 
 // ---- panel actions ---------------------------------------------------------
+// Categories come from whatever is already in the database, so a new one
+// created for one course is offered to every other course afterwards.
+function crsCategories(){
+  const set = new Set();
+  crsAll().forEach(c=>{ if(c.category) set.add(c.category); });
+  (courseStore.categories||[]).forEach(x=>set.add(x));
+  return [...set].sort();
+}
+async function crsSelectChange(id, key, sel){
+  if(sel.value === '__new__'){
+    const v = await appPrompt('Name the new category:','');
+    const c = crsById(id);
+    if(v === null || !v.trim()){ sel.value = (c && c[key]) || ''; return; }
+    if(!courseStore.categories) courseStore.categories = [];
+    if(!courseStore.categories.includes(v.trim())) courseStore.categories.push(v.trim());
+    crsSetField(id, key, v.trim());
+  } else {
+    crsSetField(id, key, sel.value);
+  }
+  crsRender();
+}
 function crsEditFromPanel(id, key, value){
   if(crsSetField(id, key, value)) crsRender();
 }
