@@ -252,21 +252,11 @@ body.sb-rail .phase-hdr:hover .ph-dot{box-shadow:0 0 0 3px rgba(201,183,156,0.45
 .pm-panel-handle{flex:0 0 6px;cursor:col-resize;background:var(--bdr);}
 .pm-panel-handle:hover,.pm-panel-handle.dragging{background:var(--acc);}
 /* ---------- Course table / card blocks ---------- */
-.block-course-table,.block-course-card{background:#fff;border:1px solid var(--bdr);border-radius:8px;overflow:hidden;}
-.crs-tbl-scroll{overflow-x:auto;}
-table.crs-tbl{width:100%;border-collapse:collapse;font-size:13.5px;}
-table.crs-tbl th{font-family:var(--font-cond);font-size:11px;font-weight:700;letter-spacing:.07em;
-  text-transform:uppercase;color:var(--mut);text-align:left;padding:8px 10px;
-  background:#F6F3F1;border-bottom:2px solid var(--bdr);white-space:nowrap;}
-table.crs-tbl th[data-course-field]{color:#2F6B4F;}
-table.crs-tbl td{padding:6px 10px;border-bottom:1px solid var(--bdr);color:var(--ink);vertical-align:top;}
-table.crs-tbl td[data-course-field="code"]{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  font-size:12.5px;font-weight:600;white-space:nowrap;}
-table.crs-tbl td:not([data-course-field]){background:#F7FAFC;}
-table.crs-tbl tr.crs-tr-group td{background:var(--sbg,#3B0A10);color:#fff;font-family:var(--font-cond);
-  font-size:11.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;padding:5px 10px;}
-table.crs-tbl tr.crs-tr-sub td{background:#F1EEEC;font-family:var(--font-cond);font-weight:700;
-  font-size:12.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);}
+/* The table itself is a standard .block-table -- no new table styling. These
+   only mark which columns the database owns and add the refresh footer. */
+.block-table th[data-course-field]{color:#2F6B4F;}
+.block-table td:not([data-course-field]):not(.tbl-utilcell){background:#F7FAFC;}
+.block-course-card{background:#fff;border:1px solid var(--bdr);border-radius:8px;overflow:hidden;}
 .crs-tbl-foot{display:flex;align-items:center;gap:9px;padding:6px 10px;background:#F6F3F1;
   border-top:1px solid var(--bdr);font-size:11.5px;color:var(--mut);}
 .crs-card-h{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;padding:9px 12px;
@@ -337,6 +327,13 @@ body.view-mode .crs-tbl-refresh,.section-locked .crs-tbl-refresh{display:none!im
 .crs-b-active{color:#2F6B4F;background:#EDF5F0;border:1px solid #BFDCCB;}
 .crs-dot{width:7px;height:7px;border-radius:50%;background:#B4761A;flex:0 0 7px;align-self:center;}
 .crs-dot-q{background:var(--mut);}
+.crs-pick{margin:0 2px 0 0;flex:0 0 auto;align-self:center;cursor:pointer;}
+.crs-pickbar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#FDF4F5;
+  border:1px solid #F0CBD5;border-radius:5px;font-size:12px;color:var(--ink);}
+.crs-pickbar b{font-family:var(--font-cond);font-size:14px;}
+.crs-ins{margin-left:auto;border:1px solid var(--acc);background:var(--acc);color:#fff;
+  border-radius:4px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+.crs-ins:hover{filter:brightness(1.08);}
 .crs-none,.crs-empty{padding:20px 4px;color:var(--mut);font-size:13px;text-align:center;}
 .crs-empty-t{font-family:var(--font-cond);font-size:17px;font-weight:700;color:var(--ink);margin-bottom:6px;}
 .crs-empty p{max-width:44ch;margin:0 auto 14px;line-height:1.55;}
@@ -1680,7 +1677,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); openKnowledgeBase();">🧠 Knowledge Base</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); ccOpenSmart();">🔍 Consistency</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); crsOpenSmart();">📚 Course Database</div>
-                <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); crsInsertTableDialog();">📋 Insert course table…</div>
+                <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); crsInsertEntry();">📋 Insert courses…</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); copyViewerLinkForCurrentPage();">🔗 Copy link to this page</div>
               </div>
             </div>
@@ -1922,7 +1919,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
   <div class="pk-item" onclick="addBlock('callout')"><div class="pk-ico">💡</div><div><div class="pk-lbl">Callout</div><div class="pk-desc">Highlight a key insight</div></div></div>
   <div class="pk-item" onclick="addBlock('table')"><div class="pk-ico">📊</div><div><div class="pk-lbl">Table</div><div class="pk-desc">Grid, comparison, matrix</div></div></div>
   <div class="pk-item" onclick="addBlock('costtable')"><div class="pk-ico">🧮</div><div><div class="pk-lbl">Cost / COGS Table</div><div class="pk-desc">Auto-calculates totals &amp; program sum</div></div></div>
-  <div class="pk-item" onclick="document.getElementById('block-picker').classList.remove('show'); crsInsertTableDialog()"><div class="pk-ico">📋</div><div><div class="pk-lbl">Course Table</div><div class="pk-desc">Built from the Course Database &mdash; pick any fields, refreshes</div></div></div>
+  <div class="pk-item" onclick="document.getElementById('block-picker').classList.remove('show'); crsInsertEntry()"><div class="pk-ico">📋</div><div><div class="pk-lbl">Course Table</div><div class="pk-desc">Tick courses in the database, insert them as a table</div></div></div>
   <div class="pk-item" onclick="document.getElementById('block-picker').classList.remove('show'); openMarginCalc(curProgId);"><div class="pk-ico">📈</div><div><div class="pk-lbl">Margin Calculator</div><div class="pk-desc">Course library, scenarios &amp; margin comparison</div></div></div>
   <div class="pk-item" onclick="addBlock('swot')"><div class="pk-ico">🧭</div><div><div class="pk-lbl">SWOT Analysis</div><div class="pk-desc">Strengths, weaknesses, opportunities, threats</div></div></div>
   <div class="pk-item" onclick="addBlock('timeline')"><div class="pk-ico">📅</div><div><div class="pk-lbl">Timeline</div><div class="pk-desc">Milestones and key dates</div></div></div>
@@ -3142,78 +3139,65 @@ function crsRowsFor(spec){
   return rows.sort((a,b)=> a.code===b.code ? (a.weeks||0)-(b.weeks||0) : (a.code<b.code?-1:1));
 }
 function crsTableBlockHTML(data){
-  const fields = (data.fields||['code','title','credits','weeks','prereqs']).filter(k=>CRS_FIELD[k]);
-  const free   = data.free || [];
-  const groupBy= data.groupBy || '';
-  const spec   = { source:data.source||'all', program:data.program||'', ids:data.ids||[], status:data.status||'' };
-  const rows   = crsRowsFor(spec);
-  const ed     = data.edition || (courseStore.editions||[]).slice(-1).map(e=>e.label)[0] || '';
-  const numericFields = fields.filter(k=>CRS_FIELD[k].numeric);
+  // Deliberately a STANDARD .block-table, not a bespoke one: the gear menu's
+  // add-column / add-row / formatting / CSV tools then all work on it, and it
+  // looks and behaves like every other table in the Playbook. The only thing
+  // that makes it special is the data-course-field / data-course-id / 
+  // data-db-value attributes, which is what lets ↻ Refresh know which cells
+  // the database owns.
+  // NOT 'tbl-'+(++uid): uid restarts at zero on every page load while blocks
+  // persist, so repeating the same steps in a later session regenerates an id
+  // that already exists in the document -- and getElementById then hands the
+  // table toolbar the WRONG table. Same shape as the block's own bid.
+  const id = 'tbl-c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  const fields = (data.fields||['code','title','credits','weeks']).filter(k=>CRS_FIELD[k]);
+  const spec = { source:data.source||'ids', program:data.program||'', ids:data.ids||[], status:data.status||'' };
+  const rows = crsRowsFor(spec);
+  const ed   = data.edition || '';
 
-  const th = fields.map(k=>'<th data-course-field="'+k+'" contenteditable="true" spellcheck="false"'
-        + (CRS_FIELD[k].numeric?' style="text-align:right"':'') + '>'
-        + escapeHtml(CRS_FIELD[k].short) + '</th>').join('')
-    + free.map(f=>'<th contenteditable="true" spellcheck="false">'+escapeHtml(f)+'</th>').join('');
+  const ths = fields.map((k,ci)=>'<th contenteditable="true" spellcheck="false" data-ci="'+ci+'"'
+      + ' data-course-field="'+k+'">'+escapeHtml(CRS_FIELD[k].short)+'</th>').join('');
+  const body = rows.map((c,ri)=>{
+    const tds = fields.map(k=>{
+      const v = crsCellText(c,k);
+      return '<td contenteditable="true" spellcheck="false" data-course-field="'+k+'"'
+           + ' data-db-value="'+escapeHtml(v)+'">'+escapeHtml(v)+'</td>';
+    }).join('');
+    return '<tr data-ri="'+ri+'" data-course-id="'+c.id+'">'+tds
+         + '<td class="tbl-utilcell" style="width:22px;padding:0;border:none;">'+tblDelCellHTML()+'</td></tr>';
+  }).join('') || ('<tr data-ri="0"><td contenteditable="true" spellcheck="false" colspan="'+fields.length+'">'
+      + 'No courses selected.</td><td class="tbl-utilcell" style="width:22px;padding:0;border:none;">'
+      + tblDelCellHTML()+'</td></tr>');
 
-  const cell = (c,k)=>'<td data-course-field="'+k+'" data-db-value="'+escapeHtml(crsCellText(c,k))+'"'
-        + (CRS_FIELD[k].numeric?' style="text-align:right"':'')
-        + ' contenteditable="true" spellcheck="false">'+escapeHtml(crsCellText(c,k))+'</td>';
-  const rowHTML = c => '<tr data-course-id="'+c.id+'">'
-        + fields.map(k=>cell(c,k)).join('')
-        + free.map(()=>'<td contenteditable="true" spellcheck="false"></td>').join('')
-        + '</tr>';
-  const subtotal = (label, group) => {
-    let h = '<tr class="crs-tr-sub" data-course-subtotal="'+escapeHtml(label)+'">';
-    fields.forEach((k,i)=>{
-      if(i===0) h += '<td colspan="1">'+escapeHtml('Total '+label.toLowerCase())+'</td>';
-      else if(CRS_FIELD[k].numeric){
-        const sum = group.reduce((n,c)=>n+(Number(c[k])||0),0);
-        h += '<td data-course-subtotal-field="'+k+'" style="text-align:right">'+sum+'</td>';
-      } else h += '<td></td>';
-    });
-    free.forEach(()=>{ h += '<td></td>'; });
-    return h + '</tr>';
-  };
-
-  let body = '';
-  if(groupBy){
-    const groups = {};
-    rows.forEach(c=>{ const g = crsFieldText(c, groupBy) || '(none)'; (groups[g]=groups[g]||[]).push(c); });
-    Object.keys(groups).sort().forEach(g=>{
-      body += '<tr class="crs-tr-group"><td colspan="'+(fields.length+free.length)+'">'+escapeHtml(g)+'</td></tr>';
-      groups[g].forEach(c=>{ body += rowHTML(c); });
-      if(numericFields.length) body += subtotal(g, groups[g]);
-    });
-    if(numericFields.length && Object.keys(groups).length>1) body += subtotal('program', rows);
-  } else {
-    rows.forEach(c=>{ body += rowHTML(c); });
-    if(numericFields.length && rows.length>1) body += subtotal('program', rows);
-  }
-  if(!rows.length) body = '<tr><td colspan="'+(fields.length+free.length)+'" style="color:#8A7B7C">'
-    + 'No courses match this table’s source. Use ↻ Refresh after adding some.</td></tr>';
-
-  return '<div class="block-course-table" data-course-table="1"'
+  return '<div class="block-table-wrap" data-course-table="1"'
     + ' data-course-source="'+escapeHtml(spec.source)+'"'
     + ' data-course-program="'+escapeHtml(spec.program)+'"'
     + ' data-course-status="'+escapeHtml(spec.status)+'"'
     + ' data-course-ids="'+escapeHtml((spec.ids||[]).join(','))+'"'
-    + ' data-course-group="'+escapeHtml(groupBy)+'"'
     + ' data-course-edition="'+escapeHtml(ed)+'">'
-    + '<div class="crs-tbl-scroll"><table class="crs-tbl"><thead><tr>'+th+'</tr></thead><tbody>'+body+'</tbody></table></div>'
+    + '<button class="tbl-gear" title="Table tools" onclick="this.closest(\'.block-table-wrap\').classList.toggle(\'tools-open\')">⚙</button>'
+    + '<table class="block-table" id="'+id+'">'
+    + '<thead><tr>'+ths+'<th style="width:22px;padding:0;background:#f8fafc;border:none;"></th></tr></thead>'
+    + '<tbody>'+body+'</tbody></table>'
+    + '<div class="tbl-toolbar">'+tblToolbarHTML(id)+'</div>'
     + '<div class="crs-tbl-foot">'
-    + '<button class="mscn-btn crs-tbl-refresh" onclick="crsRefreshTable(this)">↻ Refresh</button>'
-    + '<span>from the Course Database'+(ed?' · catalog '+escapeHtml(ed):'')+'</span>'
+    + '<button class="mscn-btn crs-tbl-refresh" onclick="crsRefreshTable(this)">↻ Refresh from Course Database</button>'
+    + (ed?'<span>catalog '+escapeHtml(ed)+'</span>':'')
     + '</div></div>';
 }
 
 // The refresh contract. Six rules, and it always reports what it did.
 async function crsRefreshTable(btn){
   if(viewerModeForced) return;
-  const box = btn.closest('.block-course-table'); if(!box) return;
-  const table = box.querySelector('table.crs-tbl'); if(!table) return;
+  const box = btn.closest('[data-course-table]'); if(!box) return;
+  const table = box.querySelector('table.block-table'); if(!table) return;
   const heads = [...table.querySelectorAll('thead th')];
   const bound = heads.map(h=>h.getAttribute('data-course-field')||null);
-  const rep = { updated:[], keptYours:[], unknown:[], missing:[], freeCols:bound.filter(b=>!b).length };
+  // The last header is the table's own delete-button cell, not one of her
+  // columns -- excluded, or the report claims a free column that isn't one.
+  const rep = { updated:[], keptYours:[], unknown:[], missing:[],
+                freeCols: heads.filter(h=>!h.getAttribute('data-course-field')
+                                       && !/^\s*$/.test(h.textContent)).length };
 
   [...table.querySelectorAll('tbody tr')].forEach(tr=>{
     if(tr.classList.contains('crs-tr-group') || tr.classList.contains('crs-tr-sub')) return;
@@ -3316,7 +3300,8 @@ function crsRefreshReport(rep){
   }
   if(rep.freeCols){
     L.push('');
-    L.push(rep.freeCols+' column'+(rep.freeCols===1?'':'s')+' of your own were not touched.');
+    const f = rep.freeCols;
+    L.push(f+' column'+(f===1?'':'s')+' of your own '+(f===1?'was':'were')+' not touched.');
   }
   if(rep.unknown.length){
     L.push('');
@@ -3376,98 +3361,26 @@ async function crsRefreshCard(btn){
 }
 
 // ---- insert into a section ----------------------------------------------
-let crsInsertPick = { fields:['code','title','credits','weeks','prereqs'], free:[], groupBy:'' };
-
-async function crsInsertTableDialog(){
+// Deliberately no configuration dialog. Tick courses in the Course Database
+// panel and press Insert; the table lands with sensible columns and is then an
+// ordinary table you edit with the gear menu. An up-front wall of options
+// (row source, grouping, free columns, saved layouts) was the wrong shape for
+// "populate a page for informational purposes".
+function crsInsertEntry(){
   if(viewerModeForced) return;
-  if(!curProgId){ await appAlert('Open a program first — the table is inserted into the section you are viewing.'); return; }
-  if(!crsAll().length){ await appAlert('The Course Database is empty. Import a catalog edition first.'); return; }
-  const progs = [...new Set(crsAll().flatMap(c=>c.catalogPrograms||[]))].sort();
-  const presets = courseStore.presets||[];
-  const groupables = ['','category','program','status','school','genEdArea'];
-
-  const body = '<div class="crs-dlg">'
-    + (presets.length ? '<div class="crs-dlg-r"><label>Saved layout</label>'
-        + '<select id="crs-i-preset" onchange="crsApplyPresetToDialog(this.value)">'
-        + '<option value="">— choose —</option>'
-        + presets.map((pr,i)=>'<option value="'+i+'">'+escapeHtml(pr.name)+'</option>').join('')
-        + '</select></div>' : '')
-    + '<div class="crs-dlg-r"><label>Rows from</label><select id="crs-i-source">'
-        + '<option value="all">Every course</option>'
-        + (progs.length?'<option value="program">One catalog program</option>':'')
-        + '<option value="status">One status</option>'
-      + '</select></div>'
-    + (progs.length ? '<div class="crs-dlg-r"><label>Program</label><select id="crs-i-program">'
-        + progs.map(x=>'<option value="'+escapeHtml(x)+'">'+escapeHtml(x)+'</option>').join('')
-        + '</select></div>' : '')
-    + '<div class="crs-dlg-r"><label>Status</label><select id="crs-i-status">'
-        + CRS_STATUSES.map(x=>'<option value="'+x.id+'">'+x.label+'</option>').join('')
-      + '</select></div>'
-    + '<div class="crs-dlg-r"><label>Group by</label><select id="crs-i-group">'
-        + groupables.map(g=>'<option value="'+g+'">'+(g?escapeHtml((CRS_FIELD[g]||{}).label||g):'No grouping')+'</option>').join('')
-      + '</select></div>'
-    + '<div class="crs-dlg-f"><label>Columns from the database</label><div class="crs-dlg-chks">'
-        + CRS_FIELDS.map(f=>'<label class="crs-dlg-chk"><input type="checkbox" value="'+f.key+'"'
-            + (crsInsertPick.fields.indexOf(f.key)>=0?' checked':'')+'> '+escapeHtml(f.label)
-            + (f.key==='learningObjectives'?' <i>(empty for now)</i>':'')+'</label>').join('')
-      + '</div></div>'
-    + '<div class="crs-dlg-r"><label>Your own columns</label>'
-        + '<input type="text" id="crs-i-free" placeholder="Term, Delivery, Approval — comma separated">'
-      + '</div>'
-    + '<p class="crs-dlg-note">Database columns refresh; your own columns never do. '
-      + 'Everything lands as a normal block you can edit, move and delete.</p>'
-    + '</div>';
-
-  const ok = await appFormDialog('Insert a course table', body, 'Insert', 'Cancel');
-  if(!ok) return;
-  const g = id => document.getElementById(id);
-  const fields = [...document.querySelectorAll('.crs-dlg-chks input:checked')].map(x=>x.value);
-  if(!fields.length){ await appAlert('Pick at least one database column.'); return; }
-  const free = (g('crs-i-free').value||'').split(',').map(x=>x.trim()).filter(Boolean);
-  const spec = { t:'courseTable', fields, free, groupBy:g('crs-i-group').value,
-                 source:g('crs-i-source').value,
-                 program:g('crs-i-program')?g('crs-i-program').value:'',
-                 status:g('crs-i-status').value,
-                 edition:(courseStore.editions||[]).slice(-1).map(e=>e.label)[0]||'' };
-  crsInsertPick = { fields, free, groupBy:spec.groupBy };
-  const node = makeBlock(spec);
-  document.getElementById('blocks-root').appendChild(node);
-  initBlockSort();
-  scheduleSave();
-  const n = crsRowsFor(spec).length;
-  toast('Inserted '+n+' course row'+(n===1?'':'s')+' — editable and movable like any block');
-  if(await appConfirm('Save these columns as a reusable layout?','Save layout','No thanks')){
-    const name = await appPrompt('Name this layout (e.g. DEAC course map):','');
-    if(name && name.trim()){
-      if(!courseStore.presets) courseStore.presets = [];
-      courseStore.presets.push({ id:'pre-'+Date.now(), name:name.trim(), fields, free, groupBy:spec.groupBy });
-      scheduleSave();
-      toast('Saved “'+name.trim()+'”');
-    }
-  }
+  if(!curProgId){ appAlert('Open a program first — courses are inserted into the section you are viewing.'); return; }
+  crsPanelOpenFor();
+  if(!crsPicked.size) toast('Tick the courses you want, then press Insert');
 }
-function crsApplyPresetToDialog(i){
-  const pr = (courseStore.presets||[])[Number(i)];
-  if(!pr) return;
-  document.querySelectorAll('.crs-dlg-chks input').forEach(x=>{ x.checked = (pr.fields||[]).indexOf(x.value)>=0; });
-  const fr = document.getElementById('crs-i-free'); if(fr) fr.value = (pr.free||[]).join(', ');
-  const gp = document.getElementById('crs-i-group'); if(gp) gp.value = pr.groupBy||'';
-}
-async function crsInsertCardDialog(id){
+// One course as a card, straight in with its useful fields. Empty fields are
+// left out entirely, so the objectives section simply does not appear yet.
+async function crsInsertCard(id){
   if(viewerModeForced) return;
   const c = crsById(id || crsSelectedId);
-  if(!c){ await appAlert('Open a course in the database first, then insert its card.'); return; }
-  if(!curProgId){ await appAlert('Open a program first — the card is inserted into the section you are viewing.'); return; }
-  const body = '<div class="crs-dlg"><div class="crs-dlg-f"><label>Include</label><div class="crs-dlg-chks">'
-    + CRS_FIELDS.filter(f=>['credits','weeks','prereqs','category','genEdArea','school','description','learningObjectives'].indexOf(f.key)>=0)
-        .map(f=>'<label class="crs-dlg-chk"><input type="checkbox" value="'+f.key+'"'
-          + (['credits','weeks','prereqs','description'].indexOf(f.key)>=0?' checked':'')+'> '
-          + escapeHtml(f.label)+(crsFieldText(c,f.key)?'':' <i>(empty)</i>')+'</label>').join('')
-    + '</div></div><p class="crs-dlg-note">Empty fields are left out entirely rather than '
-    + 'rendered as a blank heading.</p></div>';
-  if(!await appFormDialog('Insert '+crsDisplay(c), body, 'Insert', 'Cancel')) return;
-  const fields = [...document.querySelectorAll('.crs-dlg-chks input:checked')].map(x=>x.value);
-  const node = makeBlock({ t:'courseCard', courseId:c.id, fields });
+  if(!c){ await appAlert('Open a course first, then insert it.'); return; }
+  if(!curProgId){ await appAlert('Open a program first — the card goes into the section you are viewing.'); return; }
+  const node = makeBlock({ t:'courseCard', courseId:c.id,
+                           fields:['credits','weeks','prereqs','description','learningObjectives'] });
   document.getElementById('blocks-root').appendChild(node);
   initBlockSort();
   scheduleSave();
@@ -3475,8 +3388,6 @@ async function crsInsertCardDialog(id){
 }
 
 // ==================== COURSE DATABASE EXPORTS ====================
-// One scope selector, one row builder, four outputs. Viewers get exports (the
-// same line the rest of the app draws: taking a copy is not editing).
 const CRS_EXPORT_FIELDS = ['code','deliveryLabel','title','credits','weeks','prereqs',
   'category','genEdArea','school','status','description','learningObjectives','catalogEdition'];
 
@@ -3525,7 +3436,6 @@ function crsExportJSON(scope, program){
     'SDI-Courses-'+scope+'-'+new Date().toISOString().slice(0,10)+'.json');
   toast(list.length+' course'+(list.length===1?'':'s')+' exported as JSON ✓');
 }
-// The catalog document: what compliance and DEAC actually read.
 function crsExportWord(scope, program){
   const list = crsExportScope(scope, program);
   const byCat = {};
@@ -3544,23 +3454,19 @@ function crsExportWord(scope, program){
       else if(c.prereqNote)      bits.push('Prerequisite: '+c.prereqNote);
       body += '<h3>'+escapeHtml(c.code)+(c.deliveryLabel?' ('+escapeHtml(c.deliveryLabel)+')':'')
            +  ': '+escapeHtml(c.title||'')+'</h3>';
-      if(bits.length) body += '<p><i>'+escapeHtml(bits.join(' &middot; ').replace(/&middot;/g,'·'))+'</i></p>';
+      if(bits.length) body += '<p><i>'+escapeHtml(bits.join(' · '))+'</i></p>';
       if(c.description) body += '<p>'+escapeHtml(c.description)+'</p>';
-      // an empty learningObjectives prints nothing at all -- no orphan heading
       if(c.learningObjectives) body += '<p><b>Learning objectives:</b> '+escapeHtml(c.learningObjectives)+'</p>';
     });
   });
   downloadBlob(_buildDocx(body), 'SDI-Course-Catalog-'+scope+'-'+new Date().toISOString().slice(0,10)+'.docx');
   toast(list.length+' course'+(list.length===1?'':'s')+' exported to Word ✓');
 }
-// What has changed since a named catalog edition. Nothing else can produce this.
 function crsChangeRows(){
   const out = [];
   crsAll().forEach(c=>{
-    const diffs = crsDiffs(c);
-    diffs.forEach(k=>out.push([ c.code, c.deliveryLabel||'', (CRS_FIELD[k]||{}).label||k,
-                                String(c.catalogValue[k]), crsFieldText(c,k),
-                                c.catalogEdition||'', c.status ]));
+    crsDiffs(c).forEach(k=>out.push([ c.code, c.deliveryLabel||'', (CRS_FIELD[k]||{}).label||k,
+                                String(c.catalogValue[k]), crsFieldText(c,k), c.catalogEdition||'', c.status ]));
     if(c.status==='draft') out.push([ c.code, c.deliveryLabel||'', 'Whole record',
                                       '(not in the catalog)', 'Draft in the Playbook', '', 'draft' ]);
   });
@@ -3570,7 +3476,7 @@ async function crsExportChangeReport(){
   const rows = crsChangeRows();
   if(!rows.length){ await appAlert('Nothing differs from the catalog, and there are no draft courses. No report to produce.'); return; }
   const ed = (courseStore.editions||[]).slice(-1).map(e=>e.label)[0]||'the imported edition';
-  let body = '<h1>Course changes since catalog '+escapeHtml(ed)+'</h1>'
+  const body = '<h1>Course changes since catalog '+escapeHtml(ed)+'</h1>'
     + '<p>'+rows.length+' change'+(rows.length===1?'':'s')+', generated '+new Date().toLocaleDateString()+'.</p>'
     + '<table><thead><tr><th>Code</th><th>Delivery</th><th>Field</th><th>Catalog</th><th>Now</th><th>Status</th></tr></thead><tbody>'
     + rows.map(r=>'<tr>'+[r[0],r[1],r[2],r[3],r[4],r[6]].map(v=>'<td>'+escapeHtml(v)+'</td>').join('')+'</tr>').join('')
@@ -3600,17 +3506,19 @@ async function crsExportDialog(){
       + '<label class="crs-dlg-chk"><input type="radio" name="crsx" value="csv"> CSV — the same, plain text</label>'
       + '<label class="crs-dlg-chk"><input type="radio" name="crsx" value="docx"> Word — a formatted catalog document, for compliance</label>'
       + '<label class="crs-dlg-chk"><input type="radio" name="crsx" value="json"> JSON — machine-readable</label>'
-      + '<label class="crs-dlg-chk"><input type="radio" name="crsx" value="change"> Change report — what differs from the catalog (Word + CSV)</label>'
+      + '<label class="crs-dlg-chk"><input type="radio" name="crsx" value="change"> Change report — what differs from the catalog</label>'
       + '</div></div></div>';
-  if(!await appFormDialog('Export the Course Database', body, 'Export', 'Cancel')) return;
-  const scope = document.getElementById('crs-x-scope') ? document.getElementById('crs-x-scope').value : 'all';
-  const prog  = document.getElementById('crs-x-prog') ? document.getElementById('crs-x-prog').value : '';
-  const fmt   = (document.querySelector('input[name="crsx"]:checked')||{}).value || 'xls';
-  if(fmt==='csv')    crsExportCSV(scope, prog);
-  else if(fmt==='docx') crsExportWord(scope, prog);
-  else if(fmt==='json') crsExportJSON(scope, prog);
-  else if(fmt==='change') await crsExportChangeReport();
-  else crsExportExcel(scope, prog);
+  const picked = await appFormDialog('Export the Course Database', body, 'Export', 'Cancel', ov=>({
+    scope: (ov.querySelector('#crs-x-scope')||{}).value || 'all',
+    prog:  (ov.querySelector('#crs-x-prog') ||{}).value || '',
+    fmt:   (ov.querySelector('input[name="crsx"]:checked')||{}).value || 'xls'
+  }));
+  if(!picked) return;
+  if(picked.fmt==='csv')         crsExportCSV(picked.scope, picked.prog);
+  else if(picked.fmt==='docx')   crsExportWord(picked.scope, picked.prog);
+  else if(picked.fmt==='json')   crsExportJSON(picked.scope, picked.prog);
+  else if(picked.fmt==='change') await crsExportChangeReport();
+  else                           crsExportExcel(picked.scope, picked.prog);
 }
 
 function crsStats(){
@@ -9011,7 +8919,7 @@ function appDialog(opts){
 // textContent (deliberately -- it takes untrusted strings), so it cannot host
 // markup; this reuses the same .dlg-ov/.dlg-box styling for the cases where
 // the caller is supplying its own, trusted HTML.
-function appFormDialog(title, bodyHTML, okLabel, cancelLabel){
+function appFormDialog(title, bodyHTML, okLabel, cancelLabel, readFn){
   return new Promise(resolve=>{
     const old=document.getElementById('app-dialog-ov'); if(old) old.remove();
     const ov=document.createElement('div'); ov.id='app-dialog-ov'; ov.className='dlg-ov';
@@ -9024,9 +8932,15 @@ function appFormDialog(title, bodyHTML, okLabel, cancelLabel){
     ov.querySelector('.dlg-ok').textContent = okLabel||'OK';
     ov.querySelector('.dlg-cancel').textContent = cancelLabel||'Cancel';
     document.body.appendChild(ov);
+    // The caller's fields live INSIDE this overlay, so anything it needs must be
+    // read before the node is removed. Returning after removal is why "pick at
+    // least one column" fired even when columns were picked.
     function done(v){ document.removeEventListener('keydown',onKey,true); ov.remove(); resolve(v); }
     function onKey(e){ if(e.key==='Escape'){ e.stopPropagation(); e.preventDefault(); done(false); } }
-    ov.querySelector('.dlg-ok').onclick=()=>done(true);
+    ov.querySelector('.dlg-ok').onclick=()=>{
+      const val = (typeof readFn === 'function') ? readFn(ov) : true;
+      done(val);
+    };
     ov.querySelector('.dlg-cancel').onclick=()=>done(false);
     ov.onclick=e=>{ if(e.target===ov) done(false); };
     document.addEventListener('keydown',onKey,true);
@@ -11184,6 +11098,7 @@ let crsPanelOpen = false, crsPanelWasOpen = false, crsOrigin = 'hub';
 let crsView = 'list';
 let crsSelectedId = null;
 let crsFilter = { q:'', status:'', program:'', flagged:false };
+let crsPicked = new Set();          // courses ticked for insertion
 
 function crsBodyRoot(){
   return document.getElementById(crsPanelOpen ? 'course-panel-body' : 'course-body');
@@ -11296,12 +11211,20 @@ function crsListHTML(){
     +  ' onchange="crsFilter.flagged=this.checked; crsRenderList()"> Needs attention</label>'
     +  '</div>';
 
+  if(crsPicked.size){
+    h += '<div class="crs-pickbar"><span><b>'+crsPicked.size+'</b> ticked</span>'
+      +  '<button class="crs-ins" onclick="crsInsertPicked()">&#8595; Insert into this section</button>'
+      +  '<button class="crs-back" onclick="crsClearPicked()">Clear</button></div>';
+  }
   h += '<div class="crs-rows">';
   if(!list.length) h += '<div class="crs-none">Nothing matches that.</div>';
   list.forEach(c=>{
     const diffs = crsDiffs(c);
     const flags = (c.needsReview||[]).length;
     h += '<div class="crs-row" onclick="crsOpenDetail(\''+c.id+'\')">'
+      +  '<input type="checkbox" class="crs-pick"'+(crsPicked.has(c.id)?' checked':'')
+      +  ' title="Tick to insert into the open section"'
+      +  ' onclick="event.stopPropagation(); crsTogglePick(\''+c.id+'\', this.checked)">'
       +  '<span class="crs-code">'+escapeHtml(c.code)+'</span>'
       +  (c.deliveryLabel ? '<span class="crs-dl crs-dl-'+(c.weeks||'x')+'">'+escapeHtml(c.deliveryLabel)+'</span>' : '')
       +  '<span class="crs-title">'+escapeHtml(c.title||'— untitled —')+'</span>'
@@ -11326,6 +11249,28 @@ function crsRenderList(){
   const stats = root.querySelector('.crs-stats'), freshStats = tmp.querySelector('.crs-stats');
   if(stats && freshStats) stats.innerHTML = freshStats.innerHTML;
 }
+function crsTogglePick(id, on){
+  if(on) crsPicked.add(id); else crsPicked.delete(id);
+  crsRender();
+}
+function crsClearPicked(){ crsPicked.clear(); crsRender(); }
+// Straight in, no dialog. Default columns cover "what is this course" -- add
+// more with the table's own gear menu afterwards, like any other table.
+async function crsInsertPicked(){
+  if(viewerModeForced) return;
+  if(!crsPicked.size) return;
+  if(!curProgId){ await appAlert('Open a program first — the table goes into the section you are viewing.'); return; }
+  const ids = crsFiltered().filter(c=>crsPicked.has(c.id)).map(c=>c.id);
+  const node = makeBlock({ t:'courseTable', ids, source:'ids',
+    fields:['code','title','credits','weeks'],
+    edition:(courseStore.editions||[]).slice(-1).map(e=>e.label)[0]||'' });
+  document.getElementById('blocks-root').appendChild(node);
+  initBlockSort();
+  scheduleSave();
+  const n = ids.length;
+  crsPicked.clear(); crsRender();
+  toast('Inserted '+n+' course'+(n===1?'':'s')+' — edit it like any table');
+}
 function crsOpenDetail(id){ crsSelectedId=id; crsView='detail'; crsRender(); }
 function crsBackToList(){ crsView='list'; crsSelectedId=null; crsRender(); }
 
@@ -11338,7 +11283,7 @@ function crsDetailHTML(c){
     + (c.deliveryLabel ? '<span class="crs-dl crs-dl-'+(c.weeks||'x')+'">'+escapeHtml(c.deliveryLabel)+'</span>' : '')
     + '<span class="crs-badge crs-b-'+c.status+'">'+escapeHtml(c.status)+'</span>'
     + '<span style="flex:1"></span>'
-    + '<button class="crs-back" onclick="crsInsertCardDialog(\''+c.id+'\')" title="Insert this course into the open section">&#8595; Insert</button>'
+    + '<button class="crs-back" onclick="crsInsertCard(\''+c.id+'\')" title="Insert this course into the open section">&#8595; Insert</button>'
     + '<button class="crs-del" onclick="crsDeleteFromPanel(\''+c.id+'\')" title="Delete this course">&#10005; Delete</button>'
     + '</div>';
 
