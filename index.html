@@ -328,8 +328,15 @@ body.view-mode .crs-tbl-refresh,.section-locked .crs-tbl-refresh{display:none!im
 .crs-dot{width:7px;height:7px;border-radius:50%;background:#B4761A;flex:0 0 7px;align-self:center;}
 .crs-dot-q{background:var(--mut);}
 .crs-pick{margin:0 2px 0 0;flex:0 0 auto;align-self:center;cursor:pointer;}
-.crs-pickbar{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#FDF4F5;
+.crs-pickbar{display:flex;flex-direction:column;gap:6px;padding:7px 10px;background:#FDF4F5;
   border:1px solid #F0CBD5;border-radius:5px;font-size:12px;color:var(--ink);}
+.crs-pickbar-top{display:flex;align-items:center;gap:8px;}
+.crs-colchips{display:flex;flex-wrap:wrap;gap:4px;}
+.crs-chip{border:1px solid var(--bdr);background:#fff;color:var(--mut);border-radius:3px;
+  padding:1px 7px;font-size:10.5px;font-weight:600;letter-spacing:.03em;cursor:pointer;
+  font-family:var(--font-cond);text-transform:uppercase;}
+.crs-chip:hover{border-color:var(--acc);color:var(--acc);}
+.crs-chip.on{background:var(--acc);border-color:var(--acc);color:#fff;}
 .crs-pickbar b{font-family:var(--font-cond);font-size:14px;}
 .crs-ins{margin-left:auto;border:1px solid var(--acc);background:var(--acc);color:#fff;
   border-radius:4px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
@@ -11099,6 +11106,9 @@ let crsView = 'list';
 let crsSelectedId = null;
 let crsFilter = { q:'', status:'', program:'', flagged:false };
 let crsPicked = new Set();          // courses ticked for insertion
+// Which columns go in. Toggled by chips in the insert bar -- no dialog, and it
+// stays put between inserts so a second table matches the first.
+let crsCols = ['code','title','credits','weeks'];
 
 function crsBodyRoot(){
   return document.getElementById(crsPanelOpen ? 'course-panel-body' : 'course-body');
@@ -11212,9 +11222,16 @@ function crsListHTML(){
     +  '</div>';
 
   if(crsPicked.size){
-    h += '<div class="crs-pickbar"><span><b>'+crsPicked.size+'</b> ticked</span>'
-      +  '<button class="crs-ins" onclick="crsInsertPicked()">&#8595; Insert into this section</button>'
-      +  '<button class="crs-back" onclick="crsClearPicked()">Clear</button></div>';
+    h += '<div class="crs-pickbar">'
+      +  '<div class="crs-pickbar-top"><span><b>'+crsPicked.size+'</b> ticked</span>'
+      +  '<button class="crs-ins" onclick="crsInsertPicked()">&#8595; Insert</button>'
+      +  '<button class="crs-back" onclick="crsClearPicked()">Clear</button></div>'
+      +  '<div class="crs-colchips">'
+      +  CRS_FIELDS.filter(f=>f.key!=='deliveryLabel').map(f=>
+           '<button class="crs-chip'+(crsCols.indexOf(f.key)>=0?' on':'')+'"'
+           + ' onclick="crsToggleCol(\''+f.key+'\')" title="'+escapeHtml(f.label)+'">'
+           + escapeHtml(f.short)+'</button>').join('')
+      +  '</div></div>';
   }
   h += '<div class="crs-rows">';
   if(!list.length) h += '<div class="crs-none">Nothing matches that.</div>';
@@ -11254,6 +11271,12 @@ function crsTogglePick(id, on){
   crsRender();
 }
 function crsClearPicked(){ crsPicked.clear(); crsRender(); }
+function crsToggleCol(key){
+  const i = crsCols.indexOf(key);
+  if(i>=0){ if(crsCols.length===1) return; crsCols.splice(i,1); }   // never zero columns
+  else crsCols.push(key);
+  crsRender();
+}
 // Straight in, no dialog. Default columns cover "what is this course" -- add
 // more with the table's own gear menu afterwards, like any other table.
 async function crsInsertPicked(){
@@ -11261,8 +11284,9 @@ async function crsInsertPicked(){
   if(!crsPicked.size) return;
   if(!curProgId){ await appAlert('Open a program first — the table goes into the section you are viewing.'); return; }
   const ids = crsFiltered().filter(c=>crsPicked.has(c.id)).map(c=>c.id);
-  const node = makeBlock({ t:'courseTable', ids, source:'ids',
-    fields:['code','title','credits','weeks'],
+  // columns in the canonical field order, whichever chips are lit
+  const fields = CRS_FIELDS.map(f=>f.key).filter(k=>crsCols.indexOf(k)>=0);
+  const node = makeBlock({ t:'courseTable', ids, source:'ids', fields,
     edition:(courseStore.editions||[]).slice(-1).map(e=>e.label)[0]||'' });
   document.getElementById('blocks-root').appendChild(node);
   initBlockSort();
