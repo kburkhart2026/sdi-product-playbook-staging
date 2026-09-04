@@ -4583,6 +4583,68 @@ let uiState={lastLoc:{},openPhases:{}};
 try{ uiState=Object.assign(uiState,JSON.parse(localStorage.getItem('sdi_ui_state')||'{}')); }catch(e){}
 function saveUIState(){ try{ localStorage.setItem('sdi_ui_state',JSON.stringify(uiState)); }catch(e){} }
 
+// Program and section were already remembered; the open TOOL and the scroll
+// position were not -- so refreshing while the Course Database (or PM Board,
+// Margin, Consistency) was open dropped you back to the program or the Hub.
+// Read the live state rather than hooking all sixteen open/close functions:
+// the flags and view visibility are the truth, and one reader cannot drift
+// out of step with them.
+function crsViewVisible(id){
+  const e = document.getElementById(id);
+  return !!e && getComputedStyle(e).display !== 'none';
+}
+function rememberUIPosition(){
+  try{
+    let tool='', mode='';
+    if(typeof crsPanelOpen!=='undefined' && crsPanelOpen){ tool='course'; mode='panel'; }
+    else if(crsViewVisible('course-view')){ tool='course'; mode='full'; }
+    else if(typeof pmPanelOpen!=='undefined' && pmPanelOpen){ tool='pm'; mode='panel'; }
+    else if(crsViewVisible('pm-view')){ tool='pm'; mode='full'; }
+    else if(typeof marginPanelOpen!=='undefined' && marginPanelOpen){ tool='margin'; mode='panel'; }
+    else if(crsViewVisible('margin-view')){ tool='margin'; mode='full'; }
+    else if(typeof ccPanelOpen!=='undefined' && ccPanelOpen){ tool='cc'; mode='panel'; }
+    else if(crsViewVisible('cc-view')){ tool='cc'; mode='full'; }
+    else if(crsViewVisible('pm-dash-view')){ tool='dash'; mode='full'; }
+    uiState.lastTool = tool ? { tool, mode } : null;
+    const ca = document.querySelector('.content-area');
+    if(ca && curProgId && curSection && ca.scrollTop > 0)
+      uiState.lastScroll = { key: curProgId+':'+curSection, top: Math.round(ca.scrollTop) };
+    else uiState.lastScroll = null;
+    saveUIState();
+  }catch(e){}
+}
+// Put it back. Called once at boot, after the program has been reopened.
+function restoreUIPosition(){
+  const lt = uiState.lastTool;
+  if(lt && lt.tool){
+    const open = {
+      course: ()=> lt.mode==='panel' ? crsPanelOpenFor() : openCourseDB(),
+      pm:     ()=> lt.mode==='panel' ? pmPanelOpenFor(curProgId) : openPM(curProgId),
+      margin: ()=> lt.mode==='panel' ? marginPanelOpenFor(curProgId) : openMarginCalc(curProgId),
+      cc:     ()=> lt.mode==='panel' ? ccPanelOpenFor() : openConsistency(),
+      dash:   ()=> (typeof openPMDash==='function' ? openPMDash() : null),
+    }[lt.tool];
+    // A docked panel needs a program to sit beside; without one, skip rather
+    // than open a panel against the Hub.
+    const needsProgram = lt.mode==='panel';
+    if(open && (!needsProgram || curProgId)){ try{ open(); }catch(e){ console.warn('restore tool failed:', e); } }
+  }
+  const ls = uiState.lastScroll;
+  if(ls && curProgId && curSection && ls.key === curProgId+':'+curSection){
+    const ca = document.querySelector('.content-area');
+    // after the section's content has actually rendered, or there is nothing
+    // to scroll and the position is silently discarded
+    if(ca) setTimeout(()=>{ try{ ca.scrollTop = ls.top; }catch(e){} }, 260);
+  }
+}
+window.addEventListener('beforeunload', rememberUIPosition);
+window.addEventListener('pagehide', rememberUIPosition);
+// A refresh is not the only way to leave; a backgrounded tab may never fire
+// beforeunload on mobile, so snapshot on hide too.
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'hidden') rememberUIPosition();
+});
+
 // forceLoc, when given, skips the last-visited/first-available logic below
 // entirely and goes straight there -- for callers (a deep link) that already
 // know exactly which section they want, so it isn't navigated to once by
@@ -13349,6 +13411,9 @@ async function init(){
   // should always land on the main Portfolio screen, not wherever YOU last happened to be
   // (this is per-browser local state, so it only ever reflects your own editing history).
   if(!viewerModeForced && uiState.lastProg && programs.some(p=>p.id===uiState.lastProg)) openProgram(uiState.lastProg);
+  // ...and put back the tool you had open and where you were scrolled to.
+  // Never for a real viewer: a shared link lands on its own target.
+  if(!viewerModeForced) restoreUIPosition();
   if(viewerModeForced){
     // A deep-linked viewer link points at one specific page. A stale link
     // (the program got renamed/deleted, or the section moved/was removed)
