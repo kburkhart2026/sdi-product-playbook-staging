@@ -54,6 +54,93 @@ body{font-family:var(--font-body);background:var(--page);color:var(--txt);height
 .hub-body{max-width:1100px;margin:0 auto;padding:40px 32px;}
 .hub-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--mut);margin-bottom:18px;}
 .prog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
+/* ---------- Changelog ---------- */
+#clog-panel-body,#clog-body{flex:1;min-height:0;overflow-y:auto;}
+.clog-wrap{display:flex;flex-direction:column;gap:9px;padding:11px 13px 24px;}
+.clog-tabs{display:flex;gap:5px;border-bottom:1px solid var(--bdr);padding-bottom:8px;}
+.clog-tab{flex:1;font-family:var(--font-cond);font-size:11.5px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;border:1px solid var(--bdr);background:#fff;color:var(--mut);
+  border-radius:4px;padding:5px 8px;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;gap:6px;}
+.clog-tab.on{background:var(--sbg,#3B0A10);border-color:var(--sbg,#3B0A10);color:#fff;}
+.clog-n{font-family:ui-monospace,Menlo,monospace;font-size:10px;background:rgba(0,0,0,.09);
+  border-radius:8px;padding:0 5px;}
+.clog-tab.on .clog-n{background:rgba(255,255,255,.22);}
+.clog-n.hot{background:var(--acc);color:#fff;}
+.clog-bar{display:flex;gap:4px;flex-wrap:wrap;}
+.clog-chip{font-family:var(--font-cond);font-size:10px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;border:1px solid var(--bdr);background:#fff;color:var(--mut);
+  border-radius:3px;padding:2px 7px;cursor:pointer;}
+.clog-chip.on{background:var(--sbg,#3B0A10);border-color:var(--sbg,#3B0A10);color:#fff;}
+.clog-unseenbar{display:flex;align-items:center;gap:9px;padding:6px 10px;background:#FDF4F5;
+  border:1px solid #F0CBD5;border-radius:4px;font-size:12px;}
+.clog-unseenbar b{font-family:var(--font-cond);font-size:14px;}
+.clog-btn{margin-left:auto;font-family:var(--font-cond);font-size:10.5px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--bdr);background:#fff;
+  color:var(--mut);border-radius:3px;padding:3px 9px;cursor:pointer;}
+.clog-btn:hover{border-color:var(--acc);color:var(--acc);}
+.clog-btn.pub{background:var(--acc);border-color:var(--acc);color:#fff;margin-left:0;}
+.clog-btn.pub:hover{color:#fff;filter:brightness(1.1);}
+.clog-grp{display:flex;align-items:center;gap:7px;font-family:var(--font-cond);font-size:11px;
+  font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);
+  padding:7px 2px 3px;border-bottom:1px solid var(--bdr);}
+.clog-sw{width:9px;height:9px;border-radius:2px;flex:0 0 9px;}
+.clog-grp-n{margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:10px;}
+.clog-ent{border:1px solid var(--bdr);border-radius:5px;background:#fff;padding:9px 11px;
+  display:flex;flex-direction:column;gap:5px;}
+.clog-ent.unread{border-left:3px solid var(--acc);}
+.clog-ent-top{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;}
+.clog-date{font-family:ui-monospace,Menlo,monospace;font-size:10px;color:var(--mut);white-space:nowrap;}
+.clog-t{font-family:var(--font-cond);font-size:14.5px;font-weight:700;flex:1;min-width:140px;
+  outline:none;border-radius:3px;}
+.clog-t[contenteditable]:hover{background:#F6F3F1;}
+.clog-t:focus{background:#fff;outline:2px solid var(--acc);outline-offset:1px;}
+.clog-new{font-family:var(--font-cond);font-size:8.5px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;background:var(--acc);color:#fff;border-radius:2px;padding:1px 5px;}
+.clog-read{border:1px solid var(--bdr);background:#fff;color:var(--mut);border-radius:3px;
+  width:22px;height:20px;font-size:11px;cursor:pointer;line-height:1;flex:0 0 auto;}
+.clog-read:hover{border-color:var(--acc);color:var(--acc);}
+.clog-b{font-size:12.5px;color:var(--mut);line-height:1.5;outline:none;border-radius:3px;}
+.clog-b[contenteditable]:hover{background:#F6F3F1;}
+.clog-b:focus{background:#fff;outline:2px solid var(--acc);outline-offset:1px;}
+.clog-b:empty::before{content:'Add the detail…';color:#B9AEAC;font-style:italic;}
+.clog-f{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.clog-tag{font-family:var(--font-cond);font-size:9px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;padding:1px 6px;border-radius:2px;border:1px solid;cursor:default;}
+.clog-t-reg{color:#1F5B7A;border-color:#BFD9E8;background:#EAF2F7;}
+.clog-t-comp{color:#6B3A7A;border-color:#D6C4DE;background:#F4EEF7;}
+.clog-t-mkt{color:#A8501F;border-color:#E8CFB4;background:#FBF0E6;}
+.clog-t-fin{color:#2F6B4F;border-color:#BFDCCB;background:#EDF5F0;}
+.clog-t-fac{color:#3B4A6B;border-color:#C4CBDB;background:#EEF1F7;}
+.clog-t-int{color:var(--mut);border-color:var(--bdr);background:#F6F3F1;}
+.clog-addaud,.clog-del{border:1px solid var(--bdr);background:#fff;color:var(--mut);
+  border-radius:3px;width:19px;height:18px;font-size:10px;cursor:pointer;line-height:1;}
+.clog-addaud:hover{border-color:var(--acc);color:var(--acc);}
+.clog-del{margin-left:auto;}
+.clog-del:hover{border-color:#D50032;color:#D50032;background:#FDF2F4;}
+.clog-goto{font-size:11px;color:#1F5B7A;cursor:pointer;text-decoration:underline;}
+.clog-src{font-family:ui-monospace,Menlo,monospace;font-size:9.5px;color:var(--mut);}
+.clog-hint{font-size:12px;color:var(--mut);line-height:1.5;margin:0 0 3px;}
+.clog-cand{border:1px solid var(--bdr);border-left:3px solid #B4761A;border-radius:5px;
+  background:#fff;padding:9px 11px;display:flex;flex-direction:column;gap:6px;}
+.clog-cand-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+.clog-why{font-family:ui-monospace,Menlo,monospace;font-size:9.5px;color:#8A6A22;
+  text-transform:uppercase;letter-spacing:.04em;}
+.clog-cand-t{width:100%;box-sizing:border-box;padding:4px 8px;border:1px solid var(--bdr);
+  border-radius:4px;font-family:var(--font-cond);font-size:14px;font-weight:700;
+  background:#fff;color:var(--ink);}
+.clog-empty{padding:18px 4px;text-align:center;color:var(--mut);font-size:12.5px;}
+.clog-empty-t{font-family:var(--font-cond);font-size:16px;font-weight:700;color:var(--ink);margin-bottom:5px;}
+.clog-empty p{max-width:46ch;margin:0 auto;line-height:1.55;}
+.clog-badge{margin-left:6px;background:var(--acc);color:#fff;border-radius:9px;
+  font-family:ui-monospace,Menlo,monospace;font-size:10px;padding:0 5px;}
+.pc2-clog{align-self:flex-start;font-family:var(--font-cond);font-size:10px;font-weight:700;
+  letter-spacing:.07em;text-transform:uppercase;background:var(--acc);color:#fff;
+  border-radius:2px;padding:1px 6px;cursor:pointer;margin-bottom:2px;}
+/* a viewer reads, filters, marks read and clicks through -- nothing else */
+body.view-mode .clog-del,body.view-mode .clog-addaud,
+body.view-mode .clog-tabs,body.view-mode .clog-cand{display:none!important;}
+body.view-mode .clog-t[contenteditable],body.view-mode .clog-b[contenteditable]{pointer-events:none;}
 /* ---------- Hub shelves ---------- */
 /* #prog-grid is now a column of shelves; the CARD grid lives inside each one. */
 #prog-grid{display:flex;flex-direction:column;gap:16px;}
@@ -455,7 +542,7 @@ body.view-mode .crs-tbl-refresh,.section-locked .crs-tbl-refresh{display:none!im
    but belt-and-braces in case it is ever surfaced */
 body.view-mode .crs-f-in{pointer-events:none;}
 body.view-mode .crs-del,body.view-mode .crs-revert{display:none!important;}
-#pm-panel,#margin-panel,#cc-panel,#course-panel{flex:0 0 460px;min-width:0;display:flex;flex-direction:column;background:#fff;border-left:1px solid var(--bdr);overflow:hidden;}
+#pm-panel,#margin-panel,#cc-panel,#course-panel,#clog-panel{flex:0 0 460px;min-width:0;display:flex;flex-direction:column;background:#fff;border-left:1px solid var(--bdr);overflow:hidden;}
 .pmp-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--bdr);flex-wrap:wrap;}
 .pmp-title{font-family:var(--font-cond);text-transform:uppercase;letter-spacing:0.03em;font-size:14px;font-weight:800;color:var(--ink);flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .pmp-iconbtn{border:1px solid var(--bdr);background:#fff;color:var(--mut);font-size:12px;padding:3px 7px;border-radius:4px;cursor:pointer;line-height:1;}
@@ -1399,7 +1486,7 @@ body.view-mode .wysiwyg-bar{display:none!important;}
 .cp-api-save{border-radius:3px;}
 
 /* ===== PM SPACE (Monday-style boards) ===== */
-#pm-view,#pm-dash-view,#margin-view,#cc-view,#course-view{height:100vh;overflow-y:auto;background:#f4f5f7;}
+#pm-view,#pm-dash-view,#margin-view,#cc-view,#course-view,#clog-view{height:100vh;overflow-y:auto;background:#f4f5f7;}
 .pm-shell{max-width:1280px;margin:0 auto;padding:0 24px 60px;}
 .pm-head{display:flex;align-items:center;gap:14px;padding:18px 0 14px;border-bottom:3px solid var(--acc);margin-bottom:18px;flex-wrap:wrap;}
 .pm-back{cursor:pointer;font-size:13px;color:var(--mut);font-weight:600;white-space:nowrap;}
@@ -1739,6 +1826,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
               <button class="pm-board-btn" id="tools-btn" onclick="toggleToolsMenu(event)">🧰 Tools ▾</button>
               <div class="export-menu" id="tools-menu">
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); togglePanel();">&#10022; Ask Claude</div>
+                <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); clogOpenSmart();">&#128203; Changelog</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); ccOpenSmart();">&#128269; Consistency</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); copyViewerLinkForCurrentPage();">&#128279; Copy link to this page</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); crsOpenSmart();">&#128218; Course Database</div>
@@ -1753,6 +1841,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
           </div>
           <button class="tb-more" id="tb-more" onclick="toggleTbExtra(event)" title="More tools">⋯</button>
               <button class="pm-board-btn" id="pm-board-viewer-btn" onclick="pmOpenSmart()" style="display:none">📋 PM Board</button>
+              <button class="pm-board-btn" id="clog-btn" onclick="clogOpenSmart()" title="What changed">&#128203; Changelog<span id="clog-badge" class="clog-badge" style="display:none">0</span></button>
           <div class="export-wrap">
             <button class="export-btn" onclick="toggleExport(event)">Export ▾</button>
             <div class="export-menu" id="export-menu">
@@ -1854,6 +1943,16 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
           </div>
           <div id="course-panel-body"></div>
         </div>
+        <div class="pm-panel-handle" id="clog-panel-handle" title="Drag to resize" style="display:none"></div>
+        <div id="clog-panel" style="display:none">
+          <div class="pmp-head">
+            <div class="pmp-title">Changelog</div>
+            <button class="pmp-dashbtn" onclick="clogAddManual()" title="Write an entry">&#43; Entry</button>
+            <button class="pmp-iconbtn" onclick="clogPanelFullScreen()" title="Open full screen">&#8599;</button>
+            <button class="pmp-iconbtn" onclick="clogPanelClose()" title="Close panel">&#10005;</button>
+          </div>
+          <div id="clog-panel-body"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1946,6 +2045,22 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
       </div>
     </div>
     <div id="course-body"></div>
+  </div>
+</div>
+
+<div id="clog-view" style="display:none">
+  <div class="pm-shell">
+    <div class="pm-head">
+      <div class="pm-back" onclick="clogBack()">&#8592; Back</div>
+      <div>
+        <div class="pm-title">Changelog</div>
+        <div class="pm-sub">What changed, grouped by program &mdash; and who it affects</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="mg2-btn" onclick="clogAddManual()">&#43; Entry</button>
+      </div>
+    </div>
+    <div id="clog-body"></div>
   </div>
 </div>
 
@@ -2567,7 +2682,7 @@ async function ensureProgramLoaded(progId){
 async function pushLocalContentToGithub(){
   if(githubMode() !== 'editor'){ await appAlert('Connect an editor GitHub token first (Export ▾ → Connect to GitHub).'); return; }
   saveCurrentBlocks();
-  const state = { programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, v:2, ts: Date.now() };
+  const state = { programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, changelogStore, v:2, ts: Date.now() };
   const ok = await githubCommitFile(GITHUB_CONTENT_PATH, state, 'Push local content');
   if(ok) await appAlert('Current content pushed to GitHub ✓');
   else await appAlert('Push failed. Check that your editor token is still valid and scoped to '+(GITHUB_CONTENT_REPO||'the content repo')+'.');
@@ -2888,6 +3003,12 @@ let courseStore = { courses: [], presets: [], editions: [], categories: [], scho
 // order has always been the display order, so nothing new is needed to store
 // "where in the row". Shelf ORDER is the order of this array.
 let shelfStore = { shelves: [], defaultShelfId: '' };
+// The changelog. `entries` are published and shared with everyone who can open
+// the Playbook; `ignored` remembers candidates that were waved off, keyed by a
+// fingerprint of the specific change so the same one never returns.
+// What each VIEWER has already read is per-browser and lives in uiState, not
+// here -- one person's reading must not clear anyone else's.
+let changelogStore = { entries: [], ignored: {} };
 
 // ==================== COURSE DATABASE ====================
 // Field definitions drive the picker, the table columns, the card and every
@@ -3800,7 +3921,7 @@ const dirtyPrograms = new Set(); // progId's with real content changes since the
 // fields can hold bulk HTML/images.
 function buildManifest(){
   return { v:3, ts: Date.now(), programs, phases: clonePhases(PHASES), sectionStatus, sectionLocks,
-           sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore };
+           sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, changelogStore };
 }
 // Just one program's slice of blockStore, same key shape as the global
 // object (progId:sectionId) so merging it back in is a zero-transform
@@ -4085,6 +4206,10 @@ function applyState(s){
   marginStore = s.marginStore || { courses: [], scenariosByProgram: {} };
   knowledgeStore = (s.knowledgeStore && Array.isArray(s.knowledgeStore.entries))
     ? s.knowledgeStore : { entries: [] };
+  changelogStore = (s.changelogStore && typeof s.changelogStore==='object')
+    ? { entries: Array.isArray(s.changelogStore.entries) ? s.changelogStore.entries : [],
+        ignored: (s.changelogStore.ignored && typeof s.changelogStore.ignored==='object') ? s.changelogStore.ignored : {} }
+    : { entries: [], ignored: {} };
   shelfStore = (s.shelfStore && typeof s.shelfStore==='object')
     ? { shelves: Array.isArray(s.shelfStore.shelves) ? s.shelfStore.shelves : [],
         defaultShelfId: s.shelfStore.defaultShelfId || '' }
@@ -4136,7 +4261,7 @@ function persistLocalNow(){
   if(window.__skipPersist) return; // guard during restore/reload
   saveCurrentBlocks();
   try{
-    const state = { programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, v:2, ts: Date.now() };
+    const state = { programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, changelogStore, v:2, ts: Date.now() };
     const {lean,assets}=dehydrateState(state);
     let ok=false;
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(lean)); ok=true; }catch(e){ console.warn('local mirror failed:',e); }
@@ -4266,7 +4391,7 @@ async function persist(){
 async function doPersist(){
   saveCurrentBlocks();
   pushUndo();
-  const state = { programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, v:2, ts: Date.now() };
+  const state = { programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, changelogStore, v:2, ts: Date.now() };
   const ind = document.getElementById('save-ind');
 
   // Always keep a local backup (IndexedDB primary, localStorage mirror).
@@ -4638,6 +4763,200 @@ function shelvesInitDrag(){
   });
 }
 
+// ==================== CHANGELOG ====================
+// Option B with C folded in: the app raises CANDIDATES from things it already
+// tracks structurally, and nothing is published until Karen acts on it.
+//
+// Why not publish automatically from edit timestamps: on 4 September a
+// maintenance backfill stamped four sections across three programs within the
+// same minute. A feed driven off `sectionUpdated` would have announced that as
+// four changes. Only a person can tell a typo from a course-description change,
+// so the app's job is to make that judgement cheap, not to guess it.
+const CLOG_AUDIENCES = [
+  { id:'reg',   label:'Registrar'  },
+  { id:'comp',  label:'Compliance' },
+  { id:'mkt',   label:'Marketing'  },
+  { id:'fin',   label:'Finance'    },
+  { id:'fac',   label:'Faculty'    },
+  { id:'int',   label:'Internal'   },
+];
+const CLOG_AUD = {}; CLOG_AUDIENCES.forEach(a=>{ CLOG_AUD[a.id]=a; });
+
+function clogAll(){ return (changelogStore.entries||[]); }
+function clogSorted(){ return clogAll().slice().sort((a,b)=>(b.ts||0)-(a.ts||0)); }
+function clogIsIgnored(fp){ return !!(changelogStore.ignored||{})[fp]; }
+// A short stable hash, so a fingerprint stays the same length whatever goes in.
+function clogHash(str){
+  let h = 5381;
+  for(let i=0;i<String(str).length;i++) h = ((h<<5)+h+String(str).charCodeAt(i))|0;
+  return (h>>>0).toString(36);
+}
+function clogText(html){
+  const d = document.createElement('div'); d.innerHTML = html||'';
+  return (d.textContent||'').replace(/\s+/g,' ').trim();
+}
+
+// ---- candidate detection ------------------------------------------------
+// Each candidate carries a fingerprint of the SPECIFIC change -- the item and
+// its before/after values -- so Ignore suppresses exactly that and nothing
+// else. If the same item changes again later, the fingerprint differs and a
+// fresh candidate is raised.
+function clogCandidates(){
+  const out = [];
+  const seenFp = new Set();
+  const push = c => {
+    if(!c.fp || seenFp.has(c.fp) || clogIsIgnored(c.fp)) return;
+    if(clogAll().some(e=>e.fp===c.fp)) return;      // already published
+    seenFp.add(c.fp); out.push(c);
+  };
+
+  // --- Decision Log rows that have been settled -------------------------
+  // 'Open' is not news; 'Made' and 'Superseded' are.
+  Object.keys(blockStore||{}).forEach(key=>{
+    const html = blockStore[key];
+    if(!html || html.indexOf('dl-table') < 0) return;
+    const ci = key.indexOf(':');
+    const progId = key.slice(0,ci), secId = key.slice(ci+1);
+    let doc; try{ doc = new DOMParser().parseFromString('<div>'+html+'</div>','text/html'); }catch(e){ return; }
+    doc.querySelectorAll('table.dl-table tbody tr').forEach(tr=>{
+      const td = [...tr.querySelectorAll('td')].map(x=>clogText(x.innerHTML));
+      if(td.length < 5 || !td[0]) return;
+      const status = td[4];
+      if(status !== 'Made' && status !== 'Superseded') return;
+      push({ kind:'decision', progId, secId,
+             fp:'dec:'+clogHash(progId+'|'+td[0]+'|'+status),
+             why:'Decision recorded as '+status,
+             title: td[0].length>72 ? td[0].slice(0,70)+'…' : td[0],
+             body: (status==='Made' ? 'Decision made' : 'Decision superseded')
+                 + (td[1] ? ' ('+td[1]+')' : '')
+                 + (td[2] ? ', by '+td[2] : '') + '.'
+                 + (td[3] ? ' Rationale: '+td[3] : ''),
+             aud:['int'], source:'Decision Log' });
+    });
+  });
+
+  // --- Approval Tracker items that have resolved ------------------------
+  Object.keys(blockStore||{}).forEach(key=>{
+    const html = blockStore[key];
+    if(!html || html.indexOf('ap-item') < 0) return;
+    const ci = key.indexOf(':');
+    const progId = key.slice(0,ci), secId = key.slice(ci+1);
+    let doc; try{ doc = new DOMParser().parseFromString('<div>'+html+'</div>','text/html'); }catch(e){ return; }
+    doc.querySelectorAll('.ap-item').forEach(it=>{
+      const nameEl = it.querySelector('.ap-name'), btn = it.querySelector('.ap-btn');
+      if(!nameEl || !btn) return;
+      const name = clogText(nameEl.innerHTML), status = clogText(btn.innerHTML);
+      if(!name || (status!=='Approved' && status!=='Rejected')) return;
+      push({ kind:'approval', progId, secId,
+             fp:'ap:'+clogHash(progId+'|'+name+'|'+status),
+             why:'Approval '+status.toLowerCase(),
+             title: name.length>72 ? name.slice(0,70)+'…' : name,
+             body:'Approval tracker item is now '+status+'.'
+                + (clogText((it.querySelector('.ap-desc')||{}).innerHTML||'') ? ' '+clogText(it.querySelector('.ap-desc').innerHTML) : ''),
+             aud:['comp','int'], source:'Approval Tracker' });
+    });
+  });
+
+  // --- Course Database fields that disagree with the catalog ------------
+  // These are the ones that genuinely cross departments, which is why they
+  // default to Registrar and Compliance rather than Internal.
+  if(typeof crsAll === 'function'){
+    crsAll().forEach(c=>{
+      (typeof crsDiffs==='function' ? crsDiffs(c) : []).forEach(k=>{
+        const was = String(c.catalogValue[k]), now = crsFieldText(c,k) || '(empty)';
+        const label = (CRS_FIELD[k]||{}).label || k;
+        push({ kind:'course', progId:'', secId:'',
+               fp:'crs:'+clogHash(c.id+'|'+k+'|'+was+'>'+now),
+               why:'Differs from catalog '+(c.catalogEdition||''),
+               title: crsDisplay(c)+' — '+label+' changed',
+               body: label+' now reads “'+now+'”, where catalog '
+                   + (c.catalogEdition||'') + ' has “'+was+'”.',
+               aud:['reg','comp'], source:'Course Database' });
+      });
+    });
+  }
+  // --- and the margin/catalog credit-hour conflicts --------------------
+  if(typeof crsCreditConflicts === 'function'){
+    crsCreditConflicts().forEach(x=>{
+      push({ kind:'course', progId:'', secId:'',
+             fp:'crscr:'+clogHash(x.marginId+'|'+x.margin+'>'+x.catalog.join('/')),
+             why:'Credit hours disagree',
+             title: x.code+' — credit hours disagree',
+             body:'The costing line has '+x.margin+' credit hours; the catalog has '
+                + x.catalog.join(' or ')+'. Revenue is calculated from the costing figure.',
+             aud:['reg','fin'], source:'Course Database' });
+    });
+  }
+
+  return out.sort((a,b)=> a.kind===b.kind ? 0 : (a.kind==='course' ? -1 : 1));
+}
+
+// ---- publish / ignore ---------------------------------------------------
+function clogPublish(c, overrides){
+  if(viewerModeForced) return null;
+  const e = Object.assign({
+    id:'clog-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    ts: Date.now(),
+    progId: c.progId||'', secId: c.secId||'',
+    title: c.title||'', body: c.body||'',
+    aud: (c.aud||['int']).slice(),
+    source: c.source||'', fp: c.fp||''
+  }, overrides||{});
+  if(!changelogStore.entries) changelogStore.entries = [];
+  changelogStore.entries.push(e);
+  scheduleSave();
+  return e;
+}
+// One action, and it is permanent: this specific change never comes back.
+function clogIgnore(fp){
+  if(viewerModeForced || !fp) return;
+  if(!changelogStore.ignored) changelogStore.ignored = {};
+  changelogStore.ignored[fp] = Date.now();
+  scheduleSave();
+}
+function clogDelete(id){
+  if(viewerModeForced) return;
+  changelogStore.entries = clogAll().filter(e=>e.id!==id);
+  scheduleSave();
+}
+function clogSetField(id, key, value){
+  if(viewerModeForced) return;
+  const e = clogAll().find(x=>x.id===id); if(!e) return;
+  e[key] = value; scheduleSave();
+}
+function clogToggleAud(id, audId){
+  if(viewerModeForced) return;
+  const e = clogAll().find(x=>x.id===id); if(!e) return;
+  e.aud = e.aud || [];
+  const i = e.aud.indexOf(audId);
+  if(i>=0){ if(e.aud.length>1) e.aud.splice(i,1); } else e.aud.push(audId);
+  scheduleSave();
+}
+
+// ---- what THIS browser has not read yet --------------------------------
+// Read state is per-entry and per-browser, in uiState. Deliberately NOT gated
+// on viewerModeForced: clearing what you have read is the reader's own business
+// and touches only their localStorage, so a viewer can do it and it never
+// affects anyone else's count.
+function clogIsRead(id){ try{ return !!(uiState.clogRead||{})[id]; }catch(e){ return false; } }
+function clogUnseen(){ return clogAll().filter(e=>!clogIsRead(e.id)); }
+function clogUnseenFor(progId){ return clogUnseen().filter(e=>e.progId===progId).length; }
+function clogMarkRead(id, on){
+  if(!uiState.clogRead) uiState.clogRead = {};
+  if(on === false) delete uiState.clogRead[id];
+  else uiState.clogRead[id] = Date.now();
+  saveUIState();
+}
+function clogMarkAllRead(){
+  if(!uiState.clogRead) uiState.clogRead = {};
+  clogAll().forEach(e=>{ uiState.clogRead[e.id] = Date.now(); });
+  saveUIState();
+  clogRender();
+  const hub=document.getElementById('hub-view');
+  if(hub && hub.style.display!=='none') renderHub();
+  toast('Marked '+clogAll().length+' entr'+(clogAll().length===1?'y':'ies')+' as read');
+}
+
 function renderHub(){
   const grid = document.getElementById('prog-grid');
   shelvesEnsure();
@@ -4707,6 +5026,12 @@ function renderHub(){
   }
   renderRecentStrip();
   shelvesInitDrag();
+  clogRefreshBadge();
+}
+function clogRefreshBadge(){
+  const n = clogUnseen().length;
+  const b = document.getElementById('clog-badge');
+  if(b){ b.textContent = n; b.style.display = n ? 'inline-block' : 'none'; }
 }
 
 // ---- Recently edited strip on the hub ----
@@ -4804,6 +5129,8 @@ function makeProgCard(p){
     </div>
     <div class="pc2-body">
       <div class="pc2-full">${escapeHtml(nm.full)}</div>
+      ${(()=>{ const n=(typeof clogUnseenFor==='function')?clogUnseenFor(p.id):0;
+        return n?`<div class="pc2-clog" onclick="event.stopPropagation();clogOpenSmart()" title="${n} unread changelog ${n===1?'entry':'entries'}">${n} new</div>`:''; })()}
       <div class="pc2-meta"><span>${st.done}/${st.total} sections started</span><span>${st.last?fmtAgo(st.last):p.created}</span></div>
       <div class="pc2-bar"><div class="pc2-fill" style="width:${st.pct}%;background:${p.color}"></div></div>
       <div class="pc2-actions">
@@ -4936,7 +5263,7 @@ async function newProgram(){
 }
 
 // ==================== UI STATE (remembers where you were) ====================
-let uiState={lastLoc:{},openPhases:{},shelfCollapsed:{}};
+let uiState={lastLoc:{},openPhases:{},shelfCollapsed:{},clogRead:{},clogAudience:''};
 try{ uiState=Object.assign(uiState,JSON.parse(localStorage.getItem('sdi_ui_state')||'{}')); }catch(e){}
 function saveUIState(){ try{ localStorage.setItem('sdi_ui_state',JSON.stringify(uiState)); }catch(e){} }
 
@@ -4953,7 +5280,9 @@ function crsViewVisible(id){
 function rememberUIPosition(){
   try{
     let tool='', mode='';
-    if(typeof crsPanelOpen!=='undefined' && crsPanelOpen){ tool='course'; mode='panel'; }
+    if(typeof clogPanelOpen!=='undefined' && clogPanelOpen){ tool='clog'; mode='panel'; }
+    else if(crsViewVisible('clog-view')){ tool='clog'; mode='full'; }
+    else if(typeof crsPanelOpen!=='undefined' && crsPanelOpen){ tool='course'; mode='panel'; }
     else if(crsViewVisible('course-view')){ tool='course'; mode='full'; }
     else if(typeof pmPanelOpen!=='undefined' && pmPanelOpen){ tool='pm'; mode='panel'; }
     else if(crsViewVisible('pm-view')){ tool='pm'; mode='full'; }
@@ -4976,6 +5305,7 @@ function restoreUIPosition(){
   if(lt && lt.tool){
     const open = {
       course: ()=> lt.mode==='panel' ? crsPanelOpenFor() : openCourseDB(),
+      clog:   ()=> lt.mode==='panel' ? clogPanelOpenFor() : openChangelog(),
       pm:     ()=> lt.mode==='panel' ? pmPanelOpenFor(curProgId) : openPM(curProgId),
       margin: ()=> lt.mode==='panel' ? marginPanelOpenFor(curProgId) : openMarginCalc(curProgId),
       cc:     ()=> lt.mode==='panel' ? ccPanelOpenFor() : openConsistency(),
@@ -4988,7 +5318,7 @@ function restoreUIPosition(){
     // Database, Margin Calculator and Consistency live behind the editor-only
     // Tools menu. Restoring one of those would hand a viewer a tool they have
     // no way to open or close.
-    const viewerCanOpen = ['pm','dash'].indexOf(lt.tool) >= 0;
+    const viewerCanOpen = ['pm','dash','clog'].indexOf(lt.tool) >= 0;
     const allowed = !viewerModeForced || viewerCanOpen;
     if(open && allowed && (!needsProgram || curProgId)){
       try{ open(); }catch(e){ console.warn('restore tool failed:', e); }
@@ -5061,6 +5391,7 @@ function goHub(){
   if(marginPanelOpen) marginPanelClose();
   if(typeof ccPanelOpen!=='undefined' && ccPanelOpen) ccPanelClose();
   if(typeof crsPanelOpen!=='undefined' && crsPanelOpen) crsPanelClose();
+  if(typeof clogPanelOpen!=='undefined' && clogPanelOpen) clogPanelClose();
   uiState.lastProg=null; saveUIState();
   document.getElementById('prog-view').style.display = 'none';
   document.getElementById('hub-view').style.display = 'block';
@@ -9404,7 +9735,7 @@ function buildBackupJSON(){
   // stale, and reading it would export old work while looking successful.
   try{
     saveCurrentBlocks();
-    space={ programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, v:2, ts: Date.now() };
+    space={ programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, changelogStore, v:2, ts: Date.now() };
   }catch(e){ space=null; }
   if(!space){ try{ space=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null'); }catch(e){} }
   try{ tmpls=JSON.parse(localStorage.getItem('sdi_templates')||'[]'); }catch(e){}
@@ -9917,6 +10248,15 @@ async function mergeBundledSnapshot(banner){
   }
   // 7. standards: gap-fill only -- a standard already set here always wins over
   // the snapshot's, same rule as every other merge above.
+  // Changelog entries merge additively by id; an ignore is never un-ignored by
+  // a restore, so ignores union rather than overwrite.
+  if(snap.changelogStore && typeof snap.changelogStore==='object'){
+    const have = new Set((changelogStore.entries||[]).map(e=>e.id));
+    (snap.changelogStore.entries||[]).forEach(e=>{ if(e && e.id && !have.has(e.id)) changelogStore.entries.push(e); });
+    Object.keys(snap.changelogStore.ignored||{}).forEach(k=>{
+      if(!changelogStore.ignored[k]) changelogStore.ignored[k] = snap.changelogStore.ignored[k];
+    });
+  }
   // Shelves merge additively by id, like every other side table.
   if(snap.shelfStore && Array.isArray(snap.shelfStore.shelves)){
     const have = new Set((shelfStore.shelves||[]).map(x=>x.id));
@@ -9943,7 +10283,7 @@ async function mergeBundledSnapshot(banner){
 
   try{
     await saveSpace({ programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks,
-      sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, v:2, ts: Date.now() });
+      sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, changelogStore, v:2, ts: Date.now() });
   }catch(err){ await appAlert('Restore failed while writing to browser storage: '+err.message); return; }
   window.__skipPersist=true;
   await appAlert('Restored '+addedBlocks+' section(s), '+addedSecs+' new section entr(ies) and '+addedProgs+
@@ -11507,6 +11847,7 @@ function pmPanelHideDom(){
 function pmPanelOpenFor(pid){
   if(typeof ccPanelOpen!=='undefined' && ccPanelOpen) ccPanelClose(); // one docked tool at a time
   if(typeof crsPanelOpen!=='undefined' && crsPanelOpen) crsPanelClose();
+  if(typeof clogPanelOpen!=='undefined' && clogPanelOpen) clogPanelClose();
   pmProgId = pid || curProgId;
   if(!pmProgId) return;
   if(marginPanelOpen) marginPanelClose(); // only one docked tool at a time
@@ -11549,6 +11890,7 @@ function marginPanelOpenFor(progId, scenarioId){
   if(pmPanelOpen) pmPanelClose(); // only one docked tool at a time
   if(typeof ccPanelOpen!=='undefined' && ccPanelOpen) ccPanelClose();
   if(typeof crsPanelOpen!=='undefined' && crsPanelOpen) crsPanelClose();
+  if(typeof clogPanelOpen!=='undefined' && clogPanelOpen) clogPanelClose();
   marginPanelOpen=true;
   marginDrafts={};
   marginView='program'; marginCurProgId=pid;
@@ -11602,6 +11944,264 @@ let crsPicked = new Set();          // courses ticked for insertion
 // stays put between inserts so a second table matches the first.
 let crsCols = ['code','title','credits','weeks'];
 
+let clogPanelOpen = false, clogPanelWasOpen = false, clogOrigin = 'hub';
+let clogFilterAud = '';       // '' = everything
+let clogTab = 'log';          // 'log' | 'queue'
+
+function clogBodyRoot(){
+  return document.getElementById(clogPanelOpen ? 'clog-panel-body' : 'clog-body');
+}
+function clogPanelHideDom(){
+  const a=document.getElementById('clog-panel'), b=document.getElementById('clog-panel-handle');
+  if(a) a.style.display='none';
+  if(b) b.style.display='none';
+}
+function clogPanelOpenFor(){
+  if(pmPanelOpen) pmPanelClose();
+  if(marginPanelOpen) marginPanelClose();
+  if(typeof ccPanelOpen!=='undefined' && ccPanelOpen) ccPanelClose();
+  if(typeof crsPanelOpen!=='undefined' && crsPanelOpen) crsPanelClose();
+  clogPanelOpen=true;
+  const panel=document.getElementById('clog-panel'), handle=document.getElementById('clog-panel-handle');
+  panel.style.flex='0 0 '+(uiState.sidePanelWidth||460)+'px';
+  panel.style.display='flex';
+  handle.style.display='block';
+  clogRender();
+  renderHub();
+}
+function clogPanelClose(){ clogPanelOpen=false; clogPanelHideDom(); }
+function clogPanelFullScreen(){
+  clogPanelWasOpen=true; clogPanelOpen=false; clogPanelHideDom(); openChangelog();
+}
+function openChangelog(){
+  clogOrigin = document.getElementById('prog-view').style.display !== 'none' ? 'prog'
+             : (document.getElementById('pm-dash-view').style.display !== 'none' ? 'dash' : 'hub');
+  document.getElementById('prog-view').style.display='none';
+  document.getElementById('hub-view').style.display='none';
+  const dash=document.getElementById('pm-dash-view'); if(dash) dash.style.display='none';
+  document.getElementById('clog-view').style.display='block';
+  clogRender();
+}
+function clogBack(){
+  document.getElementById('clog-view').style.display='none';
+  if(clogOrigin==='prog'){
+    document.getElementById('prog-view').style.display='block';
+    if(clogPanelWasOpen){ clogPanelWasOpen=false; clogPanelOpenFor(); return; }
+  } else if(clogOrigin==='dash'){
+    const d=document.getElementById('pm-dash-view'); if(d) d.style.display='block';
+  } else {
+    document.getElementById('hub-view').style.display='block';
+    renderHub();
+  }
+}
+// A viewer gets the changelog too -- it is the whole point of publishing one.
+function clogOpenSmart(){
+  const progVisible = document.getElementById('prog-view').style.display !== 'none';
+  if(progVisible && curProgId){ clogPanelOpenFor(); }
+  else { openChangelog(); }
+}
+
+// ---- rendering ----------------------------------------------------------
+function clogAudTags(e, editable){
+  return (e.aud||[]).map(a=>'<span class="clog-tag clog-t-'+a+'"'
+    + (editable ? ' onclick="clogToggleAudUI(\''+e.id+'\',\''+a+'\')" title="Click to remove"' : '')
+    + '>'+escapeHtml((CLOG_AUD[a]||{}).label||a)+'</span>').join('');
+}
+function clogWhen(ts){
+  if(!ts) return '';
+  const d=new Date(ts);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+function clogRender(){
+  const root = clogBodyRoot(); if(!root) return;
+  const viewer = viewerModeForced;
+  const unseen = clogUnseen().length;
+  const cands = viewer ? [] : clogCandidates();
+  _clogCands = cands;
+  let h = '<div class="clog-wrap">';
+
+  // tabs -- the queue is editor-only, so a viewer never sees an empty one
+  if(!viewer){
+    h += '<div class="clog-tabs">'
+      +  '<button class="clog-tab'+(clogTab==='log'?' on':'')+'" onclick="clogSetTab(\'log\')">Published '
+      +  '<span class="clog-n">'+clogAll().length+'</span></button>'
+      +  '<button class="clog-tab'+(clogTab==='queue'?' on':'')+'" onclick="clogSetTab(\'queue\')">Waiting on you '
+      +  (cands.length?'<span class="clog-n hot">'+cands.length+'</span>':'<span class="clog-n">0</span>')
+      +  '</button></div>';
+  }
+
+  if(!viewer && clogTab==='queue'){
+    h += clogQueueHTML(cands) + '</div>';
+    root.innerHTML = h; clogRefreshBadge(); return;
+  }
+
+  // audience filter + read controls
+  h += '<div class="clog-bar">'
+    +  '<button class="clog-chip'+(clogFilterAud===''?' on':'')+'" onclick="clogSetAud(\'\')">Everything</button>'
+    +  CLOG_AUDIENCES.map(a=>'<button class="clog-chip'+(clogFilterAud===a.id?' on':'')
+         +'" onclick="clogSetAud(\''+a.id+'\')">'+escapeHtml(a.label)+'</button>').join('')
+    +  '</div>';
+  if(unseen){
+    h += '<div class="clog-unseenbar"><span><b>'+unseen+'</b> unread</span>'
+      +  '<button class="clog-btn" onclick="clogMarkAllRead()">Mark all read</button></div>';
+  }
+
+  const shown = clogSorted().filter(e=>!clogFilterAud || (e.aud||[]).indexOf(clogFilterAud)>=0);
+  if(!clogAll().length){
+    h += '<div class="clog-empty"><div class="clog-empty-t">Nothing published yet</div>'
+      +  '<p>'+(viewer
+           ? 'When something changes that affects you, it will appear here.'
+           : 'Changes worth telling people about go here. Check <b>Waiting on you</b> for '
+             +'what the Playbook has noticed, or write an entry yourself.')+'</p></div>';
+  } else if(!shown.length){
+    h += '<div class="clog-empty"><p>Nothing tagged for that audience.</p></div>';
+  } else {
+    // grouped by program, so the portfolio view is "outlined by program"
+    const groups = {};
+    shown.forEach(e=>{ const k=e.progId||'__none'; (groups[k]=groups[k]||[]).push(e); });
+    const order = Object.keys(groups).sort((a,b)=>{
+      if(a==='__none') return 1; if(b==='__none') return -1;
+      const pa=programs.find(x=>x.id===a), pb=programs.find(x=>x.id===b);
+      return (pa?programs.indexOf(pa):0)-(pb?programs.indexOf(pb):0);
+    });
+    order.forEach(pid=>{
+      const p = programs.find(x=>x.id===pid);
+      const label = p ? splitProgName(p.name).code : 'Across programs';
+      const colour = p ? p.color : 'var(--mut)';
+      h += '<div class="clog-grp"><span class="clog-sw" style="background:'+colour+'"></span>'
+        +  escapeHtml(label)+'<span class="clog-grp-n">'+groups[pid].length+'</span></div>';
+      groups[pid].forEach(e=>{ h += clogEntryHTML(e, viewer); });
+    });
+  }
+  root.innerHTML = h + '</div>';
+  clogRefreshBadge();
+}
+function clogEntryHTML(e, viewer){
+  const read = clogIsRead(e.id);
+  const sec = e.progId && e.secId ? ccSectionName(e.progId, e.secId) : '';
+  return '<div class="clog-ent'+(read?'':' unread')+'">'
+    + '<div class="clog-ent-top">'
+    +   '<span class="clog-date">'+escapeHtml(clogWhen(e.ts))+'</span>'
+    +   '<span class="clog-t"'+(viewer?'':' contenteditable="true" spellcheck="false"'
+        +' onblur="clogSetField(\''+e.id+'\',\'title\',this.textContent.trim())"')+'>'
+    +     escapeHtml(e.title||'')+'</span>'
+    +   (read ? '' : '<span class="clog-new">new</span>')
+    +   '<button class="clog-read" title="'+(read?'Mark unread':'Mark as read')+'"'
+    +     ' onclick="clogReadUI(\''+e.id+'\','+(read?'false':'true')+')">'+(read?'&#9675;':'&#10003;')+'</button>'
+    + '</div>'
+    + '<div class="clog-b"'+(viewer?'':' contenteditable="true" spellcheck="false"'
+        +' onblur="clogSetField(\''+e.id+'\',\'body\',this.textContent.trim())"')+'>'
+    +   escapeHtml(e.body||'')+'</div>'
+    + '<div class="clog-f">'+clogAudTags(e, !viewer)
+    +   (viewer ? '' : '<button class="clog-addaud" onclick="clogAudMenu(event,\''+e.id+'\')" title="Add an audience">&#43;</button>')
+    // the entry point: click straight through to the page it concerns
+    +   (sec ? '<a class="clog-goto" onclick="clogGoTo(\''+e.progId+'\',\''+e.secId+'\')">'
+             + escapeHtml(sec)+' &rarr;</a>' : '')
+    +   (e.source ? '<span class="clog-src">'+escapeHtml(e.source)+'</span>' : '')
+    +   (viewer ? '' : '<button class="clog-del" onclick="clogDeleteUI(\''+e.id+'\')" title="Remove this entry">&#10005;</button>')
+    + '</div></div>';
+}
+function clogQueueHTML(cands){
+  if(!cands.length){
+    return '<div class="clog-empty"><div class="clog-empty-t">Nothing waiting</div>'
+      + '<p>The Playbook watches decisions reaching <b>Made</b>, approvals being '
+      + '<b>Approved</b> or <b>Rejected</b>, and course fields drifting from the catalog. '
+      + 'When one of those happens it will appear here for you to publish or ignore.</p></div>';
+  }
+  let h = '<p class="clog-hint">Nothing here is published until you say so. '
+        + '<b>Ignore</b> is permanent for that particular change.</p>';
+  cands.forEach((c,i)=>{
+    const sec = c.progId && c.secId ? ccSectionName(c.progId, c.secId) : '';
+    const p = programs.find(x=>x.id===c.progId);
+    h += '<div class="clog-cand" data-fp="'+escapeHtml(c.fp)+'">'
+      + '<div class="clog-cand-top"><span class="clog-why">'+escapeHtml(c.why)+'</span>'
+      +   (p ? '<span class="clog-src">'+escapeHtml(splitProgName(p.name).code)+'</span>' : '')
+      + '</div>'
+      + '<input class="clog-cand-t" value="'+escapeHtml(c.title)+'" aria-label="Entry title">'
+      + '<div class="clog-b">'+escapeHtml(c.body)+'</div>'
+      + '<div class="clog-f">'+(c.aud||[]).map(a=>'<span class="clog-tag clog-t-'+a+'">'
+      +   escapeHtml((CLOG_AUD[a]||{}).label||a)+'</span>').join('')
+      +   (sec ? '<span class="clog-src">'+escapeHtml(sec)+'</span>' : '')
+      +   '<span style="flex:1"></span>'
+      +   '<button class="clog-btn pub" onclick="clogPublishUI('+i+')">Publish</button>'
+      +   '<button class="clog-btn" onclick="clogIgnoreUI('+i+')">Ignore</button>'
+      + '</div></div>';
+  });
+  return h;
+}
+
+// ---- panel actions ------------------------------------------------------
+let _clogCands = [];
+function clogSetTab(t){ clogTab=t; clogRender(); }
+function clogSetAud(a){ clogFilterAud=a; uiState.clogAudience=a; saveUIState(); clogRender(); }
+function clogReadUI(id, on){
+  clogMarkRead(id, on); clogRender();
+  // the hub carries its own 'N new' markers, so refresh it only when it is visible
+  const hub=document.getElementById('hub-view');
+  if(hub && hub.style.display!=='none') renderHub();
+}
+function clogPublishUI(i){
+  const c = _clogCands[i]; if(!c) return;
+  const box = document.querySelector('.clog-cand[data-fp="'+CSS.escape(c.fp)+'"] .clog-cand-t');
+  clogPublish(c, box ? { title: box.value.trim() || c.title } : null);
+  clogRender(); renderHub();
+  toast('Published');
+}
+function clogIgnoreUI(i){
+  const c = _clogCands[i]; if(!c) return;
+  clogIgnore(c.fp);
+  clogRender();
+  toast('Ignored — this change will not come up again');
+}
+async function clogDeleteUI(id){
+  const e = clogAll().find(x=>x.id===id); if(!e) return;
+  if(!await appConfirm('Remove this entry from the changelog?\n\n“'+(e.title||'')+'”\n\n'
+      +'Anyone who has not read it yet will simply never see it.', 'Remove', 'Cancel')) return;
+  clogDelete(id); clogRender(); renderHub();
+}
+async function clogAddManual(){
+  if(viewerModeForced) return;
+  const t = await appPrompt('What changed? (a short headline)','');
+  if(t===null || !t.trim()) return;
+  const e = clogPublish({ fp:'man:'+Date.now(), progId: curProgId||'', secId: curSection||'',
+                          title:t.trim(), body:'', aud:['int'], source:'written by hand' });
+  clogTab='log'; clogRender(); renderHub();
+  toast('Entry added — fill in the detail and tag who it affects');
+  return e;
+}
+function clogToggleAudUI(id, a){ clogToggleAud(id, a); clogRender(); }
+function clogAudMenu(ev, id){
+  ev.stopPropagation();
+  const old=document.getElementById('clog-aud-menu'); if(old) old.remove();
+  const e = clogAll().find(x=>x.id===id); if(!e) return;
+  const m=document.createElement('div'); m.className='pc2-menu'; m.id='clog-aud-menu';
+  m.style.width='190px';
+  m.innerHTML = CLOG_AUDIENCES.map(a=>'<div class="pc2-mi" data-a="'+a.id+'">'
+    + ((e.aud||[]).indexOf(a.id)>=0 ? '&#10003; ' : '')+escapeHtml(a.label)+'</div>').join('');
+  document.body.appendChild(m);
+  const r=ev.currentTarget.getBoundingClientRect();
+  m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-198))+'px';
+  m.style.top=Math.min(r.bottom+5, window.innerHeight-m.offsetHeight-8)+'px';
+  m.querySelectorAll('.pc2-mi').forEach(row=>row.addEventListener('click',()=>{
+    clogToggleAud(id, row.dataset.a); m.remove(); clogRender();
+  }));
+  setTimeout(()=>document.addEventListener('mousedown',function off(ev2){
+    if(!m.contains(ev2.target)){ m.remove(); document.removeEventListener('mousedown',off); }
+  }),0);
+}
+// The entry point Karen asked for: a viewer clicks an entry and lands on the
+// page it is about, with the changelog panel still docked beside it.
+async function clogGoTo(progId, sectionId){
+  const wasPanel = clogPanelOpen;
+  if(!wasPanel) document.getElementById('clog-view').style.display='none';
+  await ensureProgramLoaded(progId);
+  if(curProgId !== progId) openProgram(progId);
+  const p = programs.find(x=>x.id===progId);
+  const ph = p && phasesOf(p).find(x=>(x.sections||[]).some(sc=>sc.id===sectionId));
+  if(ph) goTo(ph.id, sectionId);
+  if(!wasPanel) clogPanelOpenFor();
+}
+
 function crsBodyRoot(){
   return document.getElementById(crsPanelOpen ? 'course-panel-body' : 'course-body');
 }
@@ -11615,6 +12215,7 @@ function crsPanelOpenFor(){
   if(pmPanelOpen) pmPanelClose();          // only one docked tool at a time
   if(marginPanelOpen) marginPanelClose();
   if(typeof ccPanelOpen!=='undefined' && ccPanelOpen) ccPanelClose();
+  if(typeof clogPanelOpen!=='undefined' && clogPanelOpen) clogPanelClose();
   crsPanelOpen=true;
   const panel=document.getElementById('course-panel'), handle=document.getElementById('course-panel-handle');
   panel.style.flex='0 0 '+(uiState.sidePanelWidth||460)+'px';
@@ -12011,6 +12612,7 @@ async function ccPanelOpenFor(){
   if(pmPanelOpen) pmPanelClose();          // only one docked tool at a time
   if(marginPanelOpen) marginPanelClose();
   if(typeof crsPanelOpen!=='undefined' && crsPanelOpen) crsPanelClose();
+  if(typeof clogPanelOpen!=='undefined' && clogPanelOpen) clogPanelClose();
   ccPanelOpen=true;
   const panel=document.getElementById('cc-panel'), handle=document.getElementById('cc-panel-handle');
   panel.style.flex='0 0 '+(uiState.sidePanelWidth||460)+'px';
@@ -12079,6 +12681,7 @@ initSidePanelResize('pm-panel-handle','pm-panel');
 initSidePanelResize('margin-panel-handle','margin-panel');
   initSidePanelResize('cc-panel-handle','cc-panel');
   initSidePanelResize('course-panel-handle','course-panel');
+  initSidePanelResize('clog-panel-handle','clog-panel');
 function openPMDash(){
   document.getElementById('hub-view').style.display='none';
   document.getElementById('prog-view').style.display='none';
@@ -13703,6 +14306,10 @@ function hideEditorChromeForViewer(){
   // gives a viewer a direct way back to the read-only PM board from inside
   // an open program, not just from the Hub.
   const pmViewerBtn=document.getElementById('pm-board-viewer-btn'); if(pmViewerBtn) pmViewerBtn.style.display='inline-block';
+  // The changelog is the one thing a viewer is meant to come BACK for, so its
+  // button survives the viewer chrome-hiding rather than being stripped with
+  // the editor tools.
+  const clogBtn=document.getElementById('clog-btn'); if(clogBtn) clogBtn.style.display='inline-block';
   // Shown only for password-unlocked viewers (set in init) -- lets someone clear
   // the saved token from a shared or public machine without digging through
   // browser settings.
@@ -13847,8 +14454,9 @@ async function init(){
   // An unconditional write here re-stamped and re-flattened whatever was loaded,
   // which turned any bad read into a permanent overwrite.
   if(seededThisBoot)
-  try{ await saveSpace({ programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, v:2, ts: Date.now() }); }catch(e){ console.warn('seed persist failed:', e); }
+  try{ await saveSpace({ programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, changelogStore, v:2, ts: Date.now() }); }catch(e){ console.warn('seed persist failed:', e); }
 
+  clogFilterAud = uiState.clogAudience || '';   // a reader's audience filter persists
   applySidebarRail(); // restore collapsed/expanded from this browser's own preference
   renderHub();
   // Reopen the program you were working in last session -- never for a real viewer, who
