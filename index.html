@@ -1296,8 +1296,11 @@ body.view-mode .wysiwyg-bar{display:none!important;}
 .pc2-mi.danger:hover{background:#FDF4F5;}
 .pc2-msep{height:1px;background:var(--bdr);margin:5px 2px;}
 .pc2-mlbl{font-family:var(--font-cond);text-transform:uppercase;letter-spacing:0.14em;font-size:10.5px;color:#8A8377;padding:4px 10px 6px;}
-.pc2-swatches{display:flex;flex-wrap:wrap;gap:6px;padding:0 10px 6px;}
-.pc2-sw{width:22px;height:22px;border-radius:3px;cursor:pointer;border:2px solid transparent;}
+.pc2-swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:0 10px 6px;}
+.pc2-mlbl-sub{opacity:.8;}
+.pc2-sw{width:100%;height:24px;border-radius:3px;cursor:pointer;border:2px solid transparent;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,0.10);}
+.pc2-sw:hover{border-color:var(--bdr);}
 .pc2-sw.sel{border-color:var(--ink);}
 .add-card{min-height:200px;}
 
@@ -4822,14 +4825,51 @@ function progMenuOutside(e){
   const m=document.getElementById('pc2-menu');
   if(m && !m.contains(e.target)) closeProgMenu();
 }
+// Program colours: six hue families, four shades each, so programs can be
+// colour-coded in shades within a family (all the uncrewed work in blues, all
+// the firearms work in ambers, and so on).
+//
+// Two constraints shaped this, both measured rather than eyeballed:
+//   1. Every shade must carry WHITE text. The card header and the whole topbar
+//      use the program colour as their background with white content on it, so
+//      a light tint is not merely ugly, it is unreadable. Each shade here sits
+//      at a chosen white-on-colour contrast ratio (12.5 / 9.5 / 7.0 / 5.2 : 1),
+//      the lowest still clearing WCAG AA at 4.5:1.
+//   2. A fifth, darker step was dropped: above about 13:1 every hue is
+//      effectively black, so the families stopped being tellable apart --
+//      which defeats the point of having families.
+//
+// The old set offered to new programs (#6366f1, #f59e0b, #14b8a6 …) failed the
+// first constraint outright -- all seven were between 2.1:1 and 4.5:1, which is
+// why a new program could come out with white text on pale teal.
+const PROG_COLORS = [
+  // Red
+  '#67111A', '#8A1622', '#AE1C2B', '#D22234',
+  // Amber
+  '#47300C', '#5F4010', '#795014', '#946218',
+  // Teal
+  '#0F3B30', '#144E41', '#196453', '#1F7A65',
+  // Blue
+  '#12374D', '#184A67', '#1F5E83', '#25739F',
+  // Indigo
+  '#292E63', '#373E86', '#4650AB', '#5B65BC',
+  // Graphite
+  '#313437', '#424649', '#55595E', '#686D73'
+];
+const PROG_COLORS_PER_ROW = 4;          // one hue family per row
+function progColorPick(i){ return PROG_COLORS[(i*7) % PROG_COLORS.length]; }
+
 function progMenu(ev,id){
   ev.stopPropagation();
   const open=document.getElementById('pc2-menu');
   closeProgMenu();
   if(open && open.dataset.pid===id) return;
   const p=programs.find(x=>x.id===id); if(!p) return;
-  const colors=['#1A4A6B','#C0202A','#1B6B5A','#6B4A1B','#4F0A12','#3B4A6B','#8A5A12','#101820'];
   const cur=progIcon(p).key;
+  const same = c => String(p.color||'').toLowerCase() === String(c).toLowerCase();
+  // A colour set before this palette existed is shown on its own row and marked
+  // selected, so the current choice is never invisible and never silently lost.
+  const offPalette = p.color && !PROG_COLORS.some(same);
   const m=document.createElement('div');
   m.className='pc2-menu'; m.id='pc2-menu'; m.dataset.pid=id;
   m.innerHTML=`
@@ -4840,7 +4880,9 @@ function progMenu(ev,id){
     <div class="pc2-icons">${ICON_ORDER.map(k=>`<div class="pc2-ic${cur===k?' sel':''}" title="${PROG_ICONS[k].n}" onclick="setProgIcon('${id}','${k}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${PROG_ICONS[k].p}</svg></div>`).join('')}<div class="pc2-ic pc2-ic-auto${p.icon?'':' sel'}" title="Match the program name" onclick="setProgIcon('${id}','')">Auto</div></div>
     <div class="pc2-msep"></div>
     <div class="pc2-mlbl">Color</div>
-    <div class="pc2-swatches">${colors.map(c=>`<div class="pc2-sw${String(p.color).toLowerCase()===c.toLowerCase()?' sel':''}" style="background:${c}" title="${c}" onclick="setProgColor('${id}','${c}')"></div>`).join('')}</div>
+    <div class="pc2-swatches">${PROG_COLORS.map(c=>`<div class="pc2-sw${same(c)?' sel':''}" style="background:${c}" title="${c}" onclick="setProgColor('${id}','${c}')"></div>`).join('')}</div>
+    ${offPalette ? `<div class="pc2-mlbl pc2-mlbl-sub">Current</div>
+    <div class="pc2-swatches"><div class="pc2-sw sel" style="background:${p.color}" title="${p.color} — set before the shade palette" onclick="setProgColor('${id}','${p.color}')"></div></div>` : ''}
     <div class="pc2-msep"></div>
     <div class="pc2-mi danger" onclick="closeProgMenu();deleteProgram('${id}')">Delete program</div>`;
   document.body.appendChild(m);
@@ -4878,12 +4920,11 @@ async function deleteProgram(id){
 async function newProgram(){
   const name = await appPrompt('Program name:');
   if(!name||!name.trim()) return;
-  const colors = ['#6366f1','#8b5cf6','#0ea5e9','#f59e0b','#10b981','#ec4899','#14b8a6'];
   const p = {
     id: 'prog-'+Date.now(),
     name: name.trim(),
     status: 'Draft',
-    color: colors[programs.length % colors.length],
+    color: progColorPick(programs.length),
     created: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
     phases: clonePhases(DEFAULT_PHASES),
     shelf: (shelfDefault()||{}).id || ''
@@ -8919,9 +8960,9 @@ async function createFromTemplate(tid){
   const name=await appPrompt('Program name:',tmpl.name);
   if(!name||!name.trim()) return;
   closeTemplateModal();
-  const colors=['#1A4A6B','#C0202A','#1B6B5A','#6366f1','#f59e0b','#8b5cf6','#10b981'];
+
   const pid='prog-'+Date.now();
-  programs.push({id:pid,name:name.trim(),status:'Draft',color:colors[programs.length%colors.length],
+  programs.push({id:pid,name:name.trim(),status:'Draft',color:progColorPick(programs.length),
     created:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
     phases: clonePhases(tmpl.phases)});
   scheduleSave();
