@@ -61,6 +61,13 @@ body{font-family:var(--font-body);background:var(--page);color:var(--txt);height
 .hub-shelf.sortable-ghost{opacity:.4;}
 .hub-shelf-head{display:flex;align-items:center;gap:10px;padding:8px 13px;background:#F6F3F1;
   border-bottom:1px solid var(--bdr);flex-wrap:wrap;}
+.hub-shelf-head{cursor:pointer;}
+.hub-shelf-arr{font-size:9px;color:var(--mut);transition:transform .18s;flex:0 0 auto;line-height:1;}
+.hub-shelf-arr.open{transform:rotate(90deg);}
+/* Collapsed: the body is gone but the header keeps its rolled-up counts, so a
+   closed shelf still tells you what is inside it. */
+.hub-shelf.collapsed .hub-shelf-body{display:none;}
+.hub-shelf.collapsed .hub-shelf-head{border-bottom:none;}
 .hub-shelf-grip{color:var(--mut);cursor:grab;user-select:none;font-size:13px;line-height:1;}
 .hub-shelf-grip:hover{color:var(--acc);}
 .hub-shelf-name{font-family:var(--font-cond);font-size:14px;font-weight:700;letter-spacing:.07em;
@@ -4475,6 +4482,24 @@ const SHELF_SEED = [
   { name:'Firearms',       re:/firearm|gunsmith|handgun|asft|cftg|ballist|rifle/i },
   { name:'Exploratory',    re:null },     // the catch-all, and the default for new programs
 ];
+// Collapsed state lives in uiState, which is per-browser localStorage -- so an
+// editor and a viewer each remember their own arrangement, and neither
+// overwrites the other's. Same store the sidebar's collapsed phases use.
+function shelfCollapsed(id){
+  try{ return !!(uiState.shelfCollapsed||{})[id]; }catch(e){ return false; }
+}
+function shelfToggle(id){
+  if(!uiState.shelfCollapsed) uiState.shelfCollapsed = {};
+  uiState.shelfCollapsed[id] = !uiState.shelfCollapsed[id];
+  saveUIState();
+  const wrap = document.querySelector('#prog-grid .hub-shelf[data-shelf="'+id+'"]');
+  if(wrap){
+    const on = uiState.shelfCollapsed[id];
+    wrap.classList.toggle('collapsed', on);
+    const arr = wrap.querySelector('.hub-shelf-arr');
+    if(arr) arr.classList.toggle('open', !on);
+  }
+}
 function shelfById(id){ return (shelfStore.shelves||[]).find(x=>x.id===id) || null; }
 function shelfDefault(){
   let d = shelfById(shelfStore.defaultShelfId);
@@ -4556,6 +4581,9 @@ async function shelfDelete(id){
   scheduleSave();
   renderHub();
 }
+// No longer surfaced as a button (it cluttered every shelf header for a setting
+// that changes once a year). Still here as the only way to move the "new" badge,
+// callable from the console if the default shelf ever needs changing.
 async function shelfSetDefault(id){
   if(viewerModeForced) return;
   const sh = shelfById(id); if(!sh) return;
@@ -4618,8 +4646,11 @@ function renderHub(){
     wrap.className = 'hub-shelf';
     wrap.setAttribute('data-shelf', sh.id);
     const isDef = def && def.id===sh.id;
+    const collapsed = shelfCollapsed(sh.id);
+    if(collapsed) wrap.classList.add('collapsed');
     wrap.innerHTML =
       '<div class="hub-shelf-head">'
+      + '<span class="hub-shelf-arr'+(collapsed?'':' open')+'" title="Collapse or expand">▶</span>'
       + (viewer ? '' : '<span class="hub-shelf-grip" title="Drag to move this shelf">⠿</span>')
       + '<span class="hub-shelf-name"'+(viewer?'':' contenteditable="true" spellcheck="false"')+'>'
       +   escapeHtml(sh.name)+'</span>'
@@ -4627,7 +4658,6 @@ function renderHub(){
       + '<span class="hub-shelf-sum">'+escapeHtml(shelfSummary(sh.id))+'</span>'
       + (viewer ? '' :
           '<span class="hub-shelf-acts">'
-        + (isDef ? '' : '<button class="hub-shelf-btn" title="Make this the shelf new programs land on">Set as new</button>')
         + '<button class="hub-shelf-btn hub-shelf-x" title="Remove this shelf">&#10005;</button>'
         + '</span>')
       + '</div>'
@@ -4641,6 +4671,11 @@ function renderHub(){
       hint.textContent = viewer ? 'No programs on this shelf' : 'Drop a program here';
       body.appendChild(hint);
     }
+    const head = wrap.querySelector('.hub-shelf-head');
+    head.addEventListener('click', e=>{
+      if(e.target.closest('.hub-shelf-name, .hub-shelf-grip, .hub-shelf-btn')) return;
+      shelfToggle(sh.id);
+    });
     if(!viewer){
       const nameEl = wrap.querySelector('.hub-shelf-name');
       nameEl.addEventListener('blur', ()=>shelfRename(nameEl, sh.id));
@@ -4650,8 +4685,6 @@ function renderHub(){
       });
       const del = wrap.querySelector('.hub-shelf-x');
       if(del) del.addEventListener('click', ()=>shelfDelete(sh.id));
-      const setd = wrap.querySelector('.hub-shelf-btn:not(.hub-shelf-x)');
-      if(setd) setd.addEventListener('click', ()=>shelfSetDefault(sh.id));
     }
     grid.appendChild(wrap);
   });
@@ -4862,7 +4895,7 @@ async function newProgram(){
 }
 
 // ==================== UI STATE (remembers where you were) ====================
-let uiState={lastLoc:{},openPhases:{}};
+let uiState={lastLoc:{},openPhases:{},shelfCollapsed:{}};
 try{ uiState=Object.assign(uiState,JSON.parse(localStorage.getItem('sdi_ui_state')||'{}')); }catch(e){}
 function saveUIState(){ try{ localStorage.setItem('sdi_ui_state',JSON.stringify(uiState)); }catch(e){} }
 
