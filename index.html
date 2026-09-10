@@ -560,6 +560,20 @@ body.view-mode .crs-del,body.view-mode .crs-revert{display:none!important;}
 .page-title:focus{background:#f8fafc;}
 .page-meta{display:flex;align-items:center;gap:18px;margin-bottom:28px;padding-bottom:16px;border-bottom:1px solid var(--bdr);flex-wrap:wrap;}
 .meta-item{font-size:12px;color:var(--mut);display:flex;align-items:center;gap:4px;}
+.meta-btn{font-size:12px;color:var(--mut);background:#fff;border:1px solid var(--bdr);
+  border-radius:5px;padding:4px 10px;cursor:pointer;white-space:nowrap;line-height:1.4;}
+.meta-btn:hover{border-color:var(--acc);color:var(--acc);background:#FCF7F7;}
+.clog-diff{border:1px solid var(--bdr);border-radius:5px;background:#FBFAF9;padding:8px 10px;margin:7px 0;
+  max-height:230px;overflow-y:auto;}
+.clog-dblk+.clog-dblk{margin-top:9px;border-top:1px dashed var(--bdr);padding-top:9px;}
+.clog-dlbl{font-family:var(--font-cond);font-size:9.5px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--mut);display:block;margin-bottom:4px;}
+.clog-dline{font-size:12px;line-height:1.55;margin-bottom:3px;word-break:break-word;}
+.clog-dctx{color:#A79E9B;}
+.clog-diff del{background:#FBEDEF;color:#8A2530;text-decoration:line-through;
+  text-decoration-color:#C97F89;padding:0 2px;border-radius:2px;}
+.clog-diff ins{background:#EAF4EE;color:#1F5B3C;text-decoration:none;padding:0 2px;border-radius:2px;}
+.clog-cand.pending{border-color:var(--acc);box-shadow:0 1px 0 rgba(213,0,50,.08);}
 
 /* ===== BLOCKS ===== */
 .blocks-container{display:flex;flex-direction:column;gap:10px;min-height:80px;}
@@ -914,6 +928,7 @@ body.view-mode [contenteditable] a{pointer-events:auto;}
 
 /* view mode */
 body.view-mode .locked-banner,
+body.view-mode #clog-post-btn,
 body.view-mode .bctrl,
 body.view-mode .add-block-area,
 body.view-mode .add-sec,
@@ -1243,7 +1258,7 @@ body.is-staging::before{content:'';position:fixed;top:0;left:0;right:0;height:3p
   .vid-change-bar,.block-tag,.wysiwyg-bar,.btool-tag,.btool-copy,.bdel,.bdrag,
   .cost-add,.cost-clear,.cost-foot-bar,.cost-rowdrag,
   .tbl-rowops,
-  .ap-btn[onclick],.locked-banner,.claude-panel,.link-pop,#tbl-fmt-pop,.export-menu,#databackup-modal,#shortcuts-modal{display:none!important;}
+  .ap-btn[onclick],.locked-banner,#clog-post-btn,.claude-panel,.link-pop,#tbl-fmt-pop,.export-menu,#databackup-modal,#shortcuts-modal{display:none!important;}
   /* print the milestone date as text, not as two dropdown boxes */
   .tl-date-text{display:inline!important;}
   body,#prog-view,.app,.main,.content-area{overflow:visible!important;height:auto!important;}
@@ -1871,6 +1886,8 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
               <div class="meta-item">📅 <span id="meta-date">Updated today</span></div>
               <div class="meta-item" style="cursor:pointer" onclick="changeUserName()" title="Click to set or change your name">👤 <span id="meta-user">Set your name</span></div>
               <div class="meta-item" id="phase-pill"></div>
+              <span style="flex:1"></span>
+              <button class="meta-btn" id="clog-post-btn" onclick="clogPostSection()" title="Write up what changed in this section, with a before and after">&#128203; Post to changelog</button>
             </div>
             <div class="locked-banner" id="locked-banner">🔒 This section is locked and approved. Unlock to make changes.</div>
             <div class="blocks-container" id="blocks-root"></div>
@@ -4796,6 +4813,117 @@ function clogText(html){
   return (d.textContent||'').replace(/\s+/g,' ').trim();
 }
 
+// ---- what this section said last time -----------------------------------
+// The reference wording lives in THIS browser's localStorage, not in the
+// content repo. Keeping it out of the manifest matters: section text is ~99%
+// of the Playbook's bulk, and a persisted baseline would roughly double what
+// every boot downloads. Posting is a deliberate editor action taken from your
+// own machine, so per-browser is the right home. Capped and LRU-evicted so a
+// long session can never fill localStorage and break the app's other state.
+const CLOG_BASE_KEY = 'sdi_clog_baselines';
+const CLOG_BASE_MAX = 1200000;
+let _clogBase = null;
+function clogBaseAll(){
+  if(_clogBase) return _clogBase;
+  try{ _clogBase = JSON.parse(localStorage.getItem(CLOG_BASE_KEY)||'{}'); }catch(e){ _clogBase = {}; }
+  if(!_clogBase || typeof _clogBase!=='object') _clogBase = {};
+  return _clogBase;
+}
+function clogBaseGet(key){ const b = clogBaseAll()[key]; return (b && b.map) ? b : null; }
+function clogBaseTrim(all){
+  const keys = Object.keys(all); const size = {}; let total = 0;
+  keys.forEach(k=>{ const n = JSON.stringify(all[k]).length + k.length + 4; size[k]=n; total+=n; });
+  if(total <= CLOG_BASE_MAX) return;
+  keys.sort((a,b)=>(all[a].ts||0)-(all[b].ts||0));
+  while(keys.length > 1 && total > CLOG_BASE_MAX){ const k = keys.shift(); total -= size[k]; delete all[k]; }
+}
+function clogBaseSet(key, snap){
+  const all = clogBaseAll();
+  all[key] = { order: snap.order, map: snap.map, ts: Date.now() };
+  clogBaseTrim(all);
+  try{ localStorage.setItem(CLOG_BASE_KEY, JSON.stringify(all)); }
+  catch(e){
+    // Out of room: keep just this section rather than losing every reference.
+    _clogBase = {}; _clogBase[key] = all[key];
+    try{ localStorage.setItem(CLOG_BASE_KEY, JSON.stringify(_clogBase)); }catch(e2){}
+  }
+}
+
+const CLOG_BLOCK_LABELS = [['block-margin-scenario','Margin scenario'],['block-course-table','Course table'],
+  ['block-text','Text'],['block-table','Table'],['block-callout','Callout'],['block-timeline','Timeline'],
+  ['block-decision','Decision log'],['block-approval','Approval tracker'],['block-image','Image'],
+  ['block-video','Video'],['block-file','File'],['block-embed','Embed'],['block-costtable','Cost table'],
+  ['block-swot','SWOT'],['block-overview','Overview'],['block-margin','Margin'],['block-drawing','Drawing']];
+// textContent runs adjacent cells together -- 'Major' and 'UAS' in two table
+// cells become 'MajorUAS', which makes a table diff unreadable. Put a space
+// back at every block and cell boundary before reading the text.
+function clogNodeText(node){
+  const html = (node.innerHTML||'')
+    .replace(/<\/(td|th|tr|li|p|div|h1|h2|h3|h4|h5|blockquote|figcaption|option)>/gi, ' </$1>')
+    .replace(/<br\s*\/?>/gi, ' ');
+  const d = document.createElement('div'); d.innerHTML = html;
+  return (d.textContent||'').replace(/\s+/g,' ').trim();
+}
+function clogBlockLabel(el){
+  for(let i=0;i<CLOG_BLOCK_LABELS.length;i++){
+    const c = CLOG_BLOCK_LABELS[i][0];
+    if(el.classList.contains(c) || el.querySelector('.'+c)) return CLOG_BLOCK_LABELS[i][1];
+  }
+  return 'Block';
+}
+// Block-by-block text, keyed on data-bid so a diff survives reordering and
+// only reports the block that actually changed. The control bar and the
+// add/change affordances are stripped -- they are chrome, not content.
+function clogBlockTexts(html){
+  const order = [], map = {};
+  let doc; try{ doc = new DOMParser().parseFromString('<div id="clogr">'+(html||'')+'</div>','text/html'); }
+  catch(e){ return { order, map }; }
+  const r = doc.getElementById('clogr'); if(!r) return { order, map };
+  [...r.children].forEach((el,i)=>{
+    const c = el.cloneNode(true);
+    // Chrome, not content: control bars, "Change image", the file block's Edit
+    // button and its "Opens in a new tab" subtitle would otherwise show up in
+    // an excerpt as if Karen had written them.
+    c.querySelectorAll('.bctrl,.vid-change-bar,.tbl-tools,.tl-add-btn,.mscn-refresh-btn,'
+      + '.crst-bar,.file-edit,.fs,.fi,.add-tbl-row,.add-tbl-col').forEach(x=>x.remove());
+    const key = (el.dataset && el.dataset.bid) ? el.dataset.bid : 'i'+i;
+    order.push(key);
+    map[key] = { label: clogBlockLabel(el), text: clogNodeText(c) };
+  });
+  return { order, map };
+}
+// null means "no reference yet", which is different from "nothing changed".
+function clogSectionChanges(progId, secId){
+  const key = progId+':'+secId;
+  const base = clogBaseGet(key);
+  if(!base) return null;
+  const now = clogBlockTexts(blockStore[key]||'');
+  const changes = [];
+  now.order.forEach(k=>{
+    const b = base.map[k], n = now.map[k];
+    if(!b){ if(n.text) changes.push({ type:'added', label:n.label, before:'', after:n.text }); return; }
+    if(b.text !== n.text) changes.push({ type:'edited', label:n.label, before:b.text, after:n.text });
+  });
+  base.order.forEach(k=>{
+    if(!now.map[k] && base.map[k] && base.map[k].text)
+      changes.push({ type:'removed', label:base.map[k].label, before:base.map[k].text, after:'' });
+  });
+  return { key, changes, since: base.ts };
+}
+// Trim the shared head and tail so the excerpt shows the words that moved,
+// not the whole paragraph they sit in.
+function clogWordDelta(before, after){
+  const a = String(before||'').split(' ').filter(Boolean);
+  const b = String(after||'').split(' ').filter(Boolean);
+  let st = 0; while(st < a.length && st < b.length && a[st] === b[st]) st++;
+  let en = 0; while(en < a.length-st && en < b.length-st && a[a.length-1-en] === b[b.length-1-en]) en++;
+  const clip = t => t.length > 220 ? t.slice(0,218)+'\u2026' : t;
+  return { ctxL: (st>5?'\u2026 ':'') + a.slice(Math.max(0,st-5), st).join(' '),
+           ctxR: a.slice(a.length-en, a.length-en+5).join(' ') + (en>5?' \u2026':''),
+           was: clip(a.slice(st, a.length-en).join(' ')),
+           now: clip(b.slice(st, b.length-en).join(' ')) };
+}
+
 // ---- candidate detection ------------------------------------------------
 // Each candidate carries a fingerprint of the SPECIFIC change -- the item and
 // its before/after values -- so Ignore suppresses exactly that and nothing
@@ -5795,6 +5923,10 @@ async function loadContent(sid){
   try{ upgradeTableRowOps(root); }catch(e){}
   // Re-baseline: structural upgrades above must not count as user edits
   if(blockStore[key]!==undefined) blockStore[key] = root.innerHTML;
+  // Changelog reference point. Recorded AFTER the upgrades above, so healing a
+  // corrupted table never reads as something Karen changed. Only when there is
+  // no reference yet -- an existing one is the wording you last posted from.
+  try{ if(!clogBaseGet(key)) clogBaseSet(key, clogBlockTexts(blockStore[key]||'')); }catch(e){}
   // Update comment count label without expanding
   const cnt = (sectionComments[curProgId+':'+sid]||[]).length;
   const lbl = document.getElementById('comments-count-label');
@@ -12026,7 +12158,8 @@ function clogRender(){
       +  '<button class="clog-tab'+(clogTab==='log'?' on':'')+'" onclick="clogSetTab(\'log\')">Published '
       +  '<span class="clog-n">'+clogAll().length+'</span></button>'
       +  '<button class="clog-tab'+(clogTab==='queue'?' on':'')+'" onclick="clogSetTab(\'queue\')">Waiting on you '
-      +  (cands.length?'<span class="clog-n hot">'+cands.length+'</span>':'<span class="clog-n">0</span>')
+      +  (()=>{ const n = cands.length + (_clogPending?1:0);
+                 return n ? '<span class="clog-n hot">'+n+'</span>' : '<span class="clog-n">0</span>'; })()
       +  '</button></div>';
   }
 
@@ -12102,13 +12235,19 @@ function clogEntryHTML(e, viewer){
     + '</div></div>';
 }
 function clogQueueHTML(cands){
-  if(!cands.length){
+  const pend = _clogPending ? clogPendingHTML(_clogPending) : '';
+  if(!cands.length && !pend){
     return '<div class="clog-empty"><div class="clog-empty-t">Nothing waiting</div>'
       + '<p>The Playbook watches decisions reaching <b>Made</b>, approvals being '
       + '<b>Approved</b> or <b>Rejected</b>, and course fields drifting from the catalog. '
-      + 'When one of those happens it will appear here for you to publish or ignore.</p></div>';
+      + 'When one of those happens it will appear here for you to publish or ignore.</p>'
+      + '<p>Ordinary content edits are not watched \u2014 a spelling fix should never '
+      + 'become an entry. To write one up yourself, open the section and click '
+      + '<b>\u{1F4CB} Post to changelog</b> under its title; you will see exactly what '
+      + 'changed before anything is posted.</p></div>';
   }
-  let h = '<p class="clog-hint">Nothing here is published until you say so. '
+  let h = pend;
+  if(cands.length) h += '<p class="clog-hint">Nothing here is published until you say so. '
         + '<b>Ignore</b> is permanent for that particular change.</p>';
   cands.forEach((c,i)=>{
     const sec = c.progId && c.secId ? ccSectionName(c.progId, c.secId) : '';
@@ -12132,6 +12271,126 @@ function clogQueueHTML(cands){
 
 // ---- panel actions ------------------------------------------------------
 let _clogCands = [];
+// ---- Karen's deliberate route: post the change you just made ----------
+// Detection deliberately does NOT cover ordinary content edits: 170 of the
+// section timestamps in real content include a machine migration, so an
+// automatic feed would announce work nobody did. This is the editor saying
+// "this one matters" -- and it still goes through the queue so the before and
+// after can be read before anything is published.
+let _clogPending = null;
+async function clogPostSection(){
+  if(viewerModeForced) return;
+  if(!curProgId || !curSection){ toast('Open a section first.'); return; }
+  saveCurrentBlocks();                       // flush the live DOM before diffing
+  const key = curProgId+':'+curSection;
+  const ch = clogSectionChanges(curProgId, curSection);
+  if(!ch){
+    clogBaseSet(key, clogBlockTexts(blockStore[key]||''));
+    toast('This section\u2019s wording is now the reference \u2014 your next change here will show a before and after');
+    return;
+  }
+  if(!ch.changes.length){
+    toast('Nothing has changed in this section since '+fmtAgo(ch.since));
+    return;
+  }
+  // Just the section's own name -- ccSectionName prefixes the phase, which
+  // reads as clutter in an entry title.
+  const full = ccSectionName(curProgId, curSection) || '';
+  const secName = (full.split('\u203a').pop() || 'This section').trim();
+  _clogPending = {
+    progId: curProgId, secId: curSection,
+    fp: 'sec:'+clogHash(key+'|'+ch.changes.map(c=>c.after).join('|')),
+    why: ch.changes.length+' change'+(ch.changes.length===1?'':'s')+' since '+fmtAgo(ch.since),
+    title: secName+' updated', body: '',
+    aud: ['int'], source: 'Section edit',
+    changes: ch.changes, since: ch.since
+  };
+  clogTab = 'queue';
+  clogOpenSmart();
+  clogRender();
+}
+function clogPendingHTML(c){
+  let h = '<div class="clog-cand pending" data-fp="'+escapeHtml(c.fp)+'">'
+    + '<div class="clog-cand-top"><span class="clog-why">'+escapeHtml(c.why)+'</span>'
+    + '<span class="clog-src">'+escapeHtml(ccSectionName(c.progId,c.secId)||'')+'</span></div>'
+    + '<input class="clog-cand-t" value="'+escapeHtml(c.title)+'" aria-label="Entry title">'
+    + '<div class="clog-diff">';
+  c.changes.forEach(ch=>{
+    h += '<div class="clog-dblk"><span class="clog-dlbl">'+escapeHtml(ch.label)+' \u00b7 '+ch.type+'</span>';
+    if(ch.type === 'edited'){
+      const d = clogWordDelta(ch.before, ch.after);
+      const ctx = t => t ? '<span class="clog-dctx">'+escapeHtml(t)+'</span> ' : '';
+      h += '<div class="clog-dline">'+ctx(d.ctxL)+'<del>'+escapeHtml(d.was||'(nothing)')+'</del> '+ctx(d.ctxR)+'</div>'
+        +  '<div class="clog-dline">'+ctx(d.ctxL)+'<ins>'+escapeHtml(d.now||'(nothing)')+'</ins> '+ctx(d.ctxR)+'</div>';
+    } else {
+      const t = ch.type==='added' ? ch.after : ch.before;
+      const tag = ch.type==='added' ? 'ins' : 'del';
+      h += '<div class="clog-dline"><'+tag+'>'+escapeHtml(t.slice(0,240))+(t.length>240?'\u2026':'')+'</'+tag+'></div>';
+    }
+    h += '</div>';
+  });
+  h += '</div>'
+    + '<div class="clog-b" contenteditable="true" spellcheck="false">'+escapeHtml(c.body)+'</div>'
+    + '<div class="clog-f">'
+    + (c.aud||[]).map(a=>'<span class="clog-tag clog-t-'+a+'" onclick="clogPendAud(\''+a+'\')" title="Click to remove">'
+        + escapeHtml((CLOG_AUD[a]||{}).label||a)+'</span>').join('')
+    + '<button class="clog-addaud" onclick="clogPendAudMenu(event)" title="Add an audience">+</button>'
+    + '<span style="flex:1"></span>'
+    + '<button class="clog-btn pub" onclick="clogPublishPending()">Post</button>'
+    + '<button class="clog-btn" onclick="clogDiscardPending()">Discard</button>'
+    + '</div></div>';
+  return h;
+}
+function clogPendAud(a){
+  if(!_clogPending) return;
+  const i = _clogPending.aud.indexOf(a);
+  if(i >= 0) _clogPending.aud.splice(i,1); else _clogPending.aud.push(a);
+  clogPendSyncFields(); clogRender();
+}
+function clogPendAudMenu(ev){
+  ev.stopPropagation();
+  const old = document.getElementById('clog-aud-menu'); if(old) old.remove();
+  if(!_clogPending) return;
+  const m = document.createElement('div'); m.className='pc2-menu'; m.id='clog-aud-menu';
+  m.style.width = '190px';
+  m.innerHTML = CLOG_AUDIENCES.map(a=>'<div class="pc2-mi" data-a="'+a.id+'">'
+    + (_clogPending.aud.indexOf(a.id)>=0 ? '&#10003; ' : '')+escapeHtml(a.label)+'</div>').join('');
+  document.body.appendChild(m);
+  const r = ev.currentTarget.getBoundingClientRect();
+  m.style.left = Math.max(8, Math.min(r.left, window.innerWidth-198))+'px';
+  m.style.top = Math.min(r.bottom+5, window.innerHeight-m.offsetHeight-8)+'px';
+  m.querySelectorAll('.pc2-mi').forEach(row=>row.addEventListener('click',()=>{
+    m.remove(); clogPendAud(row.dataset.a);
+  }));
+  setTimeout(()=>document.addEventListener('mousedown',function off(e2){
+    if(!m.contains(e2.target)){ m.remove(); document.removeEventListener('mousedown',off); }
+  }),0);
+}
+// Keep the typed title and detail through a re-render, so tagging an audience
+// never throws away wording already written.
+function clogPendSyncFields(){
+  if(!_clogPending) return;
+  const card = document.querySelector('.clog-cand.pending');
+  if(!card) return;
+  const t = card.querySelector('.clog-cand-t'), b = card.querySelector('.clog-b');
+  if(t) _clogPending.title = t.value.trim() || _clogPending.title;
+  if(b) _clogPending.body = b.textContent.trim();
+}
+function clogPublishPending(){
+  if(viewerModeForced) return;
+  clogPendSyncFields();
+  const c = _clogPending; if(!c) return;
+  clogPublish(c, { title: c.title, body: c.body });
+  // Re-baseline, so the same change is never offered a second time.
+  clogBaseSet(c.progId+':'+c.secId, clogBlockTexts(blockStore[c.progId+':'+c.secId]||''));
+  _clogPending = null; clogTab = 'log'; clogRender();
+  const hub = document.getElementById('hub-view');
+  if(hub && hub.style.display !== 'none') renderHub();
+  toast('Posted to the changelog');
+}
+// Discard leaves the reference wording alone on purpose: the change is still
+// unposted, so it can be written up later.
+function clogDiscardPending(){ _clogPending = null; clogRender(); toast('Discarded \u2014 nothing was posted'); }
 function clogSetTab(t){ clogTab=t; clogRender(); }
 function clogSetAud(a){ clogFilterAud=a; uiState.clogAudience=a; saveUIState(); clogRender(); }
 function clogReadUI(id, on){
