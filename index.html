@@ -927,6 +927,11 @@ body.view-mode [contenteditable] a{pointer-events:auto;}
 .lp-btn:hover{background:#334155;color:#fff;}
 
 /* view mode */
+/* A reviewer may comment and nothing else: the box stays, the editor-only
+   controls inside it go. */
+body.view-mode .cmt-resolve,
+body.view-mode .cmt-reopen,
+body.view-mode .cmt-del,
 body.view-mode .locked-banner,
 body.view-mode #clog-post-btn,
 body.view-mode .bctrl,
@@ -936,7 +941,6 @@ body.view-mode .dph,
 body.view-mode .dsec,
 body.view-mode .sec-del,
 body.view-mode .ph-del,
-body.view-mode #comments-area,
 body.view-mode .vid-change-bar,
 body.view-mode .tl-add-btn,
 body.view-mode .tl-del,
@@ -1223,7 +1227,15 @@ body.is-staging::before{content:'';position:fixed;top:0;left:0;right:0;height:3p
 .comment-author{font-weight:600;font-size:11px;color:var(--mut);margin-bottom:3px;}
 .cmt-flag{font-weight:600;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;border:1px solid #E3D5B4;background:#F6EFDF;color:#6B5A33;border-radius:3px;padding:0 4px;margin-left:5px;}
 .cmt-flag.pend{border-color:#BFD9E8;background:#EAF2F7;color:#1F5B7A;}
-.comment-item.resolved{opacity:.6;}
+.comment-item.resolved{opacity:.62;}
+.comment-item.reply{margin-left:18px;border-left:2px solid var(--bdr);padding-left:10px;border-bottom:none;}
+.cmt-acts{display:flex;gap:6px;margin-top:6px;}
+.cmt-act{border:1px solid var(--bdr);background:#fff;color:var(--mut);font-size:11px;padding:2px 8px;border-radius:4px;cursor:pointer;font-family:inherit;}
+.cmt-act:hover{border-color:var(--acc);color:var(--acc);}
+.cmt-res{margin-top:6px;font-size:12px;color:#1F5B3C;background:#EDF5F0;border:1px solid #BFDCCB;border-radius:5px;padding:6px 9px;}
+.cmt-res-note{color:#334155;margin-top:3px;}
+.cmt-res-ev{color:var(--mut);font-size:11px;margin-top:3px;}
+.sec-cmt{font-size:10px;font-weight:700;background:var(--acc);color:#fff;border-radius:8px;padding:0 5px;margin-left:5px;}
 .comment-item.resolved .comment-author::after{content:' \2713 resolved';color:#1F5B3C;font-weight:700;}
 .comment-input-row{display:flex;gap:8px;margin-top:12px;}
 .comment-input-row input{flex:1;padding:7px 10px;border:1px solid var(--bdr);border-radius:6px;font-size:13px;font-family:inherit;outline:none;}
@@ -2428,6 +2440,11 @@ function vkPromptUnlock(){
       try{
         const token = await vkDecryptToken(v, record);
         try{ localStorage.setItem(VK_TOKEN_KEY, token); }catch(e){}
+        // The same password also unlocks the comment token, so a reviewer
+        // types one password and not two. Deliberately best-effort: if there
+        // is no comment key deployed, or it was encrypted under a different
+        // password, reading still works and commenting simply stays off.
+        try{ await ckUnlockWith(v); }catch(e){}
         msg.className='vk-msg ok'; msg.textContent='Unlocked ✓';
         setTimeout(()=>{ ov.remove(); resolve(true); }, 220);
       }catch(e){
@@ -9906,6 +9923,116 @@ async function cmtWriteRemote(c){
   return false;
 }
 
+// Fetch comment-key.json and decrypt it with the password the viewer just
+// used. Returns true if commenting is now possible on this device.
+async function ckUnlockWith(password){
+  let rec;
+  try{
+    const r = await fetch(CK_FILE, { cache:'no-store' });
+    if(!r.ok) return false;
+    rec = await r.json();
+  }catch(e){ return false; }
+  try{
+    const token = await vkDecryptToken(password, rec);
+    try{ localStorage.setItem(CK_TOKEN_KEY, token); }catch(e){}
+    return true;
+  }catch(e){ return false; }          // wrong password for this file
+}
+// The roster turns a per-person link into a name. Read from the comments repo
+// so a reviewer holding only the content token cannot enumerate the others.
+async function cmtRosterLoad(){
+  if(_cmtRoster) return _cmtRoster;
+  const r = await cmtApi('/contents/reviewers.json');
+  if(r.status==='ok' && r.json && r.json.content){
+    try{ _cmtRoster = JSON.parse(base64ToUtf8(r.json.content)); }catch(e){ _cmtRoster = {reviewers:[]}; }
+  } else if(r.status==='not_found'){ _cmtRoster = {reviewers:[]}; }
+  return _cmtRoster;
+}
+// ---- resolving, reopening, replying -------------------------------------
+// A resolution ADDS to the comment; it never replaces or removes it. The
+// original text, author and timestamp stay exactly as written, and the change
+// is one commit, so the history shows what was addressed and when. That is
+// what makes this a record rather than a task list.
+async function cmtUpdateRemote(c){
+  // The Contents API needs the file's current sha to replace it. Fetching it
+  // now rather than trusting a cached one means a comment edited from another
+  // browser is never silently clobbered.
+  const path = cmtPathFor(c);
+  const cur = await cmtApi('/contents/'+path);
+  if(cur.status!=='ok' || !cur.json || !cur.json.sha) return false;
+  const r = await cmtApi('/contents/'+path, {
+    method:'PUT',
+    body: JSON.stringify({
+      message: (c.status==='resolved' ? 'Resolve' : 'Reopen')+' comment on '+c.progId+'/'+c.secId,
+      content: utf8ToBase64(JSON.stringify(c, null, 2)),
+      sha: cur.json.sha,
+      branch: GITHUB_BRANCH })
+  });
+  if(r.status!=='ok') return false;
+  const key=c.progId+':'+c.secId;
+  const list=_cmtRemote[key]||[];
+  const i=list.findIndex(x=>x.id===c.id);
+  if(i>=0) list[i]=c; else list.push(c);
+  return true;
+}
+function cmtFind(id){
+  for(const k of Object.keys(_cmtRemote)){
+    const hit=(_cmtRemote[k]||[]).find(c=>c.id===id);
+    if(hit) return hit;
+  }
+  return null;
+}
+async function cmtResolve(id){
+  if(viewerModeForced) return;                 // resolving is Karen's call
+  const c = cmtFind(id); if(!c) return;
+  // Optional but prompted, with the field ready: writing a note is the path of
+  // least resistance, skipping it is a deliberate choice. 'Resolved' on its
+  // own tells an auditor nothing.
+  const note = await appPrompt('What did you change? (optional, but this is what makes the record useful)\n\n'
+    + '\u201c'+c.text.slice(0,140)+(c.text.length>140?'\u2026':'')+'\u201d', '');
+  if(note===null) return;                      // cancelled -- nothing changes
+  const who = await cmtIdentity();
+  const next = Object.assign({}, c, { status:'resolved', resolution:String(note||'').trim(),
+    resolvedBy: who ? {id:who.id,name:who.name} : {id:'',name:'Editor'}, resolvedAt: Date.now(),
+    // A factual signal that the section really was edited after the comment
+    // was raised -- asserted resolutions are weaker than evidenced ones.
+    sectionEditedAfter: !!(sectionUpdated[c.progId+':'+c.secId] > c.ts) });
+  const ok = await cmtUpdateRemote(next);
+  if(!ok){ toast('\u26a0 Could not save that \u2014 nothing changed. Try again.'); return; }
+  cmtRefreshUI(); renderSidebar();
+  toast('Resolved');
+}
+async function cmtReopen(id){
+  const c = cmtFind(id); if(!c) return;
+  const who = await cmtIdentity(); if(!who) return;
+  const next = Object.assign({}, c, { status:'open', reopenedBy:{id:who.id,name:who.name},
+                                      reopenedAt: Date.now() });
+  const ok = await cmtUpdateRemote(next);
+  if(!ok){ toast('\u26a0 Could not save that \u2014 nothing changed.'); return; }
+  cmtRefreshUI(); renderSidebar();
+  toast('Reopened');
+}
+async function cmtReply(id){
+  const c = cmtFind(id); if(!c) return;
+  const text = await appPrompt('Reply to '+c.by.name+':', '');
+  if(text===null || !String(text).trim()) return;
+  const made = await cmtCreate(c.progId, c.secId, String(text).trim(), c.id);
+  if(made) cmtRefreshUI();
+}
+// Counts that drive the markers. Open means still needing attention.
+function cmtOpenCount(progId, secId){
+  return cmtList(progId, secId).filter(c=>c.status!=='resolved' && !c.replyTo).length;
+}
+function cmtOpenCountForProgram(progId){
+  const t=_cmtTree; if(!t) return 0;
+  let n=0;
+  Object.keys(t).forEach(k=>{
+    if(k.slice(0,k.indexOf(':'))!==progId) return;
+    const secId=k.slice(k.indexOf(':')+1);
+    n += (_cmtRemote[k] ? cmtOpenCount(progId,secId) : t[k].length);
+  });
+  return n;
+}
 // ==================== COMMENTS: model, queue, identity ====================
 // Step 1 of the compliance-review work. The STORAGE does not change yet --
 // comments still live in sectionComments and ride along with the program file.
@@ -9953,13 +10080,17 @@ function cmtList(progId, secId){
   return stored.concat(queued.filter(c=>!seen.has(c.id))).sort((a,b)=>a.ts-b.ts);
 }
 // The single write path. Everything a comment needs is decided here.
-async function cmtCreate(progId, secId, text){
+async function cmtCreate(progId, secId, text, replyTo){
   const t = String(text||'').trim(); if(!t) return null;
   const who = await cmtIdentity();
   if(!who) return null;                        // they declined to say who they are
+  // replyTo is set HERE, at creation. Writing the comment and then rewriting
+  // it to attach the parent would need the file's sha for the second write
+  // and would fail against the real API -- a mock happily accepted it.
   const c = cmtNormalize({
     id: 'cmt-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),
-    progId, secId, text:t, ts:Date.now(), by:who, status:'open'
+    progId, secId, text:t, ts:Date.now(), by:who, status:'open',
+    replyTo: replyTo || null
   }, cmtKey(progId, secId));
   cmtQueueAdd(c);          // durable first -- see the note on cmtQueue below
   await cmtFlush();
@@ -10037,23 +10168,47 @@ function renderComments(){
   const list=document.getElementById('comments-list');
   const lbl=document.getElementById('comments-count-label');
   const pending = comments.filter(c=>c.pending).length;
+  const openN = comments.filter(c=>c.status!=='resolved' && !c.replyTo).length;
   if(lbl) lbl.textContent='\ud83d\udcac Comments ('+comments.length+')'
+    + (openN? ' \u00b7 '+openN+' open' : '')
     + (pending? ' \u00b7 '+pending+' not saved yet' : '');
   if(!list) return;
+  // Replies sit under the comment they answer, so a finding and its
+  // resolution read as one exchange rather than two unrelated notes.
+  const tops = comments.filter(c=>!c.replyTo);
+  const repliesOf = id => comments.filter(c=>c.replyTo===id);
+  const canEdit = !viewerModeForced;
+  const when = ts => new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  const one = (c, isReply) => {
+    const flag = c.by.source==='link-unverified'
+      ? ' <span class="cmt-flag" title="Name given by the reviewer; link id '+escapeHtml(c.by.id)+'">unconfirmed</span>' : '';
+    const pend = c.pending
+      ? ' <span class="cmt-flag pend" title="Held in this browser, not stored yet">not saved yet</span>' : '';
+    let foot = '';
+    if(c.status==='resolved'){
+      foot = '<div class="cmt-res">&#10003; Resolved'
+        + (c.resolvedBy&&c.resolvedBy.name ? ' by '+escapeHtml(c.resolvedBy.name) : '')
+        + (c.resolvedAt ? ' &middot; '+when(c.resolvedAt) : '')
+        + (c.resolution ? '<div class="cmt-res-note">'+escapeHtml(c.resolution)+'</div>' : '')
+        + (c.sectionEditedAfter ? '<div class="cmt-res-ev">This section was edited after the comment was raised.</div>' : '')
+        + '</div>';
+    }
+    const acts = [];
+    if(!isReply && !c.pending){
+      if(c.status==='resolved'){ acts.push('<button class="cmt-act cmt-reopen" onclick="cmtReopen(\''+c.id+'\')">Reopen</button>'); }
+      else if(canEdit){ acts.push('<button class="cmt-act cmt-resolve" onclick="cmtResolve(\''+c.id+'\')">Resolve</button>'); }
+      if(canEdit) acts.push('<button class="cmt-act" onclick="cmtReply(\''+c.id+'\')">Reply</button>');
+    }
+    return '<div class="comment-item'+(c.status==='resolved'?' resolved':'')+(isReply?' reply':'')+'">'
+      + '<div class="comment-author">'+escapeHtml(c.by.name)+' &mdash; '+when(c.ts)+flag+pend+'</div>'
+      + '<div>'+escapeHtml(c.text)+'</div>'
+      + foot
+      + (acts.length? '<div class="cmt-acts">'+acts.join('')+'</div>' : '')
+      + '</div>';
+  };
   list.innerHTML = comments.length===0
     ? '<div style="color:var(--mut);font-size:13px;padding:4px 0;">No comments yet.</div>'
-    : comments.map(c=>{
-        const when = new Date(c.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-        // 'unverified' is stated, not hidden: the name came with a per-person
-        // link the app could not confirm against the roster.
-        const flag = c.by.source==='link-unverified'
-          ? ' <span class="cmt-flag" title="Name supplied by the reviewer; link id '+escapeHtml(c.by.id)+'">unconfirmed</span>' : '';
-        const pend = c.pending
-          ? ' <span class="cmt-flag pend" title="Saved in this browser, not yet stored">not saved yet</span>' : '';
-        return '<div class="comment-item'+(c.status==='resolved'?' resolved':'')+'">'
-          + '<div class="comment-author">'+escapeHtml(c.by.name)+' &mdash; '+when+flag+pend+'</div>'
-          + '<div>'+escapeHtml(c.text)+'</div></div>';
-      }).join('');
+    : tops.map(c=>one(c,false)+repliesOf(c.id).map(r=>one(r,true)).join('')).join('');
 }
 // One place for every surface that shows a comment count, so a flush or a
 // failed write updates all of them.
@@ -10068,11 +10223,10 @@ function cmtRefreshUI(){
   }catch(e){}
 }
 async function addComment(){
-  // Still viewer-guarded: the comment box stays hidden for viewers until
-  // step 5, when the comments repo exists and there is somewhere for a
-  // reviewer's words to actually go. Opening it before then would take
-  // comments and quietly drop them.
-  if(viewerModeForced) return;
+  // Commenting is the ONE thing a reviewer may do. The gate is no longer
+  // "are you a viewer" but "is there somewhere for this to go" -- so a link
+  // with no comment key still cannot take words it would silently drop.
+  if(!cmtToken()) return;
   const inp=document.getElementById('comment-input');
   if(!inp||!inp.value.trim()) return;
   const text=inp.value.trim();
