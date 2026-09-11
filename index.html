@@ -1221,6 +1221,10 @@ body.is-staging::before{content:'';position:fixed;top:0;left:0;right:0;height:3p
 .comments-body{margin-top:12px;}
 .comment-item{padding:10px 0;border-bottom:1px solid var(--bdr);font-size:13px;}
 .comment-author{font-weight:600;font-size:11px;color:var(--mut);margin-bottom:3px;}
+.cmt-flag{font-weight:600;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;border:1px solid #E3D5B4;background:#F6EFDF;color:#6B5A33;border-radius:3px;padding:0 4px;margin-left:5px;}
+.cmt-flag.pend{border-color:#BFD9E8;background:#EAF2F7;color:#1F5B7A;}
+.comment-item.resolved{opacity:.6;}
+.comment-item.resolved .comment-author::after{content:' \2713 resolved';color:#1F5B3C;font-weight:700;}
 .comment-input-row{display:flex;gap:8px;margin-top:12px;}
 .comment-input-row input{flex:1;padding:7px 10px;border:1px solid var(--bdr);border-radius:6px;font-size:13px;font-family:inherit;outline:none;}
 .comment-input-row input:focus{border-color:var(--acc);}
@@ -2193,6 +2197,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
     <div class="export-opt" onclick="closeDataBackupModal(); connectGithubEditor();">🐙 Connect to GitHub…</div>
     <div class="export-opt" onclick="closeDataBackupModal(); connectGithubViewerToken();">🔗 Update viewer link token…</div>
     <div class="export-opt" onclick="closeDataBackupModal(); setViewerPassword();">🔐 Set the viewer password…</div>
+    <div class="export-opt" onclick="closeDataBackupModal(); setCommentPassword();">&#128172;&#128274; Set the comment key&hellip;</div>
     <div class="export-opt" onclick="closeDataBackupModal(); pushLocalContentToGithub();">⬆🐙 Push local content to GitHub</div>
     <div class="export-opt" onclick="closeDataBackupModal(); optimizeStoredImages();">&#128444; Shrink images already in content&hellip;</div>
     <div class="export-opt" onclick="closeDataBackupModal(); migrateContentToPerProgramFiles();">🗂️🐙 Migrate content to per-program files</div>
@@ -2286,6 +2291,11 @@ const GITHUB_EDITOR_KEY = 'sdi_github_editor_pat'; // localStorage key, this bro
 // "Copy link to this page" doesn't require retyping your read-only PAT
 // every time. Same token you'd otherwise paste into a link by hand.
 const GITHUB_VIEWER_LINK_KEY = 'sdi_github_viewer_link_pat';
+// Comments live in their OWN repo, written with their own token. A leaked
+// comment credential must not be able to touch a single program, so this is a
+// different repo and a different PAT -- not a path inside the content repo,
+// because a fine-grained PAT cannot be scoped to a path.
+const GITHUB_COMMENTS_REPO = 'sdi-playbook-staging-comments';
 const GITHUB_API = 'https://api.github.com';
 // Staging wears a different skin so it can never be mistaken for production at
 // a glance. Deliberately derived from GITHUB_CONTENT_REPO -- the single line
@@ -2810,6 +2820,66 @@ async function connectGithubViewerToken(){
 // Deliberately paste-and-commit rather than writing it automatically -- that
 // would mean giving the app write access to its own source, for something that
 // only happens when the password changes.
+// Encrypts the COMMENT token under the same password viewers already type,
+// and hands back one file to commit. Mirrors setViewerPassword deliberately:
+// same vault, same iteration count, same paste-and-commit flow, so there is
+// one thing to understand rather than two.
+async function setCommentPassword(){
+  if(viewerModeForced) return;
+  if(!cmtRepoSane()){
+    await appAlert('This build is '+(IS_STAGING?'STAGING':'PRODUCTION')+' but its comments repo is '
+      + GITHUB_COMMENTS_REPO + '.\n\nThose disagree, so nothing will be written. Fix '
+      + 'GITHUB_COMMENTS_REPO before setting a comment password.');
+    return;
+  }
+  const t = await appPrompt('Paste the GitHub COMMENT token — fine-grained, Contents: Read and write, '
+    + 'scoped ONLY to ' + GITHUB_COMMENTS_REPO + '.\n\nIt is encrypted with the password below and '
+    + 'never written into the app file in the clear. Do not paste a token that can reach '
+    + GITHUB_CONTENT_REPO + '.', '');
+  if(t===null || !t.trim()) return;
+  const token = t.trim();
+
+  const p1 = await appPrompt('Password reviewers will type.\n\nUse the SAME password as your viewer '
+    + 'links unless you have a reason not to — a reviewer types one password, not two.', '');
+  if(p1===null || !p1.trim()) return;
+  if(p1.trim().length < 12){
+    if(!await appConfirm('That password is only '+p1.trim().length+' characters. The encrypted file is '
+      + 'public, so it can be attacked offline at the attacker\'s own pace.\n\nUse it anyway?',
+      'Use it anyway', 'Let me pick a better one')) return;
+  }
+  const p2 = await appPrompt('Type the same password again to confirm:', '');
+  if(p2===null) return;
+  if(p1.trim() !== p2.trim()){ await appAlert('Those did not match — nothing was changed.'); return; }
+
+  let rec;
+  try{ rec = await vkEncryptToken(p1.trim(), token); }
+  catch(e){ await appAlert('Could not encrypt: '+e.message); return; }
+  const json = JSON.stringify(rec, null, 2);
+  const appRepo = IS_STAGING ? 'sdi-product-playbook-staging' : 'sdi-product-playbook';
+
+  const ov = document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:16000;background:rgba(16,24,32,0.6);display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML =
+    '<div style="background:#fff;max-width:640px;width:100%;max-height:86vh;overflow:auto;border-radius:8px;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.35)">'
+    + '<div style="font:700 15px/1.2 var(--font-cond,system-ui);text-transform:uppercase;letter-spacing:.06em;color:#101820;border-bottom:3px solid #D50032;padding-bottom:9px;margin-bottom:14px">Comment key &mdash; one file to commit</div>'
+    + '<ol style="font-size:13.5px;line-height:1.65;color:#334155;padding-left:20px;margin:0 0 14px">'
+    +   '<li>Copy the text below.</li>'
+    +   '<li>In the <b>'+appRepo+'</b> repo, create a file named exactly <b>comment-key.json</b> at the top level, next to index.html and viewer-key.json.</li>'
+    +   '<li>Paste, commit, and wait for Pages to redeploy.</li>'
+    + '</ol>'
+    + '<textarea readonly style="width:100%;height:200px;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;border:1px solid #cbd5e1;border-radius:6px;padding:10px">'+escapeHtml(json)+'</textarea>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">'
+    +   '<button id="ck-copy" class="pc2-btn">Copy</button>'
+    +   '<button id="ck-close" class="pc2-btn">Done</button>'
+    + '</div></div>';
+  document.body.appendChild(ov);
+  ov.querySelector('#ck-copy').onclick=()=>{ navigator.clipboard.writeText(json).then(()=>toast('Copied')); };
+  ov.querySelector('#ck-close').onclick=()=>ov.remove();
+  // Cache it here too, so Karen's own browser can read and write comments
+  // immediately without waiting for Pages to redeploy.
+  try{ localStorage.setItem(CK_TOKEN_KEY, token); }catch(e){}
+  _cmtTree=null;
+}
 async function setViewerPassword(){
   if(viewerModeForced) return;
   let token = '';
@@ -6114,6 +6184,13 @@ async function loadContent(sid){
   // boot. Until now the sole thing stopping them typing was one CSS rule
   // (pointer-events:none), which does not cover a focused element.
   if(viewerModeForced) lockBlocksForViewer(root);
+  // Pull this section's comments in the background; renderComments re-runs
+  // when they land, so opening a section never waits on the network.
+  if(curProgId && sid && cmtToken()){
+    cmtFetchSection(curProgId, sid).then(list=>{
+      if(curProgId && curSection===sid && list && list.length) cmtRefreshUI();
+    }).catch(()=>{});
+  }
   // Changelog reference point. Recorded AFTER the upgrades above, so healing a
   // corrupted table never reads as something Karen changed. Only when there is
   // no reference yet -- an existing one is the wording you last posted from.
@@ -9713,27 +9790,296 @@ function toggleComments(){
   if(chev) chev.textContent=open?'▶':'▼';
   if(!open) renderComments();
 }
+// ==================== COMMENTS: the comments repo ====================
+// Step 4. Files here are ~200 bytes, so this uses the simple Contents API
+// (one request per write) rather than the blob/tree/commit/ref dance the
+// content saves need for multi-megabyte files.
+const CK_FILE      = 'comment-key.json';            // beside index.html, fetched with no auth
+const CK_TOKEN_KEY = 'sdi_comment_vault_token';     // decrypted comment PAT, this browser only
+const GITHUB_COMMENT_EDITOR_KEY = 'sdi_comment_editor_pat';  // Karen's own, if she keeps one
+
+// A staging build writing into the production comments repo would put test
+// comments inside a compliance record, and nobody would notice until it
+// mattered. The two must agree, and if they do not, nothing is written.
+function cmtRepoSane(){
+  return /staging/i.test(GITHUB_COMMENTS_REPO||'') === !!IS_STAGING;
+}
+function cmtRepoUrl(path){
+  return GITHUB_API+'/repos/'+GITHUB_OWNER+'/'+GITHUB_COMMENTS_REPO+path;
+}
+// Karen writes with her own editor token (which she has granted access to the
+// comments repo); a reviewer writes with the token from comment-key.json.
+function cmtToken(){
+  if(!viewerModeForced){
+    try{ const t=localStorage.getItem(GITHUB_EDITOR_KEY)||''; if(t) return t; }catch(e){}
+  }
+  try{ return localStorage.getItem(CK_TOKEN_KEY)||''; }catch(e){ return ''; }
+}
+function cmtCanWrite(){ return !!cmtToken() && cmtRepoSane(); }
+
+async function cmtApi(path, opts){
+  const token = cmtToken(); if(!token) return { status:'no_token' };
+  try{
+    const r = await fetch(cmtRepoUrl(path), Object.assign({ cache:'no-store',
+      headers: githubHeaders(token) }, opts||{}));
+    if(r.status===404) return { status:'not_found' };
+    if(!r.ok) return { status:'error', code:r.status };
+    return { status:'ok', json: await r.json() };
+  }catch(e){ return { status:'error', code:0 }; }
+}
+
+// One recursive tree read tells us which sections hold comments and how many,
+// without downloading a single comment body -- that is what feeds the counts
+// on the hub and in the sidebar. Bodies are fetched only for the section
+// actually being read.
+let _cmtTree = null, _cmtTreePromise = null;
+const _cmtRemote = {};            // 'progId:secId' -> [comment]  (bodies, once fetched)
+function cmtPathFor(c){ return 'comments/'+c.progId+'/'+c.secId+'/'+c.id+'.json'; }
+async function cmtTreeLoad(force){
+  if(_cmtTree && !force) return _cmtTree;
+  if(_cmtTreePromise) return _cmtTreePromise;
+  _cmtTreePromise = (async ()=>{
+    const r = await cmtApi('/git/trees/'+GITHUB_BRANCH+'?recursive=1');
+    const map = {};
+    if(r.status==='ok' && r.json && Array.isArray(r.json.tree)){
+      r.json.tree.forEach(n=>{
+        if(n.type!=='blob' || n.path.indexOf('comments/')!==0 || !/\.json$/.test(n.path)) return;
+        const parts = n.path.split('/');            // comments / progId / secId / id.json
+        if(parts.length!==4) return;
+        const key = parts[1]+':'+parts[2];
+        (map[key] = map[key] || []).push({ path:n.path, sha:n.sha });
+      });
+    }
+    // An empty repo 404s on the tree -- that is "no comments yet", not a fault.
+    _cmtTree = (r.status==='ok' || r.status==='not_found') ? map : null;
+    _cmtTreePromise = null;
+    return _cmtTree;
+  })();
+  return _cmtTreePromise;
+}
+function cmtCountFor(progId, secId){
+  const t=_cmtTree; if(!t) return 0;
+  return (t[progId+':'+secId]||[]).length;
+}
+function cmtCountForProgram(progId){
+  const t=_cmtTree; if(!t) return 0;
+  return Object.keys(t).filter(k=>k.slice(0,k.indexOf(':'))===progId)
+    .reduce((a,k)=>a+t[k].length,0);
+}
+// Fetch the bodies for one section. Cached, so re-opening a section is free.
+async function cmtFetchSection(progId, secId){
+  const key = progId+':'+secId;
+  if(_cmtRemote[key]) return _cmtRemote[key];
+  const tree = await cmtTreeLoad();
+  const entries = (tree && tree[key]) || [];
+  const out = [];
+  for(const e of entries){
+    const r = await cmtApi('/git/blobs/'+e.sha);
+    if(r.status!=='ok' || !r.json || !r.json.content) continue;
+    try{ const c = cmtNormalize(JSON.parse(base64ToUtf8(r.json.content)), key); if(c) out.push(c); }
+    catch(err){}
+  }
+  _cmtRemote[key] = out;
+  return out;
+}
+// Write one comment as its own file. Append-only, so two reviewers commenting
+// at the same moment write different paths and can never collide.
+async function cmtWriteRemote(c){
+  if(!cmtRepoSane()){
+    console.warn('comments: refusing to write -- '+(IS_STAGING?'staging':'production')+
+                 ' app pointed at '+GITHUB_COMMENTS_REPO);
+    return false;
+  }
+  const r = await cmtApi('/contents/'+cmtPathFor(c), {
+    method:'PUT',
+    body: JSON.stringify({
+      message: 'Comment on '+c.progId+'/'+c.secId+' by '+(c.by&&c.by.name||'unknown'),
+      content: utf8ToBase64(JSON.stringify(c, null, 2)),
+      branch: GITHUB_BRANCH })
+  });
+  if(r.status==='ok'){
+    const key = c.progId+':'+c.secId;
+    if(_cmtRemote[key] && !_cmtRemote[key].some(x=>x.id===c.id)) _cmtRemote[key].push(c);
+    if(_cmtTree) (_cmtTree[key] = _cmtTree[key]||[]).push({ path:cmtPathFor(c), sha:'' });
+    return true;
+  }
+  return false;
+}
+
+// ==================== COMMENTS: model, queue, identity ====================
+// Step 1 of the compliance-review work. The STORAGE does not change yet --
+// comments still live in sectionComments and ride along with the program file.
+// What changes is that every read and write now goes through one place, so
+// step 4 can swap the backing store for the comments repo without touching a
+// single rendering path. Decided 2026-09-11.
+
+// A comment as the rest of the app should see it. Accepts the legacy
+// {author, text, ts} shape so nothing already written is lost or looks odd.
+function cmtNormalize(c, key){
+  if(!c || typeof c!=='object') return null;
+  const ts = c.ts || 0;
+  const by = c.by && typeof c.by==='object'
+    ? { id:c.by.id||'', name:c.by.name||'Anonymous', source:c.by.source||'typed' }
+    : { id:'', name:c.author||'Anonymous', source:'legacy' };
+  return {
+    id: c.id || ('cmt-'+ts.toString(36)+'-'+(c.author||by.name||'x').slice(0,3)),
+    v: 1,
+    progId: c.progId || (key? key.slice(0, key.indexOf(':')) : ''),
+    secId:  c.secId  || (key? key.slice(key.indexOf(':')+1) : ''),
+    round:  c.round  || '',
+    text:   String(c.text||''),
+    ts, by,
+    replyTo: c.replyTo || null,
+    status:  c.status  || 'open',
+    pending: !!c.pending
+  };
+}
+function cmtKey(progId, secId){ return progId+':'+secId; }
+// The single read path. Merges anything still queued in this browser, so a
+// reviewer always sees their own comment immediately even if the write has
+// not landed yet.
+function cmtList(progId, secId){
+  const key = cmtKey(progId, secId);
+  // Three sources, in one list: comments written before the comments repo
+  // existed (still in the program file), comments from the repo, and anything
+  // this browser has typed but not yet managed to store.
+  const legacy = (sectionComments[key]||[]).map(c=>cmtNormalize(c, key)).filter(Boolean);
+  const remote = (_cmtRemote[key]||[]);
+  const seenIds = new Set(legacy.map(c=>c.id));
+  const stored = legacy.concat(remote.filter(c=>!seenIds.has(c.id)));
+  const queued = cmtQueueAll().filter(c=>c.progId===progId && c.secId===secId)
+                   .map(c=>Object.assign({}, c, { pending:true }));
+  const seen = new Set(stored.map(c=>c.id));
+  return stored.concat(queued.filter(c=>!seen.has(c.id))).sort((a,b)=>a.ts-b.ts);
+}
+// The single write path. Everything a comment needs is decided here.
+async function cmtCreate(progId, secId, text){
+  const t = String(text||'').trim(); if(!t) return null;
+  const who = await cmtIdentity();
+  if(!who) return null;                        // they declined to say who they are
+  const c = cmtNormalize({
+    id: 'cmt-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7),
+    progId, secId, text:t, ts:Date.now(), by:who, status:'open'
+  }, cmtKey(progId, secId));
+  cmtQueueAdd(c);          // durable first -- see the note on cmtQueue below
+  await cmtFlush();
+  return c;
+}
+
+// ---- the queue -----------------------------------------------------------
+// A reviewer's words must survive a failed write, a closed laptop, or a
+// connection that drops halfway through a review. The comment is written to
+// this browser's own storage BEFORE anything is attempted, and only leaves the
+// queue once it is genuinely stored. Today "stored" means sectionComments;
+// from step 4 it will mean a commit in the comments repo, and nothing else
+// here has to change.
+const CMT_QUEUE_KEY = 'sdi_cmt_queue';
+function cmtQueueAll(){
+  try{ const q=JSON.parse(localStorage.getItem(CMT_QUEUE_KEY)||'[]');
+       return Array.isArray(q) ? q.map(c=>cmtNormalize(c)).filter(Boolean) : []; }
+  catch(e){ return []; }
+}
+function cmtQueueWrite(list){
+  try{ localStorage.setItem(CMT_QUEUE_KEY, JSON.stringify(list)); }catch(e){}
+}
+function cmtQueueAdd(c){ const q=cmtQueueAll(); q.push(c); cmtQueueWrite(q); }
+function cmtQueueDrop(id){ cmtQueueWrite(cmtQueueAll().filter(c=>c.id!==id)); }
+function cmtPendingCount(){ return cmtQueueAll().length; }
+// Move everything queued into the store. Returns how many landed.
+async function cmtFlush(){
+  const q = cmtQueueAll(); if(!q.length) return 0;
+  let landed = 0;
+  for(const c of q){
+    const ok = await cmtPersistOne(c);
+    if(ok){ cmtQueueDrop(c.id); landed++; }
+  }
+  if(landed) cmtRefreshUI();
+  return landed;
+}
+// THE SWAP POINT. Step 4 replaces the body of this one function with a commit
+// to the comments repo; everything above and below stays exactly as it is.
+async function cmtPersistOne(c){
+  const stored = Object.assign({}, c); delete stored.pending;
+  // The comments repo is the home. If it is not reachable -- no token yet, no
+  // network, the repo not set up -- the comment stays in the queue and is
+  // retried, rather than being written somewhere it will not be seen.
+  if(cmtCanWrite()) return await cmtWriteRemote(stored);
+  return false;
+}
+
+// ---- who is commenting ---------------------------------------------------
+// Two mechanisms, as chosen: a per-person link where Karen knows who she sent
+// it to, and a typed name as the fallback for a generic or forwarded link.
+// The roster lands in step 4; until then a link id is carried but its name is
+// still self-declared, which cmtIdentity records honestly in `source`.
+let _cmtRoster = null;                       // step 4: loaded from the comments repo
+function cmtReviewerIdFromUrl(){
+  const m = /(?:^#|&)r=([A-Za-z0-9_-]{1,32})/.exec(location.hash||'');
+  return m ? m[1] : '';
+}
+function cmtRosterLookup(id){
+  if(!id || !_cmtRoster || !Array.isArray(_cmtRoster.reviewers)) return null;
+  const r = _cmtRoster.reviewers.find(x=>x && x.id===id && !x.revoked);
+  return r || null;
+}
+async function cmtIdentity(){
+  const id = cmtReviewerIdFromUrl();
+  const known = cmtRosterLookup(id);
+  if(known) return { id, name:known.name, source:'link' };
+  const name = await getUserName();
+  if(!name) return null;
+  // An id with no roster entry is recorded as unverified rather than silently
+  // treated as confirmed -- the difference matters for a review record.
+  return { id, name, source: id ? 'link-unverified' : (viewerModeForced ? 'typed' : 'editor') };
+}
 function renderComments(){
-  const key=curProgId+':'+curSection;
-  const comments=sectionComments[key]||[];
+  const comments = cmtList(curProgId, curSection);
   const list=document.getElementById('comments-list');
   const lbl=document.getElementById('comments-count-label');
-  if(lbl) lbl.textContent='💬 Comments ('+comments.length+')';
+  const pending = comments.filter(c=>c.pending).length;
+  if(lbl) lbl.textContent='\ud83d\udcac Comments ('+comments.length+')'
+    + (pending? ' \u00b7 '+pending+' not saved yet' : '');
   if(!list) return;
-  list.innerHTML=comments.length===0
-    ?'<div style="color:var(--mut);font-size:13px;padding:4px 0;">No comments yet.</div>'
-    :comments.map(c=>`<div class="comment-item"><div class="comment-author">${c.author} -- ${new Date(c.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div><div>${c.text}</div></div>`).join('');
+  list.innerHTML = comments.length===0
+    ? '<div style="color:var(--mut);font-size:13px;padding:4px 0;">No comments yet.</div>'
+    : comments.map(c=>{
+        const when = new Date(c.ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+        // 'unverified' is stated, not hidden: the name came with a per-person
+        // link the app could not confirm against the roster.
+        const flag = c.by.source==='link-unverified'
+          ? ' <span class="cmt-flag" title="Name supplied by the reviewer; link id '+escapeHtml(c.by.id)+'">unconfirmed</span>' : '';
+        const pend = c.pending
+          ? ' <span class="cmt-flag pend" title="Saved in this browser, not yet stored">not saved yet</span>' : '';
+        return '<div class="comment-item'+(c.status==='resolved'?' resolved':'')+'">'
+          + '<div class="comment-author">'+escapeHtml(c.by.name)+' &mdash; '+when+flag+pend+'</div>'
+          + '<div>'+escapeHtml(c.text)+'</div></div>';
+      }).join('');
+}
+// One place for every surface that shows a comment count, so a flush or a
+// failed write updates all of them.
+function cmtRefreshUI(){
+  try{
+    if(typeof curSection!=='undefined' && curSection) renderComments();
+    const lbl=document.getElementById('comments-count-label');
+    if(lbl && curProgId && curSection){
+      const n=cmtList(curProgId,curSection).length, p=cmtPendingCount();
+      lbl.textContent='\ud83d\udcac Comments ('+n+')'+(p? ' \u00b7 '+p+' not saved yet':'');
+    }
+  }catch(e){}
 }
 async function addComment(){
-  if(viewerModeForced) return; // belt-and-suspenders -- the whole comments area is already hidden
+  // Still viewer-guarded: the comment box stays hidden for viewers until
+  // step 5, when the comments repo exists and there is somewhere for a
+  // reviewer's words to actually go. Opening it before then would take
+  // comments and quietly drop them.
+  if(viewerModeForced) return;
   const inp=document.getElementById('comment-input');
   if(!inp||!inp.value.trim()) return;
-  const key=curProgId+':'+curSection;
-  if(!sectionComments[key]) sectionComments[key]=[];
-  sectionComments[key].push({author:(await getUserName())||'Anonymous',text:inp.value.trim(),ts:Date.now()});
+  const text=inp.value.trim();
   inp.value='';
+  const c=await cmtCreate(curProgId, curSection, text);
+  if(!c){ inp.value=text; return; }        // gave no name -- give them their words back
   renderComments();
-  scheduleSave();
 }
 
 // ==================== DUPLICATE PROGRAM ====================
@@ -15183,6 +15529,9 @@ async function init(){
   // is someone else's read-only view of a shared link -- neither should
   // download a "backup" file onto that person's machine.
   if(!declinedRecovery && !viewerModeForced) setTimeout(maybeAutoBackup, 4000);
+  // A comment written when the last session could not store it is still in
+  // this browser. Try again now rather than waiting for the person to notice.
+  if(cmtPendingCount()) setTimeout(()=>{ cmtFlush(); }, 2500);
   setInterval(updateBackupReminder, 10*60*1000);
   // Drop the heavy seed node once consumed -- keeps DOM light
   const seedEl = document.getElementById('embedded-seed');
