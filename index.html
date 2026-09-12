@@ -1933,7 +1933,6 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
                 <div class="comment-input-row">
                   <input id="comment-input" type="text" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')addComment()"/>
                   <button class="comment-post-btn" onclick="addComment()">Post</button>
-                <button class="comment-post-btn" id="rev-finish-btn" onclick="revFinish()" style="display:none" title="Summarise your comments to email back">Finish review</button>
                 </div>
               </div>
             </div>
@@ -9974,73 +9973,6 @@ async function cmtRosterLoad(){
   } else if(r.status==='not_found'){ _cmtRoster = {reviewers:[]}; }
   return _cmtRoster;
 }
-// ---- Finish review: the artifact that supplies WHO ----------------------
-// The repo proves what was said and when; it cannot prove who, because a
-// shared link means a self-declared name. The reviewer emailing this summary
-// FROM THEIR OWN ADDRESS is what closes that gap -- so it has to be
-// matchable against the repo, not just readable. The digest is what does
-// that: it is derived from the comment ids, so an email and the commit
-// timeline can be lined up and shown to agree.
-function revDigest(ids){
-  let h = 5381;
-  ids.slice().sort().forEach(id=>{ for(let i=0;i<id.length;i++) h=((h<<5)+h+id.charCodeAt(i))|0; });
-  return (h>>>0).toString(36).toUpperCase();
-}
-async function revFinish(){
-  const who = await cmtIdentity();
-  if(!who){ return; }
-  const mine = revAllComments().filter(c=>c.by && c.by.name===who.name && (!who.id || c.by.id===who.id));
-  if(!mine.length){ await appAlert('You have not left any comments yet.'); return; }
-  const progName = pid => { const p=programs.find(x=>x.id===pid); return p?splitProgName(p.name).code:pid; };
-  const secName  = (pid,sid) => (typeof ccSectionName==='function' ? ccSectionName(pid,sid) : '') || sid;
-  const when = ts => new Date(ts).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'});
-  const digest = revDigest(mine.map(c=>c.id));
-  const lines = [];
-  lines.push('REVIEW SUMMARY');
-  lines.push('Reviewer: '+who.name + (who.source==='link' ? ' (link '+who.id+')' : ' (name self-entered)'));
-  lines.push('Completed: '+when(Date.now()));
-  lines.push('Comments: '+mine.length);
-  lines.push('Reference: '+digest);
-  lines.push('');
-  const byProg={};
-  mine.forEach(c=>{ (byProg[c.progId]=byProg[c.progId]||[]).push(c); });
-  Object.keys(byProg).forEach(pid=>{
-    lines.push(progName(pid));
-    const bySec={};
-    byProg[pid].forEach(c=>{ (bySec[c.secId]=bySec[c.secId]||[]).push(c); });
-    Object.keys(bySec).forEach(sid=>{
-      lines.push('  '+secName(pid,sid));
-      bySec[sid].forEach(c=>{
-        lines.push('    - '+c.text.replace(/\s+/g,' ').trim());
-        lines.push('      ['+c.id+' \u00b7 '+when(c.ts)+']');
-      });
-    });
-    lines.push('');
-  });
-  lines.push('Each comment above is stored as its own dated record. The reference');
-  lines.push('code identifies this exact set of comments.');
-  const text = lines.join('\n');
-
-  const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;z-index:16000;background:rgba(16,24,32,0.6);display:flex;align-items:center;justify-content:center;padding:20px;';
-  ov.innerHTML =
-    '<div style="background:#fff;max-width:680px;width:100%;max-height:86vh;overflow:auto;border-radius:8px;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.35)">'
-    + '<div style="font:700 15px/1.2 var(--font-cond,system-ui);text-transform:uppercase;letter-spacing:.06em;color:#101820;border-bottom:3px solid #D50032;padding-bottom:9px;margin-bottom:12px">Review complete &mdash; '+mine.length+' comment'+(mine.length===1?'':'s')+'</div>'
-    + '<p style="font-size:13.5px;line-height:1.6;color:#334155;margin:0 0 12px">Your comments are already saved. To confirm your review formally, <b>email this summary from your own address</b> to whoever asked you to review &mdash; that email is what records the review as yours.</p>'
-    + '<textarea readonly style="width:100%;height:260px;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;border:1px solid #cbd5e1;border-radius:6px;padding:10px">'+escapeHtml(text)+'</textarea>'
-    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">'
-    +   '<button id="rv-copy" class="pc2-btn">Copy</button>'
-    +   '<button id="rv-dl" class="pc2-btn">Download</button>'
-    +   '<button id="rv-close" class="pc2-btn">Done</button>'
-    + '</div></div>';
-  document.body.appendChild(ov);
-  ov.querySelector('#rv-copy').onclick=()=>{ navigator.clipboard.writeText(text).then(()=>toast('Copied')); };
-  ov.querySelector('#rv-dl').onclick=()=>{
-    try{ downloadBlob(new Blob([text],{type:'text/plain'}), 'review-'+digest+'.txt'); }
-    catch(e){ toast('Could not download \u2014 use Copy instead'); }
-  };
-  ov.querySelector('#rv-close').onclick=()=>ov.remove();
-}
 // ---- the review panel: every finding in one place ------------------------
 // Comments are useless if they have to be hunted for section by section. This
 // is the working list: what is still open, where, and who raised it.
@@ -10414,13 +10346,6 @@ function renderComments(){
 // failed write updates all of them.
 function cmtRefreshUI(){
   try{
-    // 'Finish review' belongs to the reviewer, and only once there is
-    // something to finish -- an empty summary would be worse than none.
-    const fb=document.getElementById('rev-finish-btn');
-    if(fb){
-      const mine = viewerModeForced && revAllComments().some(c=>c.by && !c.replyTo);
-      fb.style.display = mine ? 'inline-block' : 'none';
-    }
     if(typeof curSection!=='undefined' && curSection) renderComments();
     const lbl=document.getElementById('comments-count-label');
     if(lbl && curProgId && curSection){
