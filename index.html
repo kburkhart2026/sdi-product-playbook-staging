@@ -1236,6 +1236,18 @@ body.is-staging::before{content:'';position:fixed;top:0;left:0;right:0;height:3p
 .cmt-res-note{color:#334155;margin-top:3px;}
 .cmt-res-ev{color:var(--mut);font-size:11px;margin-top:3px;}
 .sec-cmt{font-size:10px;font-weight:700;background:var(--acc);color:#fff;border-radius:8px;padding:0 5px;margin-left:5px;}
+.pc2-rev{align-self:flex-start;font-family:var(--font-cond);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid #E3D5B4;background:#F6EFDF;color:#6B5A33;border-radius:3px;padding:1px 6px;margin-top:4px;cursor:pointer;}
+.pc2-rev:hover{border-color:var(--acc);color:var(--acc);}
+#rev-panel{display:none;flex-direction:column;min-width:320px;background:#fff;border-left:1px solid var(--bdr);overflow:hidden;}
+#rev-panel-body{flex:1;overflow-y:auto;padding:10px 12px 20px;}
+.rev-sec{margin:8px 0 4px;}
+.rev-item{border:1px solid var(--bdr);border-radius:6px;padding:8px 10px;margin-bottom:6px;background:#fff;}
+.rev-item.resolved{opacity:.6;background:#FBFAF9;}
+.rev-who{font-size:11px;font-weight:700;color:var(--mut);display:flex;align-items:center;gap:6px;}
+.rev-when{margin-left:auto;font-weight:400;}
+.rev-text{font-size:12.5px;line-height:1.5;margin-top:3px;word-break:break-word;}
+.rev-meta{font-size:11px;color:var(--mut);margin-top:4px;}
+body.view-mode .pc2-rev{display:none!important;}
 .comment-item.resolved .comment-author::after{content:' \2713 resolved';color:#1F5B3C;font-weight:700;}
 .comment-input-row{display:flex;gap:8px;margin-top:12px;}
 .comment-input-row input{flex:1;padding:7px 10px;border:1px solid var(--bdr);border-radius:6px;font-size:13px;font-family:inherit;outline:none;}
@@ -1867,6 +1879,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); marginOpenSmart();">&#128178; Margin Calculator</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); pmOpenSmart();">&#128203; PM Board</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); cycleStatus();">&#127991; Program status</div>
+                <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); revPanelOpenFor();">&#128172; Review comments</div>
               </div>
             </div>
           </div>
@@ -1920,6 +1933,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
                 <div class="comment-input-row">
                   <input id="comment-input" type="text" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')addComment()"/>
                   <button class="comment-post-btn" onclick="addComment()">Post</button>
+                <button class="comment-post-btn" id="rev-finish-btn" onclick="revFinish()" style="display:none" title="Summarise your comments to email back">Finish review</button>
                 </div>
               </div>
             </div>
@@ -1977,6 +1991,15 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
           <div id="course-panel-body"></div>
         </div>
         <div class="pm-panel-handle" id="clog-panel-handle" title="Drag to resize" style="display:none"></div>
+        <div class="pm-panel-handle" id="rev-panel-handle" title="Drag to resize" style="display:none"></div>
+        <div id="rev-panel" style="display:none">
+          <div class="pmp-head">
+            <div class="pmp-title">Review</div>
+            <button class="pmp-dashbtn" onclick="revRefresh()" title="Check for new comments">&#8635;</button>
+            <button class="pmp-iconbtn" onclick="revPanelClose()" title="Close panel">&#10005;</button>
+          </div>
+          <div id="rev-panel-body"></div>
+        </div>
         <div id="clog-panel" style="display:none">
           <div class="pmp-head">
             <div class="pmp-title">Changelog</div>
@@ -5529,6 +5552,8 @@ function makeProgCard(p){
       <div class="pc2-full">${escapeHtml(nm.full)}</div>
       ${(()=>{ const n=(typeof clogUnseenFor==='function')?clogUnseenFor(p.id):0;
         return n?`<div class="pc2-clog" onclick="event.stopPropagation();clogOpenSmart()" title="${n} unread changelog ${n===1?'entry':'entries'}">${n} new</div>`:''; })()}
+      ${(()=>{ const n=(typeof cmtOpenCountForProgram==='function')?cmtOpenCountForProgram(p.id):0;
+        return n?`<div class="pc2-rev" onclick="event.stopPropagation();revPanelOpenFor()" title="${n} open review ${n===1?'comment':'comments'}">${n} to review</div>`:''; })()}
       <div class="pc2-meta"><span>${st.done}/${st.total} sections started</span><span>${st.last?fmtAgo(st.last):p.created}</span></div>
       <div class="pc2-bar"><div class="pc2-fill" style="width:${st.pct}%;background:${p.color}"></div></div>
       <div class="pc2-actions">
@@ -5815,7 +5840,8 @@ function renderSidebar(){
       return `
       <div class="sec-item ${s.id===curSection?'active':''}" data-sid="${s.id}" data-pid="${ph.id}" onclick="goTo('${ph.id}','${s.id}')">
         <span class="dsec" title="Drag">⠿</span>
-        <span class="sec-nm">${s.name}</span>
+        <span class="sec-nm">${s.name}</span>${(()=>{ const n=(typeof cmtOpenCount==='function'&&curProgId)?cmtOpenCount(curProgId,s.id):0;
+          return n?`<span class="sec-cmt" title="${n} open review ${n===1?'comment':'comments'}">${n}</span>`:''; })()}
         <span class="sec-status" data-s="${stat}" title="Status: ${stat}" onclick="cycleSectionStatus('${s.id}',event)"></span>
         <span class="sec-del" title="Delete section" onclick="deleteSection('${ph.id}','${s.id}',event)">✕</span>
       </div>`;}).join('');
@@ -9948,6 +9974,180 @@ async function cmtRosterLoad(){
   } else if(r.status==='not_found'){ _cmtRoster = {reviewers:[]}; }
   return _cmtRoster;
 }
+// ---- Finish review: the artifact that supplies WHO ----------------------
+// The repo proves what was said and when; it cannot prove who, because a
+// shared link means a self-declared name. The reviewer emailing this summary
+// FROM THEIR OWN ADDRESS is what closes that gap -- so it has to be
+// matchable against the repo, not just readable. The digest is what does
+// that: it is derived from the comment ids, so an email and the commit
+// timeline can be lined up and shown to agree.
+function revDigest(ids){
+  let h = 5381;
+  ids.slice().sort().forEach(id=>{ for(let i=0;i<id.length;i++) h=((h<<5)+h+id.charCodeAt(i))|0; });
+  return (h>>>0).toString(36).toUpperCase();
+}
+async function revFinish(){
+  const who = await cmtIdentity();
+  if(!who){ return; }
+  const mine = revAllComments().filter(c=>c.by && c.by.name===who.name && (!who.id || c.by.id===who.id));
+  if(!mine.length){ await appAlert('You have not left any comments yet.'); return; }
+  const progName = pid => { const p=programs.find(x=>x.id===pid); return p?splitProgName(p.name).code:pid; };
+  const secName  = (pid,sid) => (typeof ccSectionName==='function' ? ccSectionName(pid,sid) : '') || sid;
+  const when = ts => new Date(ts).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'});
+  const digest = revDigest(mine.map(c=>c.id));
+  const lines = [];
+  lines.push('REVIEW SUMMARY');
+  lines.push('Reviewer: '+who.name + (who.source==='link' ? ' (link '+who.id+')' : ' (name self-entered)'));
+  lines.push('Completed: '+when(Date.now()));
+  lines.push('Comments: '+mine.length);
+  lines.push('Reference: '+digest);
+  lines.push('');
+  const byProg={};
+  mine.forEach(c=>{ (byProg[c.progId]=byProg[c.progId]||[]).push(c); });
+  Object.keys(byProg).forEach(pid=>{
+    lines.push(progName(pid));
+    const bySec={};
+    byProg[pid].forEach(c=>{ (bySec[c.secId]=bySec[c.secId]||[]).push(c); });
+    Object.keys(bySec).forEach(sid=>{
+      lines.push('  '+secName(pid,sid));
+      bySec[sid].forEach(c=>{
+        lines.push('    - '+c.text.replace(/\s+/g,' ').trim());
+        lines.push('      ['+c.id+' \u00b7 '+when(c.ts)+']');
+      });
+    });
+    lines.push('');
+  });
+  lines.push('Each comment above is stored as its own dated record. The reference');
+  lines.push('code identifies this exact set of comments.');
+  const text = lines.join('\n');
+
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;z-index:16000;background:rgba(16,24,32,0.6);display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.innerHTML =
+    '<div style="background:#fff;max-width:680px;width:100%;max-height:86vh;overflow:auto;border-radius:8px;padding:22px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.35)">'
+    + '<div style="font:700 15px/1.2 var(--font-cond,system-ui);text-transform:uppercase;letter-spacing:.06em;color:#101820;border-bottom:3px solid #D50032;padding-bottom:9px;margin-bottom:12px">Review complete &mdash; '+mine.length+' comment'+(mine.length===1?'':'s')+'</div>'
+    + '<p style="font-size:13.5px;line-height:1.6;color:#334155;margin:0 0 12px">Your comments are already saved. To confirm your review formally, <b>email this summary from your own address</b> to whoever asked you to review &mdash; that email is what records the review as yours.</p>'
+    + '<textarea readonly style="width:100%;height:260px;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;border:1px solid #cbd5e1;border-radius:6px;padding:10px">'+escapeHtml(text)+'</textarea>'
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">'
+    +   '<button id="rv-copy" class="pc2-btn">Copy</button>'
+    +   '<button id="rv-dl" class="pc2-btn">Download</button>'
+    +   '<button id="rv-close" class="pc2-btn">Done</button>'
+    + '</div></div>';
+  document.body.appendChild(ov);
+  ov.querySelector('#rv-copy').onclick=()=>{ navigator.clipboard.writeText(text).then(()=>toast('Copied')); };
+  ov.querySelector('#rv-dl').onclick=()=>{
+    try{ downloadBlob(new Blob([text],{type:'text/plain'}), 'review-'+digest+'.txt'); }
+    catch(e){ toast('Could not download \u2014 use Copy instead'); }
+  };
+  ov.querySelector('#rv-close').onclick=()=>ov.remove();
+}
+// ---- the review panel: every finding in one place ------------------------
+// Comments are useless if they have to be hunted for section by section. This
+// is the working list: what is still open, where, and who raised it.
+let revPanelOpen = false, revFilter = 'open';
+function revPanelOpenFor(){
+  if(typeof pmPanelOpen!=='undefined' && pmPanelOpen) pmPanelClose();
+  if(typeof marginPanelOpen!=='undefined' && marginPanelOpen) marginPanelClose();
+  if(typeof ccPanelOpen!=='undefined' && ccPanelOpen) ccPanelClose();
+  if(typeof crsPanelOpen!=='undefined' && crsPanelOpen) crsPanelClose();
+  if(typeof clogPanelOpen!=='undefined' && clogPanelOpen) clogPanelClose();
+  revPanelOpen = true;
+  const panel=document.getElementById('rev-panel'), handle=document.getElementById('rev-panel-handle');
+  panel.style.flex='0 0 '+(uiState.sidePanelWidth||460)+'px';
+  panel.style.display='flex'; handle.style.display='block';
+  revRender();
+  revLoadAll();
+}
+function revPanelClose(){
+  revPanelOpen=false;
+  const panel=document.getElementById('rev-panel'), handle=document.getElementById('rev-panel-handle');
+  if(panel) panel.style.display='none';
+  if(handle) handle.style.display='none';
+}
+function revSetFilter(f){ revFilter=f; revRender(); }
+async function revRefresh(){ _cmtTree=null; Object.keys(_cmtRemote).forEach(k=>delete _cmtRemote[k]);
+  await revLoadAll(); toast('Refreshed'); }
+// The tree gives counts without bodies; the panel needs the bodies, so pull
+// every section that has any. One pass, then it is cached.
+async function revLoadAll(){
+  const tree = await cmtTreeLoad();
+  if(!tree) { revRender(); return; }
+  const keys = Object.keys(tree);
+  for(const k of keys){
+    if(_cmtRemote[k]) continue;
+    await cmtFetchSection(k.slice(0,k.indexOf(':')), k.slice(k.indexOf(':')+1));
+  }
+  revRender();
+  renderSidebar();
+}
+function revAllComments(){
+  const out=[];
+  Object.keys(_cmtRemote).forEach(k=>{ (_cmtRemote[k]||[]).forEach(c=>out.push(c)); });
+  return out.sort((a,b)=>b.ts-a.ts);
+}
+function revRender(){
+  const root=document.getElementById('rev-panel-body'); if(!root) return;
+  const all=revAllComments();
+  const tops=all.filter(c=>!c.replyTo);
+  const open=tops.filter(c=>c.status!=='resolved');
+  const shown=(revFilter==='open'?open:tops);
+  let h='<div class="clog-wrap">'
+    + '<div class="clog-tabs">'
+    + '<button class="clog-tab'+(revFilter==='open'?' on':'')+'" onclick="revSetFilter(\'open\')">Open '
+    + (open.length?'<span class="clog-n hot">'+open.length+'</span>':'<span class="clog-n">0</span>')+'</button>'
+    + '<button class="clog-tab'+(revFilter==='all'?' on':'')+'" onclick="revSetFilter(\'all\')">Everything '
+    + '<span class="clog-n">'+tops.length+'</span></button>'
+    + '</div>';
+  if(!shown.length){
+    h += '<div class="clog-empty"><div class="clog-empty-t">'
+      + (revFilter==='open'?'Nothing open':'No comments yet')+'</div>'
+      + '<p>'+(revFilter==='open'
+          ? 'Every comment raised so far has been resolved.'
+          : 'Comments left by reviewers on the viewer link appear here, section by section.')
+      + '</p></div></div>';
+    root.innerHTML=h; return;
+  }
+  // grouped by program, then section, so a review reads in document order
+  const byProg={};
+  shown.forEach(c=>{ (byProg[c.progId]=byProg[c.progId]||[]).push(c); });
+  Object.keys(byProg).forEach(pid=>{
+    const prog=programs.find(x=>x.id===pid);
+    const colour=prog?prog.color:'var(--mut)';
+    const label=prog?splitProgName(prog.name).code:'(removed program)';
+    h += '<div class="clog-grp"><span class="clog-sw" style="background:'+colour+'"></span>'
+      +  escapeHtml(label)+'<span class="clog-grp-n">'+byProg[pid].length+'</span></div>';
+    const bySec={};
+    byProg[pid].forEach(c=>{ (bySec[c.secId]=bySec[c.secId]||[]).push(c); });
+    Object.keys(bySec).forEach(sid=>{
+      const name=(typeof ccSectionName==='function' ? ccSectionName(pid,sid) : '') || sid;
+      h += '<div class="rev-sec"><a class="clog-goto" onclick="revGoTo(\''+pid+'\',\''+sid+'\')">'
+        +  escapeHtml(name)+' &rarr;</a></div>';
+      bySec[sid].forEach(c=>{
+        const replies=all.filter(x=>x.replyTo===c.id).length;
+        h += '<div class="rev-item'+(c.status==='resolved'?' resolved':'')+'">'
+          + '<div class="rev-who">'+escapeHtml(c.by.name)
+          +   (c.by.source==='link-unverified'?' <span class="cmt-flag">unconfirmed</span>':'')
+          +   '<span class="rev-when">'+new Date(c.ts).toLocaleDateString('en-US',{month:'short',day:'numeric'})+'</span></div>'
+          + '<div class="rev-text">'+escapeHtml(c.text.length>180?c.text.slice(0,178)+'\u2026':c.text)+'</div>'
+          + (replies?'<div class="rev-meta">'+replies+' repl'+(replies===1?'y':'ies')+'</div>':'')
+          + (c.status==='resolved'&&c.resolution?'<div class="rev-meta">\u2713 '+escapeHtml(c.resolution)+'</div>':'')
+          + '</div>';
+      });
+    });
+  });
+  root.innerHTML = h+'</div>';
+}
+async function revGoTo(progId, secId){
+  if(progId && progId!==curProgId){ openProgram(progId); await new Promise(r=>setTimeout(r,220)); }
+  const prog=programs.find(x=>x.id===progId); if(!prog) return;
+  const ph=(prog.phases||[]).find(x=>(x.sections||[]).some(sc=>sc.id===secId));
+  if(!ph) return;
+  await goTo(ph.id, secId);
+  const body=document.getElementById('comments-body');
+  if(body && body.style.display==='none') toggleComments();
+  const area=document.getElementById('comments-area');
+  if(area) area.scrollIntoView({behavior:'smooth', block:'center'});
+}
 // ---- resolving, reopening, replying -------------------------------------
 // A resolution ADDS to the comment; it never replaces or removes it. The
 // original text, author and timestamp stay exactly as written, and the change
@@ -10214,6 +10414,13 @@ function renderComments(){
 // failed write updates all of them.
 function cmtRefreshUI(){
   try{
+    // 'Finish review' belongs to the reviewer, and only once there is
+    // something to finish -- an empty summary would be worse than none.
+    const fb=document.getElementById('rev-finish-btn');
+    if(fb){
+      const mine = viewerModeForced && revAllComments().some(c=>c.by && !c.replyTo);
+      fb.style.display = mine ? 'inline-block' : 'none';
+    }
     if(typeof curSection!=='undefined' && curSection) renderComments();
     const lbl=document.getElementById('comments-count-label');
     if(lbl && curProgId && curSection){
@@ -13853,6 +14060,7 @@ initSidePanelResize('margin-panel-handle','margin-panel');
   initSidePanelResize('cc-panel-handle','cc-panel');
   initSidePanelResize('course-panel-handle','course-panel');
   initSidePanelResize('clog-panel-handle','clog-panel');
+  initSidePanelResize('rev-panel-handle','rev-panel');
 function openPMDash(){
   document.getElementById('hub-view').style.display='none';
   document.getElementById('prog-view').style.display='none';
