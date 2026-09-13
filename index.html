@@ -5790,6 +5790,10 @@ function openProgram(id, forceLoc){
     btn.textContent = s.lbl; btn.style.background=s.bg; btn.style.color=s.color;
   }
   renderSidebar();
+  // Before any of the early returns below: pull this program's comment counts
+  // so the sidebar badges are right straight away, not only for the sections
+  // that happen to get opened.
+  cmtPrimeProgram(id);
   uiState.lastProg=id; saveUIState();
   if(forceLoc){ goTo(forceLoc.phid, forceLoc.sid); return; }
   const last=uiState.lastLoc[id];
@@ -9973,6 +9977,47 @@ async function cmtRosterLoad(){
   } else if(r.status==='not_found'){ _cmtRoster = {reviewers:[]}; }
   return _cmtRoster;
 }
+// ---- keeping the counts honest ------------------------------------------
+// The badge on a section counts OPEN comments, and "open" lives inside the
+// comment body -- so a count cannot be derived from the file listing alone.
+// Bodies load lazily per section, which meant a section you had not opened
+// showed no badge even when it held findings. Fix: when a program opens, use
+// the listing to find which of ITS sections have comments and fetch just
+// those. A handful of requests, not one per section.
+let _cmtPrimed = {};
+async function cmtPrimeProgram(progId, force){
+  if(!progId || !cmtToken()) return;
+  if(_cmtPrimed[progId] && !force) return;
+  _cmtPrimed[progId] = true;
+  const tree = await cmtTreeLoad(force);
+  if(!tree) return;
+  const mine = Object.keys(tree).filter(k=>k.slice(0,k.indexOf(':'))===progId);
+  for(const k of mine){
+    if(_cmtRemote[k] && !force) continue;
+    if(force) delete _cmtRemote[k];
+    await cmtFetchSection(progId, k.slice(k.indexOf(':')+1));
+  }
+  renderSidebar();
+  cmtRefreshUI();
+  if(typeof revPanelOpen!=='undefined' && revPanelOpen) revRender();
+}
+// A comment left in another browser (or by a reviewer five minutes ago) is
+// invisible until the listing is re-read. Re-read it when this tab comes back
+// to the front, which is exactly when someone returns to check.
+let _cmtLastSync = 0;
+async function cmtResync(){
+  if(!cmtToken()) return;
+  if(Date.now() - _cmtLastSync < 60000) return;      // not on every tab flick
+  _cmtLastSync = Date.now();
+  _cmtTree = null; _cmtPrimed = {};
+  Object.keys(_cmtRemote).forEach(k=>delete _cmtRemote[k]);
+  if(curProgId) await cmtPrimeProgram(curProgId, true);
+  else { await cmtTreeLoad(true); renderHub(); }
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') cmtResync();
+});
+window.addEventListener('focus', ()=>cmtResync());
 // ---- the review panel: every finding in one place ------------------------
 // Comments are useless if they have to be hunted for section by section. This
 // is the working list: what is still open, where, and who raised it.
@@ -9997,8 +10042,11 @@ function revPanelClose(){
   if(handle) handle.style.display='none';
 }
 function revSetFilter(f){ revFilter=f; revRender(); }
-async function revRefresh(){ _cmtTree=null; Object.keys(_cmtRemote).forEach(k=>delete _cmtRemote[k]);
-  await revLoadAll(); toast('Refreshed'); }
+async function revRefresh(){
+  _cmtTree=null; _cmtPrimed={}; _cmtLastSync=Date.now();
+  Object.keys(_cmtRemote).forEach(k=>delete _cmtRemote[k]);
+  await revLoadAll(); renderSidebar(); cmtRefreshUI(); toast('Refreshed');
+}
 // The tree gives counts without bodies; the panel needs the bodies, so pull
 // every section that has any. One pass, then it is cached.
 async function revLoadAll(){
