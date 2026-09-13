@@ -6234,7 +6234,12 @@ async function loadContent(sid){
   // when they land, so opening a section never waits on the network.
   if(curProgId && sid && cmtToken()){
     cmtFetchSection(curProgId, sid).then(list=>{
-      if(curProgId && curSection===sid && list && list.length) cmtRefreshUI();
+      if(curProgId && curSection===sid && list && list.length){
+        cmtRefreshUI();
+        // ...and the sidebar, or this section's own badge stays stale until
+        // something else happens to re-render it.
+        renderSidebar();
+      }
     }).catch(()=>{});
   }
   // Changelog reference point. Recorded AFTER the upgrades above, so healing a
