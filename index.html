@@ -5124,6 +5124,21 @@ function clogSorted(){ return clogAll().slice().sort((a,b)=>(b.ts||0)-(a.ts||0))
 // data, they just stop being listed, because a changelog is about what is
 // recent, not an archive of everything.
 const CLOG_READ_KEEP_DAYS = 30;
+function clogSeedReadForNewBrowser(){
+  try{
+    if(uiState.clogSeeded) return;
+    uiState.clogSeeded = 1;
+    if(!uiState.clogRead) uiState.clogRead = {};
+    const cutoff = Date.now() - CLOG_READ_KEEP_DAYS*24*60*60*1000;
+    let n = 0;
+    clogAll().forEach(e=>{
+      if((e.ts||0) < cutoff && !uiState.clogRead[e.id]){ uiState.clogRead[e.id] = e.ts || cutoff; n++; }
+    });
+    saveUIState();
+    if(n) console.info('changelog: '+n+' entr'+(n===1?'y':'ies')+' older than '
+      +CLOG_READ_KEEP_DAYS+' days marked read for this browser');
+  }catch(e){}
+}
 function clogReadAt(id){
   try{ const v=(uiState.clogRead||{})[id]; return typeof v==='number' ? v : 0; }catch(e){ return 0; }
 }
@@ -13420,7 +13435,7 @@ function clogRender(){
   if(!viewer){
     h += '<div class="clog-tabs">'
       +  '<button class="clog-tab'+(clogTab==='log'?' on':'')+'" onclick="clogSetTab(\'log\')">Published '
-      +  '<span class="clog-n">'+clogAll().length+'</span></button>'
+      +  '<span class="clog-n">'+clogLive().length+'</span></button>'
       +  '<button class="clog-tab'+(clogTab==='queue'?' on':'')+'" onclick="clogSetTab(\'queue\')">Waiting on you '
       +  (()=>{ const n = cands.length + (_clogPending?1:0);
                  return n ? '<span class="clog-n hot">'+n+'</span>' : '<span class="clog-n">0</span>'; })()
@@ -15970,6 +15985,7 @@ async function init(){
   try{ await saveSpace({ programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, changelogStore, v:2, ts: Date.now() }); }catch(e){ console.warn('seed persist failed:', e); }
 
   clogFilterPh = uiState.clogPhase || '';      // a reader's phase filter persists
+  clogSeedReadForNewBrowser();
   applySidebarRail(); // restore collapsed/expanded from this browser's own preference
   renderHub();
   // Reopen the program you were working in last session -- never for a real viewer, who
