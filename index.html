@@ -1240,7 +1240,16 @@ body.is-staging::before{content:'';position:fixed;top:0;left:0;right:0;height:3p
 .pc2-rev:hover{border-color:var(--acc);color:var(--acc);}
 #rev-panel{display:none;flex-direction:column;min-width:320px;background:#fff;border-left:1px solid var(--bdr);overflow:hidden;}
 #rev-panel-body{flex:1;overflow-y:auto;padding:10px 12px 20px;}
-.rev-sec{margin:8px 0 4px;}
+.rev-sec{display:flex;align-items:center;gap:4px;margin:10px 0 4px;}
+.rev-sec-tog{flex:1;display:flex;align-items:center;gap:6px;min-width:0;border:none;background:none;
+  padding:4px 2px;cursor:pointer;font-family:inherit;font-size:12.5px;color:var(--ink);text-align:left;}
+.rev-sec-tog:hover .rev-sec-nm{color:var(--acc);}
+.rev-chev{font-size:9px;color:var(--mut);flex-shrink:0;}
+.rev-sec-nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
+.rev-sec-n{font-size:10px;font-weight:700;color:var(--mut);border:1px solid var(--bdr);
+  border-radius:8px;padding:0 6px;flex-shrink:0;}
+.rev-sec-n.hot{background:var(--acc);border-color:var(--acc);color:#fff;}
+.rev-sec-go{flex-shrink:0;font-size:13px;text-decoration:none;padding:2px 4px;}
 .rev-item{border:1px solid var(--bdr);border-radius:6px;padding:8px 10px;margin-bottom:6px;background:#fff;}
 .rev-item.resolved{opacity:.6;background:#FBFAF9;}
 .rev-who{font-size:11px;font-weight:700;color:var(--mut);display:flex;align-items:center;gap:6px;}
@@ -1995,6 +2004,8 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
         <div id="rev-panel" style="display:none">
           <div class="pmp-head">
             <div class="pmp-title">Review</div>
+            <button class="pmp-dashbtn" onclick="revExpandAll()" title="Expand every section">&#8964; Expand All</button>
+            <button class="pmp-dashbtn" onclick="revCollapseAll()" title="Collapse every section">&#8963; Collapse All</button>
             <button class="pmp-dashbtn" onclick="revRefresh()" title="Check for new comments">&#8635;</button>
             <button class="pmp-iconbtn" onclick="revPanelClose()" title="Close panel">&#10005;</button>
           </div>
@@ -10064,6 +10075,25 @@ function revPanelClose(){
   if(handle) handle.style.display='none';
 }
 function revSetFilter(f){ revFilter=f; revRender(); }
+// Section groups start CLOSED, so opening the panel shows the shape of the
+// review -- which sections were commented on and how many -- rather than a
+// wall of text. Same idea, and the same Expand/Collapse All, as the sidebar.
+// Remembered per browser in uiState, so a reviewer's choice survives a reload.
+function revSecOpen(key){
+  try{ return !!(uiState.revOpen||{})[key]; }catch(e){ return false; }
+}
+function revToggleSec(key){
+  if(!uiState.revOpen) uiState.revOpen={};
+  if(uiState.revOpen[key]) delete uiState.revOpen[key];
+  else uiState.revOpen[key]=1;
+  saveUIState(); revRender();
+}
+function revExpandAll(){
+  if(!uiState.revOpen) uiState.revOpen={};
+  revAllComments().filter(c=>!c.replyTo).forEach(c=>{ uiState.revOpen[c.progId+':'+c.secId]=1; });
+  saveUIState(); revRender();
+}
+function revCollapseAll(){ uiState.revOpen={}; saveUIState(); revRender(); }
 async function revRefresh(){
   _cmtTree=null; _cmtPrimed={}; _cmtLastSync=Date.now();
   Object.keys(_cmtRemote).forEach(k=>delete _cmtRemote[k]);
@@ -10147,8 +10177,19 @@ function revRender(){
     byProg[pid].forEach(c=>{ (bySec[c.secId]=bySec[c.secId]||[]).push(c); });
     Object.keys(bySec).forEach(sid=>{
       const name=(typeof ccSectionName==='function' ? ccSectionName(pid,sid) : '') || sid;
-      h += '<div class="rev-sec"><a class="clog-goto" onclick="revGoTo(\''+pid+'\',\''+sid+'\')">'
-        +  escapeHtml(name)+' &rarr;</a></div>';
+      const key = pid+':'+sid, open = revSecOpen(key);
+      const unresolved = bySec[sid].filter(c=>c.status!=='resolved').length;
+      h += '<div class="rev-sec'+(open?' open':'')+'">'
+        +   '<button class="rev-sec-tog" onclick="revToggleSec(\''+key+'\')" '
+        +     'title="'+(open?'Collapse':'Expand')+' this section" aria-expanded="'+open+'">'
+        +     '<span class="rev-chev">'+(open?'\u25be':'\u25b8')+'</span>'
+        +     '<span class="rev-sec-nm">'+escapeHtml(name)+'</span>'
+        +     '<span class="rev-sec-n'+(unresolved?' hot':'')+'">'+bySec[sid].length+'</span>'
+        +   '</button>'
+        +   '<a class="clog-goto rev-sec-go" onclick="revGoTo(\''+pid+'\',\''+sid+'\')" '
+        +     'title="Open this section">&rarr;</a>'
+        + '</div>';
+      if(!open) return;                       // closed: the header tells the story
       bySec[sid].forEach(c=>{
         const replies=all.filter(x=>x.replyTo===c.id).length;
         h += '<div class="rev-item'+(c.status==='resolved'?' resolved':'')+'">'
@@ -11063,6 +11104,7 @@ function downloadBackup(prefix){
   return true;
 }
 async function exportBackup(){
+  if(viewerModeForced) return;          // never hand the raw state to a reader
   const em=document.getElementById('export-menu'); if(em) em.classList.remove('show');
   // Pull in every program's content BEFORE snapshotting. Without this, a
   // manual backup taken right after boot holds only whatever happened to be
@@ -11247,6 +11289,16 @@ async function maybeAutoBackup(){
   }
 }
 function updateBackupReminder(){
+  // A viewer has nothing to back up, so their browser's backup clock is always
+  // zero and this pill read "No backup yet" permanently in the topbar of a
+  // read-only link. Worse, it is a button: clicking it ran exportBackup and
+  // handed over the entire raw state -- including marginStore, the tuition and
+  // COGS model. Export for viewers is meant to be documents, not the data.
+  if(viewerModeForced){
+    const old=document.getElementById('backup-pill');
+    if(old) old.style.display='none';
+    return;
+  }
   const ts=lastBackupTs();
   const days=ts? Math.floor((Date.now()-ts)/(24*60*60*1000)) : null;
   let partial=false; try{ partial = localStorage.getItem('sdi_last_backup_partial')==='1'; }catch(e){}
@@ -15721,6 +15773,7 @@ function hideEditorChromeForViewer(){
   // how they discover commenting exists at all -- the box itself is at the
   // bottom of a section, which is easy to never scroll to.
   const revBtn=document.getElementById('rev-viewer-btn'); if(revBtn) revBtn.style.display='inline-block';
+  const bkPill=document.getElementById('backup-pill'); if(bkPill) bkPill.style.display='none';
   // The changelog is the one thing a viewer is meant to come BACK for, so its
   // button survives the viewer chrome-hiding rather than being stripped with
   // the editor tools.
