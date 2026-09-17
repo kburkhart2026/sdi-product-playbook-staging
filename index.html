@@ -101,6 +101,10 @@ body{font-family:var(--font-body);background:var(--page);color:var(--txt);height
   width:22px;height:20px;font-size:13px;cursor:pointer;line-height:1;flex:0 0 auto;
   display:inline-flex;align-items:center;justify-content:center;}
 .clog-read:hover{border-color:var(--acc);color:var(--acc);}
+/* Green only once it is ticked: the colour is the confirmation, so it has to
+   mean "done" and nothing else. */
+.clog-read.done{color:#1F5B3C;border-color:#BFDCCB;background:#EDF5F0;}
+.clog-read.done:hover{color:#1F5B3C;border-color:#8FBFA4;background:#DDEDE4;}
 .clog-b{font-size:12.5px;color:var(--mut);line-height:1.5;outline:none;border-radius:3px;}
 .clog-b[contenteditable]:hover{background:#F6F3F1;}
 .clog-b:focus{background:#fff;outline:2px solid var(--acc);outline-offset:1px;}
@@ -13468,7 +13472,7 @@ function clogEntryHTML(e, viewer){
         +' onblur="clogSetField(\''+e.id+'\',\'title\',this.textContent.trim())"')+'>'
     +     escapeHtml(e.title||'')+'</span>'
     +   (read ? '' : '<span class="clog-new">new</span>')
-    +   '<button class="clog-read" title="'+(read?'Mark unread':'Mark as read')+'"'
+    +   '<button class="clog-read'+(read?' done':'')+'" title="'+(read?'Mark unread':'Mark as read')+'"'
     +     ' onclick="clogReadUI(\''+e.id+'\','+(read?'false':'true')+')">'+(read?'&#9745;&#65038;':'&#9744;&#65038;')+'</button>'
     + '</div>'
     + '<div class="clog-b"'+(viewer?'':' contenteditable="true" spellcheck="false"'
