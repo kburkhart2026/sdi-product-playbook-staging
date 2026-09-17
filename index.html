@@ -113,9 +113,8 @@ body{font-family:var(--font-body);background:var(--page);color:var(--txt);height
 .clog-t-fin{color:#2F6B4F;border-color:#BFDCCB;background:#EDF5F0;}
 .clog-t-fac{color:#3B4A6B;border-color:#C4CBDB;background:#EEF1F7;}
 .clog-t-int{color:var(--mut);border-color:var(--bdr);background:#F6F3F1;}
-.clog-addaud,.clog-del{border:1px solid var(--bdr);background:#fff;color:var(--mut);
+.clog-del{border:1px solid var(--bdr);background:#fff;color:var(--mut);
   border-radius:3px;width:19px;height:18px;font-size:10px;cursor:pointer;line-height:1;}
-.clog-addaud:hover{border-color:var(--acc);color:var(--acc);}
 .clog-del{margin-left:auto;}
 .clog-del:hover{border-color:#D50032;color:#D50032;background:#FDF2F4;}
 .clog-goto{font-size:11px;color:#1F5B7A;cursor:pointer;text-decoration:underline;}
@@ -138,7 +137,7 @@ body{font-family:var(--font-body);background:var(--page);color:var(--txt);height
   letter-spacing:.07em;text-transform:uppercase;background:var(--acc);color:#fff;
   border-radius:2px;padding:1px 6px;cursor:pointer;margin-bottom:2px;}
 /* a viewer reads, filters, marks read and clicks through -- nothing else */
-body.view-mode .clog-del,body.view-mode .clog-addaud,
+body.view-mode .clog-del,
 body.view-mode .clog-tabs,body.view-mode .clog-cand{display:none!important;}
 body.view-mode .clog-t[contenteditable],body.view-mode .clog-b[contenteditable]{pointer-events:none;}
 /* ---------- Hub shelves ---------- */
@@ -5361,14 +5360,6 @@ function clogSetField(id, key, value){
   if(viewerModeForced) return;
   const e = clogAll().find(x=>x.id===id); if(!e) return;
   e[key] = value; scheduleSave();
-}
-function clogToggleAud(id, audId){
-  if(viewerModeForced) return;
-  const e = clogAll().find(x=>x.id===id); if(!e) return;
-  e.aud = e.aud || [];
-  const i = e.aud.indexOf(audId);
-  if(i>=0){ if(e.aud.length>1) e.aud.splice(i,1); } else e.aud.push(audId);
-  scheduleSave();
 }
 
 // ---- what THIS browser has not read yet --------------------------------
@@ -13383,9 +13374,8 @@ function clogAudTags(e, editable){
   // structure cannot. Everywhere else the phase already answers "who cares",
   // and a tag the app guessed at is worse than no tag.
   if(clogPhaseOf(e)) return '';
-  return (e.aud||[]).map(a=>'<span class="clog-tag clog-t-'+a+'"'
-    + (editable ? ' onclick="clogToggleAudUI(\''+e.id+'\',\''+a+'\')" title="Click to remove"' : '')
-    + '>'+escapeHtml((CLOG_AUD[a]||{}).label||a)+'</span>').join('');
+  return (e.aud||[]).map(a=>'<span class="clog-tag clog-t-'+a+'">'
+    + escapeHtml((CLOG_AUD[a]||{}).label||a)+'</span>').join('');
 }
 function clogWhen(ts){
   if(!ts) return '';
@@ -13484,7 +13474,6 @@ function clogEntryHTML(e, viewer){
         +' onblur="clogSetField(\''+e.id+'\',\'body\',this.textContent.trim())"')+'>'
     +   escapeHtml(e.body||'')+'</div>'
     + '<div class="clog-f">'+clogAudTags(e, !viewer)
-    +   (viewer ? '' : '<button class="clog-addaud" onclick="clogAudMenu(event,\''+e.id+'\')" title="Add an audience">&#43;</button>')
     // the entry point: click straight through to the page it concerns
     +   (sec ? '<a class="clog-goto" onclick="clogGoTo(\''+e.progId+'\',\''+e.secId+'\')">'
              + escapeHtml(sec)+' &rarr;</a>' : '')
@@ -13590,39 +13579,13 @@ function clogPendingHTML(c){
   h += '</div>'
     + '<div class="clog-b" contenteditable="true" spellcheck="false">'+escapeHtml(c.body)+'</div>'
     + '<div class="clog-f">'
-    + (c.aud||[]).map(a=>'<span class="clog-tag clog-t-'+a+'" onclick="clogPendAud(\''+a+'\')" title="Click to remove">'
+    + (c.aud||[]).map(a=>'<span class="clog-tag clog-t-'+a+'">'
         + escapeHtml((CLOG_AUD[a]||{}).label||a)+'</span>').join('')
-    + '<button class="clog-addaud" onclick="clogPendAudMenu(event)" title="Add an audience">+</button>'
     + '<span style="flex:1"></span>'
     + '<button class="clog-btn pub" onclick="clogPublishPending()">Post</button>'
     + '<button class="clog-btn" onclick="clogDiscardPending()">Discard</button>'
     + '</div></div>';
   return h;
-}
-function clogPendAud(a){
-  if(!_clogPending) return;
-  const i = _clogPending.aud.indexOf(a);
-  if(i >= 0) _clogPending.aud.splice(i,1); else _clogPending.aud.push(a);
-  clogPendSyncFields(); clogRender();
-}
-function clogPendAudMenu(ev){
-  ev.stopPropagation();
-  const old = document.getElementById('clog-aud-menu'); if(old) old.remove();
-  if(!_clogPending) return;
-  const m = document.createElement('div'); m.className='pc2-menu'; m.id='clog-aud-menu';
-  m.style.width = '190px';
-  m.innerHTML = CLOG_AUDIENCES.map(a=>'<div class="pc2-mi" data-a="'+a.id+'">'
-    + (_clogPending.aud.indexOf(a.id)>=0 ? '&#10003; ' : '')+escapeHtml(a.label)+'</div>').join('');
-  document.body.appendChild(m);
-  const r = ev.currentTarget.getBoundingClientRect();
-  m.style.left = Math.max(8, Math.min(r.left, window.innerWidth-198))+'px';
-  m.style.top = Math.min(r.bottom+5, window.innerHeight-m.offsetHeight-8)+'px';
-  m.querySelectorAll('.pc2-mi').forEach(row=>row.addEventListener('click',()=>{
-    m.remove(); clogPendAud(row.dataset.a);
-  }));
-  setTimeout(()=>document.addEventListener('mousedown',function off(e2){
-    if(!m.contains(e2.target)){ m.remove(); document.removeEventListener('mousedown',off); }
-  }),0);
 }
 // Keep the typed title and detail through a re-render, so tagging an audience
 // never throws away wording already written.
@@ -13691,26 +13654,6 @@ async function clogAddManual(){
   clogTab='log'; clogRender(); renderHub();
   toast('Entry added — fill in the detail and tag who it affects');
   return e;
-}
-function clogToggleAudUI(id, a){ clogToggleAud(id, a); clogRender(); }
-function clogAudMenu(ev, id){
-  ev.stopPropagation();
-  const old=document.getElementById('clog-aud-menu'); if(old) old.remove();
-  const e = clogAll().find(x=>x.id===id); if(!e) return;
-  const m=document.createElement('div'); m.className='pc2-menu'; m.id='clog-aud-menu';
-  m.style.width='190px';
-  m.innerHTML = CLOG_AUDIENCES.map(a=>'<div class="pc2-mi" data-a="'+a.id+'">'
-    + ((e.aud||[]).indexOf(a.id)>=0 ? '&#10003; ' : '')+escapeHtml(a.label)+'</div>').join('');
-  document.body.appendChild(m);
-  const r=ev.currentTarget.getBoundingClientRect();
-  m.style.left=Math.max(8,Math.min(r.left,window.innerWidth-198))+'px';
-  m.style.top=Math.min(r.bottom+5, window.innerHeight-m.offsetHeight-8)+'px';
-  m.querySelectorAll('.pc2-mi').forEach(row=>row.addEventListener('click',()=>{
-    clogToggleAud(id, row.dataset.a); m.remove(); clogRender();
-  }));
-  setTimeout(()=>document.addEventListener('mousedown',function off(ev2){
-    if(!m.contains(ev2.target)){ m.remove(); document.removeEventListener('mousedown',off); }
-  }),0);
 }
 // The entry point Karen asked for: a viewer clicks an entry and lands on the
 // page it is about, with the changelog panel still docked beside it.
