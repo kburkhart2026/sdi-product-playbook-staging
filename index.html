@@ -1236,6 +1236,12 @@ body.is-staging::before{content:'';position:fixed;top:0;left:0;right:0;height:3p
 .cmt-res-note{color:#334155;margin-top:3px;}
 .cmt-res-ev{color:var(--mut);font-size:11px;margin-top:3px;}
 .sec-cmt{font-size:10px;font-weight:700;background:var(--acc);color:#fff;border-radius:8px;padding:0 5px;margin-left:5px;}
+/* Deliberately NOT the comment badge's red: two red counts in one narrow
+   column, meaning different things, would read as one signal. */
+.ph-clog{font-size:9.5px;font-weight:700;background:rgba(255,255,255,0.18);color:var(--stxt,#fff);
+  border:1px solid rgba(255,255,255,0.35);border-radius:8px;padding:0 5px;margin-left:6px;cursor:pointer;}
+.ph-clog:hover{background:rgba(255,255,255,0.32);}
+.clog-chip-n{font-size:9.5px;font-weight:700;opacity:.7;margin-left:5px;}
 .pc2-rev{align-self:flex-start;font-family:var(--font-cond);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid #E3D5B4;background:#F6EFDF;color:#6B5A33;border-radius:3px;padding:1px 6px;margin-top:4px;cursor:pointer;}
 .pc2-rev:hover{border-color:var(--acc);color:var(--acc);}
 #rev-panel{display:none;flex-direction:column;min-width:320px;background:#fff;border-left:1px solid var(--bdr);overflow:hidden;}
@@ -5372,6 +5378,16 @@ function clogToggleAud(id, audId){
 // affects anyone else's count.
 function clogIsRead(id){ try{ return !!(uiState.clogRead||{})[id]; }catch(e){ return false; } }
 function clogUnseen(){ return clogAll().filter(e=>!clogIsRead(e.id)); }
+// Unread entries anywhere inside one phase -- what the left-nav badge shows,
+// so a collapsed phase still says there is something new in it.
+function clogUnseenForPhase(progId, phId){
+  if(typeof clogUnseen!=='function') return 0;
+  return clogUnseen().filter(e=>{
+    if(e.progId!==progId) return false;
+    const ph = clogPhaseOf(e);
+    return !!ph && ph.id===phId;
+  }).length;
+}
 function clogUnseenFor(progId){ return clogUnseen().filter(e=>e.progId===progId).length; }
 function clogMarkRead(id, on){
   if(!uiState.clogRead) uiState.clogRead = {};
@@ -5697,7 +5713,7 @@ async function newProgram(){
 }
 
 // ==================== UI STATE (remembers where you were) ====================
-let uiState={lastLoc:{},openPhases:{},shelfCollapsed:{},clogRead:{},clogAudience:''};
+let uiState={lastLoc:{},openPhases:{},shelfCollapsed:{},clogRead:{},clogPhase:''};
 try{ uiState=Object.assign(uiState,JSON.parse(localStorage.getItem('sdi_ui_state')||'{}')); }catch(e){}
 function saveUIState(){ try{ localStorage.setItem('sdi_ui_state',JSON.stringify(uiState)); }catch(e){} }
 
@@ -5864,7 +5880,9 @@ function renderSidebar(){
       <div class="phase-hdr" title="${escapeHtml(ph.name)}" onclick="togglePh('${ph.id}')">
         <span class="dph" title="Drag">⠿</span>
         <span class="ph-dot" style="background:${ph.color}"></span>
-        <span class="ph-nm">${ph.name}</span>
+        <span class="ph-nm">${ph.name}</span>${(()=>{
+          const n=(typeof clogUnseenForPhase==='function'&&curProgId)?clogUnseenForPhase(curProgId,ph.id):0;
+          return n?`<span class="ph-clog" title="${n} unread changelog ${n===1?'entry':'entries'} in this tab" onclick="event.stopPropagation();clogOpenPhase('${ph.id}')">${n}</span>`:''; })()}
         <span class="ph-arr ${isActive?'open':''}" id="arr-${ph.id}">▶</span>
         <span class="ph-del" title="Delete tab" onclick="deletePhase('${ph.id}',event)">✕</span>
       </div>
@@ -13280,7 +13298,29 @@ let crsPicked = new Set();          // courses ticked for insertion
 let crsCols = ['code','title','credits','weeks'];
 
 let clogPanelOpen = false, clogPanelWasOpen = false, clogOrigin = 'hub';
-let clogFilterAud = '';       // '' = everything
+let clogFilterPh = '';        // '' = everything. A PHASE id, not an audience.
+// Where a change happened already says who cares: Compliance's work lives in
+// the Compliance phase, Marketing's in Marketing. Filtering by phase needs no
+// tagging, cannot be tagged wrongly, and is what a reader actually wants --
+// their own area. Replaced the audience filter 2026-09-17.
+function clogPhaseOf(e){
+  if(!e || !e.progId || !e.secId) return null;          // portfolio-level
+  const p = programs.find(x=>x.id===e.progId); if(!p) return null;
+  const ph = (p.phases||[]).find(x=>(x.sections||[]).some(sc=>sc.id===e.secId));
+  return ph ? { id:ph.id, name:ph.name, color:ph.color } : null;
+}
+// Only phases that actually hold something get a pill -- an empty filter is
+// noise, and the old six departments showed whether or not anything used them.
+function clogPhasesPresent(){
+  const seen = new Map(); let loose = 0;
+  clogAll().forEach(e=>{
+    const ph = clogPhaseOf(e);
+    if(!ph){ loose++; return; }
+    if(!seen.has(ph.id)) seen.set(ph.id, { ph, n:0 });
+    seen.get(ph.id).n++;
+  });
+  return { list:[...seen.values()], loose };
+}
 let clogTab = 'log';          // 'log' | 'queue'
 
 function clogBodyRoot(){
@@ -13338,6 +13378,11 @@ function clogOpenSmart(){
 
 // ---- rendering ----------------------------------------------------------
 function clogAudTags(e, editable){
+  // Tags are kept ONLY for entries that belong to no phase -- the course
+  // database conflicts, where 'Registrar + Finance' says something the
+  // structure cannot. Everywhere else the phase already answers "who cares",
+  // and a tag the app guessed at is worse than no tag.
+  if(clogPhaseOf(e)) return '';
   return (e.aud||[]).map(a=>'<span class="clog-tag clog-t-'+a+'"'
     + (editable ? ' onclick="clogToggleAudUI(\''+e.id+'\',\''+a+'\')" title="Click to remove"' : '')
     + '>'+escapeHtml((CLOG_AUD[a]||{}).label||a)+'</span>').join('');
@@ -13373,16 +13418,26 @@ function clogRender(){
 
   // audience filter + read controls
   h += '<div class="clog-bar">'
-    +  '<button class="clog-chip'+(clogFilterAud===''?' on':'')+'" onclick="clogSetAud(\'\')">Everything</button>'
-    +  CLOG_AUDIENCES.map(a=>'<button class="clog-chip'+(clogFilterAud===a.id?' on':'')
-         +'" onclick="clogSetAud(\''+a.id+'\')">'+escapeHtml(a.label)+'</button>').join('')
+    +  '<button class="clog-chip'+(clogFilterPh===''?' on':'')+'" onclick="clogSetPh(\'\')">Everything</button>'
+    +  (()=>{ const got=clogPhasesPresent();
+         let out = got.list.map(x=>'<button class="clog-chip'+(clogFilterPh===x.ph.id?' on':'')
+           +'" onclick="clogSetPh(\''+x.ph.id+'\')">'+escapeHtml(x.ph.name)
+           +'<span class="clog-chip-n">'+x.n+'</span></button>').join('');
+         if(got.loose) out += '<button class="clog-chip'+(clogFilterPh==='__none'?' on':'')
+           +'" onclick="clogSetPh(\'__none\')" title="Not tied to one section">Across programs'
+           +'<span class="clog-chip-n">'+got.loose+'</span></button>';
+         return out; })()
     +  '</div>';
   if(unseen){
     h += '<div class="clog-unseenbar"><span><b>'+unseen+'</b> unread</span>'
       +  '<button class="clog-btn" onclick="clogMarkAllRead()">Mark all read</button></div>';
   }
 
-  const shown = clogSorted().filter(e=>!clogFilterAud || (e.aud||[]).indexOf(clogFilterAud)>=0);
+  const shown = clogSorted().filter(e=>{
+    if(!clogFilterPh) return true;
+    const ph = clogPhaseOf(e);
+    return clogFilterPh==='__none' ? !ph : (ph && ph.id===clogFilterPh);
+  });
   if(!clogAll().length){
     h += '<div class="clog-empty"><div class="clog-empty-t">Nothing published yet</div>'
       +  '<p>'+(viewer
@@ -13595,7 +13650,13 @@ function clogPublishPending(){
 // unposted, so it can be written up later.
 function clogDiscardPending(){ _clogPending = null; clogRender(); toast('Discarded \u2014 nothing was posted'); }
 function clogSetTab(t){ clogTab=t; clogRender(); }
-function clogSetAud(a){ clogFilterAud=a; uiState.clogAudience=a; saveUIState(); clogRender(); }
+// From the left nav straight into that phase's changes -- the 'jump into my
+// own area' path.
+function clogOpenPhase(phId){
+  clogFilterPh = phId; uiState.clogPhase = phId; saveUIState();
+  if(typeof clogOpenSmart==='function') clogOpenSmart(); else clogRender();
+}
+function clogSetPh(id){ clogFilterPh=id; uiState.clogPhase=id; saveUIState(); clogRender(); }
 function clogReadUI(id, on){
   clogMarkRead(id, on); clogRender();
   // the hub carries its own 'N new' markers, so refresh it only when it is visible
@@ -15924,7 +15985,7 @@ async function init(){
   if(seededThisBoot)
   try{ await saveSpace({ programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks, sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, changelogStore, v:2, ts: Date.now() }); }catch(e){ console.warn('seed persist failed:', e); }
 
-  clogFilterAud = uiState.clogAudience || '';   // a reader's audience filter persists
+  clogFilterPh = uiState.clogPhase || '';      // a reader's phase filter persists
   applySidebarRail(); // restore collapsed/expanded from this browser's own preference
   renderHub();
   // Reopen the program you were working in last session -- never for a real viewer, who
