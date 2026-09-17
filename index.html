@@ -98,7 +98,8 @@ body{font-family:var(--font-body);background:var(--page);color:var(--txt);height
 .clog-new{font-family:var(--font-cond);font-size:8.5px;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;background:var(--acc);color:#fff;border-radius:2px;padding:1px 5px;}
 .clog-read{border:1px solid var(--bdr);background:#fff;color:var(--mut);border-radius:3px;
-  width:22px;height:20px;font-size:11px;cursor:pointer;line-height:1;flex:0 0 auto;}
+  width:22px;height:20px;font-size:13px;cursor:pointer;line-height:1;flex:0 0 auto;
+  display:inline-flex;align-items:center;justify-content:center;}
 .clog-read:hover{border-color:var(--acc);color:var(--acc);}
 .clog-b{font-size:12.5px;color:var(--mut);line-height:1.5;outline:none;border-radius:3px;}
 .clog-b[contenteditable]:hover{background:#F6F3F1;}
@@ -13468,7 +13469,7 @@ function clogEntryHTML(e, viewer){
     +     escapeHtml(e.title||'')+'</span>'
     +   (read ? '' : '<span class="clog-new">new</span>')
     +   '<button class="clog-read" title="'+(read?'Mark unread':'Mark as read')+'"'
-    +     ' onclick="clogReadUI(\''+e.id+'\','+(read?'false':'true')+')">'+(read?'&#9675;':'&#10003;')+'</button>'
+    +     ' onclick="clogReadUI(\''+e.id+'\','+(read?'false':'true')+')">'+(read?'&#9745;&#65038;':'&#9744;&#65038;')+'</button>'
     + '</div>'
     + '<div class="clog-b"'+(viewer?'':' contenteditable="true" spellcheck="false"'
         +' onblur="clogSetField(\''+e.id+'\',\'body\',this.textContent.trim())"')+'>'
