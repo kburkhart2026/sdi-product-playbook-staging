@@ -142,6 +142,7 @@ body{font-family:var(--font-body);background:var(--page);color:var(--txt);height
   letter-spacing:.07em;text-transform:uppercase;background:var(--acc);color:#fff;
   border-radius:2px;padding:1px 6px;cursor:pointer;margin-bottom:2px;}
 /* a viewer reads, filters, marks read and clicks through -- nothing else */
+body.view-mode .clog-addentry,
 body.view-mode .clog-del,
 body.view-mode .clog-tabs,body.view-mode .clog-cand{display:none!important;}
 body.view-mode .clog-t[contenteditable],body.view-mode .clog-b[contenteditable]{pointer-events:none;}
@@ -1246,6 +1247,8 @@ body.is-staging::before{content:'';position:fixed;top:0;left:0;right:0;height:3p
   border:1px solid rgba(255,255,255,0.35);border-radius:8px;padding:0 5px;margin-left:6px;cursor:pointer;}
 .ph-clog:hover{background:rgba(255,255,255,0.32);}
 .clog-chip-n{font-size:9.5px;font-weight:700;opacity:.7;margin-left:5px;}
+.clog-chip-read{color:#1F5B3C;border-color:#BFDCCB;background:#EDF5F0;}
+.clog-chip-read.on{background:#1F5B3C;border-color:#1F5B3C;color:#fff;}
 .pc2-rev{align-self:flex-start;font-family:var(--font-cond);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px solid #E3D5B4;background:#F6EFDF;color:#6B5A33;border-radius:3px;padding:1px 6px;margin-top:4px;cursor:pointer;}
 .pc2-rev:hover{border-color:var(--acc);color:var(--acc);}
 #rev-panel{display:none;flex-direction:column;min-width:320px;background:#fff;border-left:1px solid var(--bdr);overflow:hidden;}
@@ -2024,7 +2027,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
         <div id="clog-panel" style="display:none">
           <div class="pmp-head">
             <div class="pmp-title">Changelog</div>
-            <button class="pmp-dashbtn" onclick="clogAddManual()" title="Write an entry">&#43; Entry</button>
+            <button class="pmp-dashbtn clog-addentry" onclick="clogAddManual()" title="Write an entry">&#43; Entry</button>
             <button class="pmp-iconbtn" onclick="clogPanelFullScreen()" title="Open full screen">&#8599;</button>
             <button class="pmp-iconbtn" onclick="clogPanelClose()" title="Close panel">&#10005;</button>
           </div>
@@ -2134,7 +2137,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
         <div class="pm-sub">What changed, grouped by program &mdash; and who it affects</div>
       </div>
       <div style="margin-left:auto;display:flex;gap:8px">
-        <button class="mg2-btn" onclick="clogAddManual()">&#43; Entry</button>
+        <button class="mg2-btn clog-addentry" onclick="clogAddManual()">&#43; Entry</button>
       </div>
     </div>
     <div id="clog-body"></div>
@@ -5115,6 +5118,22 @@ const CLOG_AUD = {}; CLOG_AUDIENCES.forEach(a=>{ CLOG_AUD[a.id]=a; });
 
 function clogAll(){ return (changelogStore.entries||[]); }
 function clogSorted(){ return clogAll().slice().sort((a,b)=>(b.ts||0)-(a.ts||0)); }
+// Marking something read moves it OUT of the phase views and into the Read
+// pill, so the log shows what still needs attention rather than everything
+// ever published. Read entries then age out after 30 days -- they stay in the
+// data, they just stop being listed, because a changelog is about what is
+// recent, not an archive of everything.
+const CLOG_READ_KEEP_DAYS = 30;
+function clogReadAt(id){
+  try{ const v=(uiState.clogRead||{})[id]; return typeof v==='number' ? v : 0; }catch(e){ return 0; }
+}
+function clogReadAged(e){
+  const t = clogReadAt(e.id);
+  return !!t && (Date.now()-t) > CLOG_READ_KEEP_DAYS*24*60*60*1000;
+}
+// Everything a reader could be shown: unread, plus read-but-still-recent.
+function clogLive(){ return clogSorted().filter(e=>!clogReadAged(e)); }
+function clogReadRecent(){ return clogLive().filter(e=>clogIsRead(e.id)); }
 function clogIsIgnored(fp){ return !!(changelogStore.ignored||{})[fp]; }
 // A short stable hash, so a fingerprint stays the same length whatever goes in.
 function clogHash(str){
@@ -13309,7 +13328,9 @@ function clogPhaseOf(e){
 // noise, and the old six departments showed whether or not anything used them.
 function clogPhasesPresent(){
   const seen = new Map(); let loose = 0;
-  clogAll().forEach(e=>{
+  // Counts the entries a phase pill would actually show -- unread and not yet
+  // aged out -- so a pill never promises something the view will not list.
+  clogLive().filter(e=>!clogIsRead(e.id)).forEach(e=>{
     const ph = clogPhaseOf(e);
     if(!ph){ loose++; return; }
     if(!seen.has(ph.id)) seen.set(ph.id, { ph, n:0 });
@@ -13421,6 +13442,10 @@ function clogRender(){
          if(got.loose) out += '<button class="clog-chip'+(clogFilterPh==='__none'?' on':'')
            +'" onclick="clogSetPh(\'__none\')" title="Not tied to one section">Across programs'
            +'<span class="clog-chip-n">'+got.loose+'</span></button>';
+         const rd = clogReadRecent().length;
+         if(rd) out += '<button class="clog-chip clog-chip-read'+(clogFilterPh==='__read'?' on':'')
+           +'" onclick="clogSetPh(\'__read\')" title="Already read \u2014 cleared after '
+           +CLOG_READ_KEEP_DAYS+' days">Read<span class="clog-chip-n">'+rd+'</span></button>';
          return out; })()
     +  '</div>';
   if(unseen){
@@ -13428,7 +13453,10 @@ function clogRender(){
       +  '<button class="clog-btn" onclick="clogMarkAllRead()">Mark all read</button></div>';
   }
 
-  const shown = clogSorted().filter(e=>{
+  const shown = clogLive().filter(e=>{
+    const isRead = clogIsRead(e.id);
+    if(clogFilterPh==='__read') return isRead;
+    if(isRead) return false;                 // read: it now lives under the Read pill
     if(!clogFilterPh) return true;
     const ph = clogPhaseOf(e);
     return clogFilterPh==='__none' ? !ph : (ph && ph.id===clogFilterPh);
@@ -13440,7 +13468,15 @@ function clogRender(){
            : 'Changes worth telling people about go here. Check <b>Waiting on you</b> for '
              +'what the Playbook has noticed, or write an entry yourself.')+'</p></div>';
   } else if(!shown.length){
-    h += '<div class="clog-empty"><p>Nothing tagged for that audience.</p></div>';
+    const rd = clogReadRecent().length;
+    h += '<div class="clog-empty">'
+      + (clogFilterPh==='__read'
+          ? '<p>Nothing read in the last '+CLOG_READ_KEEP_DAYS+' days.</p>'
+          : '<div class="clog-empty-t">All caught up</div><p>Nothing unread here'
+            + (rd? ' \u2014 '+rd+' already read '+(rd===1?'entry is':'entries are')
+                 + ' under <b>Read</b>, and clear after '+CLOG_READ_KEEP_DAYS+' days.' : '.')
+            + '</p>')
+      + '</div>';
   } else {
     // grouped by program, so the portfolio view is "outlined by program"
     const groups = {};
