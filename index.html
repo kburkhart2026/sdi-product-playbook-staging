@@ -1293,12 +1293,6 @@ body.is-staging::before{content:'';position:fixed;top:0;left:0;right:0;height:3p
 .fm-branch span{font-size:11.5px;color:#7A7168;}
 .fm-row{display:flex;gap:10px;align-items:center;}
 .fm-rowoff{opacity:.6;}
-.fm-picksec{border:1px solid var(--bdr);border-radius:7px;margin-bottom:9px;overflow:hidden;}
-.fm-pickhead{background:#FAFAF8;padding:6px 9px;font-size:11.5px;font-weight:700;border-bottom:1px solid var(--bdr);}
-.fm-pickrow{display:flex;gap:8px;align-items:flex-start;padding:7px 9px;border-bottom:1px solid var(--bdr);font-size:11.5px;cursor:pointer;}
-.fm-pickrow:last-child{border-bottom:0;}
-.fm-pickrow:hover{background:#FAFAF8;}
-.fm-pickrow input{margin-top:2px;}
 .fm-src .link{border:0;background:none;color:#9B2743;font-size:11px;font-weight:650;text-decoration:underline;text-underline-offset:2px;padding:0;cursor:pointer;}
 .fm-aff{border:1px solid var(--bdr);border-radius:7px;padding:4px 10px;}
 .fm-affrow{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--bdr);font-size:11.5px;color:#4A433D;align-items:flex-start;}
@@ -14891,10 +14885,20 @@ function fmTableLines(el){
       .map((v,i)=>v?((heads[i]?heads[i]+': ':'')+v):'')
       .filter(Boolean).join('; ')).filter(Boolean).join('\n');
 }
+const _fmBlockCache={}, _fmDraftCache={};
+// A cheap fingerprint of everything this program holds. Changing any section
+// changes a length, which retires every cached draft for that program.
+function fmContentSig(progId){
+  let n=0;
+  fmSections(progId).forEach(s=>{ n+=((blockStore||{})[progId+':'+s.id]||'').length+7; });
+  return n;
+}
 // One record per block, with its text already readable.
 function fmBlocks(progId,secId){
   const html=(blockStore||{})[progId+':'+secId]||'';
   if(!html) return [];
+  const ck=progId+':'+secId+'|'+html.length;
+  if(_fmBlockCache[ck]) return _fmBlockCache[ck];
   const doc=fmScratchDoc(), host=doc.body;
   host.innerHTML=html;
   const out=[];
@@ -14910,6 +14914,7 @@ function fmBlocks(progId,secId){
     if(kind!=='media' && text) out.push({ i, bid: bl.dataset.bid||('i'+i), kind, text });
   });
   host.innerHTML='';
+  _fmBlockCache[ck]=out;
   return out;
 }
 function fmSectionText(progId,secId){
@@ -14951,6 +14956,8 @@ function fmBestSlot(block,secName){
 }
 // Assemble an answer from the whole program, not one chosen section.
 function fmAutoDraft(progId,slot){
+  const ck=progId+'|'+slot.k+'|'+fmContentSig(progId);
+  if(_fmDraftCache[ck]) return _fmDraftCache[ck];
   const secs=fmSections(progId), cand=[];
   secs.forEach((s,si)=>fmBlocks(progId,s.id).forEach(b=>{
     cand.push({ secId:s.id, secName:s.name, phase:s.phase, si, bid:b.bid, i:b.i,
@@ -14967,25 +14974,10 @@ function fmAutoDraft(progId,slot){
     used.push(c); chars+=c.text.length;
   }
   used.sort((a,b)=> a.si-b.si || a.i-b.i);
+  _fmDraftCache[ck]=used;
   return used;
 }
-// The blocks behind an answer: whatever she chose by hand, else the draft.
-function fmUsedBlocks(progId,a,slot){
-  const chosen=(a.secUse||{})[slot.k];
-  if(chosen && chosen.length){
-    const out=[];
-    fmSections(progId).forEach((s,si)=>{
-      if(!chosen.some(c=>c.secId===s.id)) return;
-      fmBlocks(progId,s.id).forEach(b=>{
-        if(chosen.some(c=>c.secId===s.id&&c.bid===b.bid))
-          out.push({secId:s.id,secName:s.name,phase:s.phase,si,bid:b.bid,i:b.i,kind:b.kind,text:b.text});
-      });
-    });
-    out.sort((x,y)=> x.si-y.si || x.i-y.i);
-    return out;
-  }
-  return fmAutoDraft(progId,slot);
-}
+function fmUsedBlocks(progId,a,slot){ return fmAutoDraft(progId,slot); }
 // Course figures for a program, from the Course Database. Returns null rather
 // than a guess when nothing is linked -- a wrong credit-hour count on an
 // accreditor form is worse than an empty field.
@@ -15197,7 +15189,7 @@ function fmPanelClose(){
   if(handle) handle.style.display='none';
 }
 function fmGo(view,formId){ fmView=view; if(formId!==undefined) fmFormId=formId; fmStep=0; fmRender(); }
-function fmBack(){ if(fmView==='pick'){ fmPickDone(); return; } fmGo('list'); }
+function fmBack(){ fmGo('list'); }
 function fmSetStep(n){ fmStep=n; fmRender(); }
 
 function fmChip(src,need){
@@ -15259,43 +15251,7 @@ function fmRedraft(slotKey){
   if(viewerModeForced) return;
   const a=fmAns(fmProgId,fmFormId);
   delete a.vals['sec:'+slotKey];
-  if(a.secUse) delete a.secUse[slotKey];
   fmDirty(); fmRender();
-}
-let fmPickSlot='';
-function fmOpenPicker(slotKey){ if(viewerModeForced) return; fmPickSlot=slotKey; fmView='pick'; fmRender(); }
-function fmPickToggle(secId,bid,on){
-  const a=fmAns(fmProgId,fmFormId);
-  if(!a.secUse) a.secUse={};
-  const cur=(a.secUse[fmPickSlot]||[]).filter(c=>!(c.secId===secId&&c.bid===bid));
-  if(on) cur.push({secId,bid});
-  a.secUse[fmPickSlot]=cur;
-  delete a.vals['sec:'+fmPickSlot];   // a new selection replaces an old edit
-  fmDirty();
-}
-function fmPickDone(){ fmView='form'; fmStep=2; fmRender(); }
-function fmRenderPicker(){
-  const a=fmAns(fmProgId,fmFormId), slot=FM_SEC_SLOTS.filter(x=>x.k===fmPickSlot)[0]||FM_SEC_SLOTS[0];
-  const chosen=(a.secUse||{})[fmPickSlot]||[];
-  const auto=chosen.length?[]:fmAutoDraft(fmProgId,slot);
-  let h='<p class="fm-q">'+escapeHtml(slot.l)+'</p>'+
-    '<p class="fm-hint">Tick the blocks this answer should use. They can come from more than one section. '+
-    (chosen.length?'':'The ticked ones are what the app drafted on its own.')+'</p>';
-  fmSections(fmProgId).forEach(sec=>{
-    const blocks=fmBlocks(fmProgId,sec.id).filter(b=>b.kind!=='media');
-    if(!blocks.length) return;
-    h+='<div class="fm-picksec"><div class="fm-pickhead">'+escapeHtml(sec.phase+' → '+sec.name)+'</div>';
-    blocks.forEach(b=>{
-      const on = chosen.length ? chosen.some(c=>c.secId===sec.id&&c.bid===b.bid)
-                               : auto.some(u=>u.secId===sec.id&&u.bid===b.bid);
-      h+='<label class="fm-pickrow"><input type="checkbox"'+(on?' checked':'')+
-         ' onchange="fmPickToggle(\''+sec.id+'\',\''+b.bid+'\',this.checked)">'+
-         '<span><span class="fm-chip '+(b.kind==='prose'?'ok':'man')+'">'+b.kind+'</span> '+
-         escapeHtml(b.text.slice(0,150))+(b.text.length>150?'…':'')+'</span></label>';
-    });
-    h+='</div>';
-  });
-  return h;
 }
 function fmSetSec(slot,secId){
   if(viewerModeForced) return;
@@ -15335,11 +15291,6 @@ function fmRenderList(){
          '</div></button>';
     }
   });
-  if(!viewerModeForced)
-    h+='<button class="fm-row" onclick="fmGo(\'org\')">'+
-       '<div class="fm-rt">Institution Profile</div>'+
-       '<div class="fm-rs">Answered once, reused by every form</div>'+
-       '<div class="fm-src">'+fmChip(fmOrgMissing()?fmOrgMissing()+' still blank':'complete',!!fmOrgMissing())+'</div></button>';
   return h+'</div>';
 }
 function fmOrgMissing(){
@@ -15348,7 +15299,7 @@ function fmOrgMissing(){
 }
 function fmRenderOrg(){
   const org=fmOrg();
-  let h='<p class="fm-hint">Section 1 of every accreditor form. Fill it once — every form reads it from here.</p>';
+  let h='<p class="fm-hint">Already filled in, and shared by every accreditor form. Edit anything that has changed.</p>';
   FM_ORG_FIELDS.filter(f=>!f.extra).forEach(f=>{
     h+=fmTextField('org:'+f.k,f.l,org[f.k]||'','Institution Profile',
         !org[f.k]&&!/^(formerNames|accList|accDenied|accPending)$/.test(f.k),f.big);
@@ -15380,7 +15331,9 @@ function fmRenderForm(){
        '<p class="fm-q">Any pending accrediting action?</p>'+fmRadio('acc3',[['yes','Yes'],['no','No']],a.acc3)+
        '<p class="fm-q">Does the change make students eligible for a licensure examination?</p>'+fmRadio('lic',[['yes','Yes'],['no','No']],a.lic)+
        fmTextField('manual:licDetail','If yes — related programmatic accreditation or licensure examinations',
-                   a.vals['manual:licDetail']||'','you answer this',false,true);
+                   a.vals['manual:licDetail']||'','you answer this',false,true)+
+       '<details class="fm-more"><summary>Section 1 — institution information ('+
+       (fmOrgMissing()?fmOrgMissing()+' still blank':'prefilled')+')</summary>'+fmRenderOrg()+'</details>';
   }
   if(fmStep===1){
     h+='<p class="fm-q">Is this a new program, or a change to an existing one?</p>'+
@@ -15413,16 +15366,12 @@ function fmRenderForm(){
       const key='sec:'+slot.k, r=fmResolve(key,fmProgId,a);
       // "Redraft" has to be offered after a hand-pick too, not only after an
       // edit -- otherwise the only way back is unticking blocks one by one.
-      const edited=!!a.vals[key] || !!((a.secUse||{})[slot.k]||[]).length;
-      const used=r.used||[];
+      const edited=!!a.vals[key];
       h+='<div class="fm-f'+(r.need?' need':'')+'">'+
          '<label>'+escapeHtml(slot.l)+'</label>'+
-         '<textarea rows="5"'+(viewerModeForced?' readonly':'')+' oninput="fmEdit(\''+key+'\',this.value)">'+escapeHtml(r.v)+'</textarea>'+
+         '<textarea rows="6"'+(viewerModeForced?' readonly':'')+' oninput="fmEdit(\''+key+'\',this.value)">'+escapeHtml(r.v)+'</textarea>'+
          '<div class="fm-src">'+fmChip(r.src,r.need)+
-         (used.length?'<span class="fm-chip man">'+used.length+' block'+(used.length===1?'':'s')+'</span>':'')+
-         (viewerModeForced?'':
-            '<button class="link" onclick="fmOpenPicker(\''+slot.k+'\')">Choose blocks…</button>'+
-            (edited?'<button class="link" onclick="fmRedraft(\''+slot.k+'\')">Redraft from the program</button>':''))+
+         (!viewerModeForced && edited ? '<button class="link" onclick="fmRedraft(\''+slot.k+'\')">Start again from the program</button>':'')+
          '</div></div>';
     });
     h+='<p class="fm-note">Nothing else is asked here: Section 4’s 14 affirmations are checked on the '+
@@ -15457,19 +15406,11 @@ function fmRender(){
   const body=document.getElementById('forms-panel-body'), foot=document.getElementById('forms-panel-foot'),
         title=document.querySelector('#forms-panel .pmp-title'), back=document.getElementById('fm-back');
   if(!body) return;
-  if(title) title.textContent = fmView==='form' ? (fmForm(fmFormId)||{}).title||'Form'
-    : fmView==='org' ? 'Institution Profile'
-    : fmView==='pick' ? 'Choose blocks' : 'Compliance Forms';
+  if(title) title.textContent = fmView==='form' ? (fmForm(fmFormId)||{}).title||'Form' : 'Compliance Forms';
   if(back) back.style.display = fmView==='list' ? 'none' : 'inline-block';
-  body.innerHTML = fmView==='list' ? fmRenderList()
-    : fmView==='org' ? fmRenderOrg()
-    : fmView==='pick' ? fmRenderPicker() : fmRenderForm();
+  body.innerHTML = fmView==='list' ? fmRenderList() : fmRenderForm();
   if(foot){
-    if(fmView==='pick'){
-      foot.style.display='flex';
-      foot.innerHTML='<div class="fm-bar"><div class="fm-bt">Ticked blocks become this answer, in the order they appear.</div></div>'+
-        '<button class="fm-cta" onclick="fmPickDone()">Done</button>';
-    }else if(fmView==='form'){
+    if(fmView==='form'){
       const s=fmStatus();
       foot.style.display='flex';
       const a=fmAns(fmProgId,fmFormId);
@@ -15482,7 +15423,7 @@ function fmRender(){
     }else{ foot.style.display='none'; foot.innerHTML=''; }
   }
   fmRefreshBadge();
-  if((fmView==='form'||fmView==='pick') && !_fmTpl[fmFormId]) fmEnsureTemplate();
+  if(fmView==='form' && !_fmTpl[fmFormId]) fmEnsureTemplate();
 }
 // A template committed a minute ago is the normal case, so a failed read
 // must offer another go rather than a dead end.
