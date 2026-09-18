@@ -14902,16 +14902,17 @@ function base64ToBytes(b64){
 // Same two-step read as githubReadFileStatus, but the blob stays binary.
 async function githubReadBinary(path){
   const token=githubActiveToken();
-  if(!token) return { status:'error' };
+  if(!token) return { status:'error', why:'this browser has no GitHub token' };
   try{
     const meta=await fetch(githubRepoUrl('/contents/'+path+'?ref='+GITHUB_BRANCH),{headers:githubHeaders(token),cache:'no-store'});
-    if(!meta.ok) return { status: meta.status===404?'not_found':'error' };
+    if(!meta.ok) return { status: meta.status===404?'not_found':'error', code:meta.status,
+                          why:'GitHub returned '+meta.status+' for '+path+(meta.status===404?' — check the path, or the upload may not have finished':'') };
     const m=await meta.json();
     const blob=await fetch(githubRepoUrl('/git/blobs/'+m.sha),{headers:githubHeaders(token),cache:'no-store'});
-    if(!blob.ok) return { status:'error' };
+    if(!blob.ok) return { status:'error', code:blob.status, why:'GitHub returned '+blob.status+' reading the file itself' };
     const b=await blob.json();
     return { status:'ok', bytes:base64ToBytes(b.content) };
-  }catch(e){ return { status:'error' }; }
+  }catch(e){ return { status:'error', why:'no response from GitHub (offline, or the request was blocked)' }; }
 }
 async function fmParse(form,bytes){
   const entries=dxUnzip(bytes);
@@ -14924,9 +14925,11 @@ async function fmParse(form,bytes){
   _fmTpl[form.id]={ bytes, fields, unmatched };
   return _fmTpl[form.id];
 }
+const _fmTplErr={};
 async function fmTemplate(form,quiet){
   if(_fmTpl[form.id]) return _fmTpl[form.id];
   const r=await githubReadBinary(form.path);
+  _fmTplErr[form.id] = r.status==='ok' ? null : (r.why||'the template could not be read');
   if(r.status!=='ok'){
     if(!quiet) await appAlert(r.status==='not_found'
       ? 'The form template is not in the content repo yet.\n\nCommit the blank .docx to:\n'+form.path+'\n\nOr use "Load template from this computer" to try it without committing.'
@@ -15175,6 +15178,14 @@ function fmRender(){
   }
   if(fmView==='form' && !_fmTpl[fmFormId]) fmEnsureTemplate();
 }
+// A template committed a minute ago is the normal case, so a failed read
+// must offer another go rather than a dead end.
+function fmRetryTemplate(){
+  const foot=document.getElementById('forms-panel-foot');
+  if(foot) foot.innerHTML='<div class="fm-bar"><div class="fm-bt">Reading the template…</div></div>';
+  delete _fmTpl[fmFormId]; delete _fmTplErr[fmFormId];
+  fmEnsureTemplate();
+}
 async function fmEnsureTemplate(){
   const form=fmForm(fmFormId); if(!form||_fmTpl[form.id]) return;
   const t=await fmTemplate(form,true);
@@ -15184,8 +15195,9 @@ async function fmEnsureTemplate(){
     fmRender();
   }else{
     const foot=document.getElementById('forms-panel-foot');
-    if(foot) foot.innerHTML='<div class="fm-bar"><div class="fm-bt">Template not found at '+escapeHtml(form.path)+'</div></div>'+
-      '<button class="fm-cta sec" onclick="fmLoadLocalTemplate(\''+form.id+'\')">Load from this computer…</button>';
+    if(foot) foot.innerHTML='<div class="fm-bar"><div class="fm-bt">'+escapeHtml(_fmTplErr[form.id]||('Could not read '+form.path))+'</div></div>'+
+      '<button class="fm-cta" onclick="fmRetryTemplate()">Try again</button>'+
+      '<button class="fm-cta sec" onclick="fmLoadLocalTemplate(\''+form.id+'\')">From this computer…</button>';
   }
 }
 
