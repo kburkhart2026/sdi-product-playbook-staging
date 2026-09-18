@@ -14842,22 +14842,31 @@ function fmSections(progId){
   (phasesOf(p)||[]).forEach(ph=>(ph.sections||[]).forEach(s=>out.push({id:s.id,name:s.name,phase:ph.name})));
   return out;
 }
-// innerText only reports text that is actually being rendered. On a DETACHED
+// innerText only reports text that is actually being RENDERED. On a detached
 // element it silently degrades to textContent, which is why a three-column
-// table arrived as "ChannelPriorityBudget %". The scratch container therefore
-// has to be in the document AND visible -- visibility:hidden and display:none
-// both put us straight back to textContent. Off-screen is the only way to have
-// it laid out without it being seen.
-let _fmScratchEl=null;
-function fmScratch(){
-  if(_fmScratchEl && _fmScratchEl.isConnected) return _fmScratchEl;
-  const d=document.createElement('div');
-  d.id='fm-scratch';
-  d.setAttribute('aria-hidden','true');
-  d.style.cssText='position:absolute;left:-10000px;top:0;width:760px;z-index:-1;pointer-events:none;';
-  document.body.appendChild(d);
-  _fmScratchEl=d;
-  return d;
+// table arrived as "ChannelPriorityBudget %"; visibility:hidden and
+// display:none do the same. So the scratch copy has to be laid out somewhere.
+// It goes in an off-screen iframe rather than in this document, because
+// dropping real block markup into the page wakes the app's own machinery --
+// the table-upgrade MutationObserver watches the whole document and would
+// start rewriting scratch content, and the document-level input listener sits
+// right behind it. The iframe is a plain document with no app code in it.
+let _fmFrame=null;
+function fmScratchDoc(){
+  if(_fmFrame && _fmFrame.isConnected && _fmFrame.contentDocument) return _fmFrame.contentDocument;
+  const f=document.createElement('iframe');
+  f.id='fm-scratch';
+  f.setAttribute('aria-hidden','true');
+  f.setAttribute('tabindex','-1');
+  f.style.cssText='position:absolute;left:-10000px;top:0;width:780px;height:600px;border:0;';
+  document.body.appendChild(f);
+  const d=f.contentDocument;
+  d.open();
+  d.write('<!doctype html><meta charset="utf-8"><style>body{margin:0;font:14px system-ui,sans-serif;width:760px}'+
+          'table{border-collapse:collapse}td,th{padding:2px 6px}</style><body></body>');
+  d.close();
+  _fmFrame=f;
+  return f.contentDocument;
 }
 // Checklist ticks, callout icons and trend arrows are characters inside her
 // blocks, not toolbar chrome, so removing the toolbars never reached them.
@@ -14886,13 +14895,13 @@ function fmTableLines(el){
 function fmBlocks(progId,secId){
   const html=(blockStore||{})[progId+':'+secId]||'';
   if(!html) return [];
-  const host=fmScratch();
+  const doc=fmScratchDoc(), host=doc.body;
   host.innerHTML=html;
   const out=[];
   [...host.children].forEach((bl,i)=>{
     const clone=bl.cloneNode(true);
     clone.querySelectorAll('.bctrl,.tbl-toolbar,.add-block-area,.vid-change-bar,script,style').forEach(n=>n.remove());
-    host.appendChild(clone);                       // attached, so innerText lays out
+    host.appendChild(clone);                       // rendered, so innerText lays out
     let kind='other';
     for(const k in FM_KIND) if(clone.querySelector('.'+k)||clone.classList.contains(k)){ kind=FM_KIND[k]; break; }
     let text = kind==='table' ? fmTableLines(clone) : fmClean(clone.innerText);
@@ -15157,10 +15166,29 @@ function fmPanelOpenFor(){
   if(typeof clogPanelOpen!=='undefined' && clogPanelOpen) clogPanelClose();
   if(typeof revPanelOpen!=='undefined' && revPanelOpen) revPanelClose();
   fmPanelOpen=true; fmProgId=curProgId; fmView='list'; fmStep=0;
+  if(viewerModeForced) fmRefreshFromManifest();
   const panel=document.getElementById('forms-panel'), handle=document.getElementById('forms-panel-handle');
   panel.style.flex='0 0 '+(uiState.sidePanelWidth||460)+'px';
   panel.style.display='flex'; handle.style.display='block';
   fmRender();
+}
+let _fmRefreshedAt=0;
+// Read-only sessions only: pull the current answers and ready flags out of
+// the manifest, so a reviewer who left the tab open still sees what Karen
+// released since. Throttled -- the manifest is not tiny.
+async function fmRefreshFromManifest(){
+  if(!viewerModeForced) return;
+  if(Date.now()-_fmRefreshedAt < 60000) return;
+  _fmRefreshedAt=Date.now();
+  try{
+    const r=await githubReadFileStatus(GITHUB_MANIFEST_PATH);
+    if(r.status!=='ok' || !r.json || !r.json.formStore) return;
+    const fs=r.json.formStore;
+    if(fs.org && typeof fs.org==='object') formStore.org=fs.org;
+    if(fs.answers && typeof fs.answers==='object') formStore.answers=fs.answers;
+    if(fmPanelOpen) fmRender();
+    fmRefreshBadge();
+  }catch(e){}
 }
 function fmPanelClose(){
   fmPanelOpen=false;
@@ -15287,7 +15315,7 @@ function fmRenderList(){
     const ready=!!a.ready;
     const when=ready?new Date(a.ready).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'';
     const pill=ready?'<span class="fm-chip ok">Form ready</span>'
-                    :'<span class="fm-chip '+(viewerModeForced?'man':'need')+'">'+(viewerModeForced?'In preparation':'Not marked ready')+'</span>';
+                    :'<span class="fm-chip '+(viewerModeForced?'man':'need')+'">'+(viewerModeForced?'Preparing':'Draft')+'</span>';
     const sub=f.agency+' · '+f.revision+(ready?' · marked ready '+when:'');
     if(viewerModeForced){
       h+='<div class="fm-row'+(ready?'':' fm-rowoff')+'">'+
@@ -17181,6 +17209,9 @@ function applyStagingSkin(){
 }
 
 function hideEditorChromeForViewer(){
+  const si=document.getElementById('save-ind');
+  if(si){ si.textContent=''; }   // nothing in a read-only session saves
+
   document.querySelectorAll('.mode-btn').forEach(b=>b.style.display='none');
   const tbExtra=document.getElementById('tb-extra'); if(tbExtra) tbExtra.style.display='none';
   const tbMore=document.getElementById('tb-more'); if(tbMore) tbMore.style.display='none';
@@ -17260,18 +17291,22 @@ async function init(){
     const manifest = await probeManifest();
     if(manifest && manifest.v === 3 && (manifest.programs||[]).length > 0){
       manifestMode = true;
+      viewerModeForced = true;   // BEFORE applyState -- see note below
       applyState(manifest);
       loaded = true;
-      viewerModeForced = true;
       setHubSyncStatus('viewer');
     } else {
     const githubState = await loadFromGithub();
     // Require real content, not just a valid version number -- a shared link that
     // technically "loads" 0 programs is not a working link, it's a broken one.
     if(githubState && githubState.v === 2 && (githubState.programs||[]).length > 0){
+      // Same ordering rule as the manifest branch above: the read-only flag
+      // has to be true before any content is applied, or a save scheduled
+      // during that step puts 'Saving...' in the topbar of a session that
+      // will never save, and nothing ever clears it.
+      viewerModeForced = true;
       applyState(githubState);
       loaded = true;
-      viewerModeForced = true;
       setHubSyncStatus('viewer');
     } else {
       setHubSyncStatus('warn');
