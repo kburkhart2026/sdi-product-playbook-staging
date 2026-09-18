@@ -1291,6 +1291,8 @@ body.is-staging::before{content:'';position:fixed;top:0;left:0;right:0;height:3p
 .fm-branch button.sel{border-color:#9B2743;background:#FBEDF0;}
 .fm-branch b{display:block;font-size:12.5px;margin-bottom:2px;}
 .fm-branch span{font-size:11.5px;color:#7A7168;}
+.fm-row{display:flex;gap:10px;align-items:center;}
+.fm-rowoff{opacity:.6;}
 .fm-picksec{border:1px solid var(--bdr);border-radius:7px;margin-bottom:9px;overflow:hidden;}
 .fm-pickhead{background:#FAFAF8;padding:6px 9px;font-size:11.5px;font-weight:700;border-bottom:1px solid var(--bdr);}
 .fm-pickrow{display:flex;gap:8px;align-items:flex-start;padding:7px 9px;border-bottom:1px solid var(--bdr);font-size:11.5px;cursor:pointer;}
@@ -1968,7 +1970,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
           <button class="tb-more" id="tb-more" onclick="toggleTbExtra(event)" title="More tools">⋯</button>
               <button class="pm-board-btn" id="pm-board-viewer-btn" onclick="pmOpenSmart()" style="display:none">📋 PM Board</button>
               <button class="pm-board-btn" id="rev-viewer-btn" onclick="revPanelOpenFor()" style="display:none" title="See every comment on this program">&#128172; Comments</button>
-              <button class="pm-board-btn" id="forms-viewer-btn" onclick="fmOpenSmart()" style="display:none" title="Generate an accreditor form for this program">&#128196; Forms</button>
+              <button class="pm-board-btn" id="forms-viewer-btn" onclick="fmOpenSmart()" style="display:none" title="Accreditor forms for this program">&#128196; Forms<span id="forms-badge" class="clog-badge" style="display:none">0</span></button>
               <button class="pm-board-btn" id="clog-btn" onclick="clogOpenSmart()" title="What changed">&#128203; Changelog<span id="clog-badge" class="clog-badge" style="display:none">0</span></button>
           <div class="export-wrap">
             <button class="export-btn" onclick="toggleExport(event)">Export ▾</button>
@@ -5930,6 +5932,7 @@ function openProgram(id, forceLoc){
   // so the sidebar badges are right straight away, not only for the sections
   // that happen to get opened.
   cmtPrimeProgram(id);
+  try{ fmRefreshBadge(); }catch(e){}
   uiState.lastProg=id; saveUIState();
   if(forceLoc){ goTo(forceLoc.phid, forceLoc.sid); return; }
   const last=uiState.lastLoc[id];
@@ -14823,6 +14826,7 @@ function fmAns(progId,formId){
   if(!a.lic)  a.lic='no';
   if(!a.vals||typeof a.vals!=='object') a.vals={};
   if(!a.secPick||typeof a.secPick!=='object') a.secPick={};
+  if(typeof a.ready!=='number') a.ready=0;   // 0 = not released to compliance
   return a;
 }
 function fmDirty(){
@@ -15145,13 +15149,14 @@ function fmOpenSmart(){
   fmPanelOpenFor();
 }
 function fmPanelOpenFor(){
+  // Whatever a viewer was last looking at, they come back to the list.
   if(typeof pmPanelOpen!=='undefined' && pmPanelOpen) pmPanelClose();
   if(typeof marginPanelOpen!=='undefined' && marginPanelOpen) marginPanelClose();
   if(typeof ccPanelOpen!=='undefined' && ccPanelOpen) ccPanelClose();
   if(typeof crsPanelOpen!=='undefined' && crsPanelOpen) crsPanelClose();
   if(typeof clogPanelOpen!=='undefined' && clogPanelOpen) clogPanelClose();
   if(typeof revPanelOpen!=='undefined' && revPanelOpen) revPanelClose();
-  fmPanelOpen=true; fmProgId=curProgId; fmView='list';
+  fmPanelOpen=true; fmProgId=curProgId; fmView='list'; fmStep=0;
   const panel=document.getElementById('forms-panel'), handle=document.getElementById('forms-panel-handle');
   panel.style.flex='0 0 '+(uiState.sidePanelWidth||460)+'px';
   panel.style.display='flex'; handle.style.display='block';
@@ -15187,6 +15192,32 @@ function fmEdit(key,val){
   if(key.indexOf('org:')===0){ fmOrg()[key.slice(4)]=val; }
   else { fmAns(fmProgId,fmFormId).vals[key]=val; }
   fmDirty();
+}
+// Karen's sign-off. Until she marks a form ready, a viewer sees that it is
+// being prepared and cannot download it -- which is the whole point: the
+// reviewer should never pull a half-finished application.
+async function fmToggleReady(){
+  if(viewerModeForced) return;
+  const a=fmAns(fmProgId,fmFormId);
+  if(a.ready){ a.ready=0; fmDirty(); fmRender(); toast('Marked as still in preparation'); return; }
+  const st=fmStatus();
+  if(st.need){
+    const ok=await appConfirm(st.need+' field'+(st.need===1?' is':'s are')+' still blank. '+
+      'Mark it ready for compliance anyway?');
+    if(!ok) return;
+  }
+  a.ready=Date.now(); fmDirty(); fmRender(); fmRefreshBadge();
+  toast('Ready — compliance can download it from the Forms panel');
+}
+function fmReadyCount(progId){
+  const byForm=((formStore.answers||{})[progId||fmProgId||curProgId]||{});
+  return FM_FORMS.filter(f=>(byForm[f.id]||{}).ready).length;
+}
+function fmRefreshBadge(){
+  const b=document.getElementById('forms-badge');
+  if(!b) return;
+  const n=curProgId?fmReadyCount(curProgId):0;
+  b.textContent=n; b.style.display=n?'inline-block':'none';
 }
 function fmSetChoice(what,val){
   if(viewerModeForced) return;
@@ -15246,21 +15277,41 @@ function fmSetSec(slot,secId){
 }
 
 function fmRenderList(){
-  const t=_fmTpl[FM_FORMS[0].id];
-  let h='<p class="fm-hint">Forms for <b>'+escapeHtml(((programs||[]).filter(p=>p.id===fmProgId)[0]||{}).name||'')+'</b>. '+
-        'Templates are read from the content repo, so a new revision is a file swap.</p><div class="fm-list">';
+  const prog=(programs||[]).filter(p=>p.id===fmProgId)[0]||{};
+  let h='<p class="fm-hint">'+(viewerModeForced
+      ? 'Accreditor forms for <b>'+escapeHtml(prog.name||'')+'</b>. Download the Word file and submit it as it is.'
+      : 'Forms for <b>'+escapeHtml(prog.name||'')+'</b>. Templates are read from the content repo, so a new revision is a file swap.')+
+    '</p><div class="fm-list">';
   FM_FORMS.forEach(f=>{
-    const st=_fmTpl[f.id];
-    h+='<button class="fm-row" onclick="fmGo(\'form\',\''+f.id+'\')">'+
-       '<div class="fm-rt">'+escapeHtml(f.title)+'</div>'+
-       '<div class="fm-rs">'+escapeHtml(f.agency+' · '+f.revision+' · '+f.expect+' fields')+'</div>'+
-       '<div class="fm-src">'+(st?'<span class="fm-chip ok">template loaded</span>':'<span class="fm-chip man">template loads when you open it</span>')+
-       (st&&st.unmatched?'<span class="fm-chip need">'+st.unmatched+' unmapped</span>':'')+'</div></button>';
+    const a=((formStore.answers||{})[fmProgId]||{})[f.id]||{};
+    const ready=!!a.ready;
+    const when=ready?new Date(a.ready).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'';
+    const pill=ready?'<span class="fm-chip ok">Form ready</span>'
+                    :'<span class="fm-chip '+(viewerModeForced?'man':'need')+'">'+(viewerModeForced?'In preparation':'Not marked ready')+'</span>';
+    const sub=f.agency+' · '+f.revision+(ready?' · marked ready '+when:'');
+    if(viewerModeForced){
+      h+='<div class="fm-row'+(ready?'':' fm-rowoff')+'">'+
+         '<div style="flex:1;min-width:0"><div class="fm-rt">'+escapeHtml(f.title)+'</div>'+
+         '<div class="fm-rs">'+escapeHtml(sub)+'</div>'+
+         '<div class="fm-src">'+pill+'</div></div>'+
+         (ready?'<button class="fm-cta" onclick="fmQuickGenerate(\''+f.id+'\')">Download Word</button>':'')+
+         '</div>';
+    }else{
+      const st=_fmTpl[f.id];
+      h+='<button class="fm-row" onclick="fmGo(\'form\',\''+f.id+'\')">'+
+         '<div class="fm-rt">'+escapeHtml(f.title)+'</div>'+
+         '<div class="fm-rs">'+escapeHtml(sub+' · '+f.expect+' fields')+'</div>'+
+         '<div class="fm-src">'+pill+
+         (st?'<span class="fm-chip man">template loaded</span>':'')+
+         (st&&st.unmatched?'<span class="fm-chip need">'+st.unmatched+' unmapped</span>':'')+
+         '</div></button>';
+    }
   });
-  h+='<button class="fm-row" onclick="fmGo(\'org\')">'+
-     '<div class="fm-rt">Institution Profile</div>'+
-     '<div class="fm-rs">Answered once, reused by every form</div>'+
-     '<div class="fm-src">'+fmChip(fmOrgMissing()?fmOrgMissing()+' still blank':'complete',!!fmOrgMissing())+'</div></button>';
+  if(!viewerModeForced)
+    h+='<button class="fm-row" onclick="fmGo(\'org\')">'+
+       '<div class="fm-rt">Institution Profile</div>'+
+       '<div class="fm-rs">Answered once, reused by every form</div>'+
+       '<div class="fm-src">'+fmChip(fmOrgMissing()?fmOrgMissing()+' still blank':'complete',!!fmOrgMissing())+'</div></button>';
   return h+'</div>';
 }
 function fmOrgMissing(){
@@ -15329,7 +15380,7 @@ function fmRenderForm(){
   if(fmStep===2){
     const secs=fmSections(fmProgId);
     h+='<p class="fm-q">Section 2 — the proposed change</p>'+
-       '<p class="fm-hint">Each answer is drafted from a section of this program. Edit it here and the edit stays with the form, not the section.</p>';
+       '<p class="fm-hint">Each answer is drafted from whichever blocks across this program best answer that question. Edit it here and the edit stays with the form, not the section.</p>';
     FM_SEC_SLOTS.forEach(slot=>{
       const key='sec:'+slot.k, r=fmResolve(key,fmProgId,a);
       // "Redraft" has to be offered after a hand-pick too, not only after an
@@ -15393,12 +15444,16 @@ function fmRender(){
     }else if(fmView==='form'){
       const s=fmStatus();
       foot.style.display='flex';
+      const a=fmAns(fmProgId,fmFormId);
       foot.innerHTML='<div class="fm-bar"><div class="fm-bt">'+escapeHtml(s.msg)+'</div>'+
         '<div class="fm-track"><i style="width:'+(s.total?Math.round(100*(s.total-s.need)/s.total):0)+'%"></i></div></div>'+
-        (viewerModeForced?'<span class="fm-chip man">read-only</span>':'')+
+        (viewerModeForced?'<span class="fm-chip man">read-only</span>'
+          :'<button class="fm-cta sec" onclick="fmToggleReady()"'+(s.ready?'':' disabled')+'>'+
+            (a.ready?'Ready ✓':'Mark ready')+'</button>')+
         '<button class="fm-cta" onclick="fmGenerate()"'+(s.ready?'':' disabled')+'>Generate Word file</button>';
     }else{ foot.style.display='none'; foot.innerHTML=''; }
   }
+  fmRefreshBadge();
   if((fmView==='form'||fmView==='pick') && !_fmTpl[fmFormId]) fmEnsureTemplate();
 }
 // A template committed a minute ago is the normal case, so a failed read
@@ -15425,6 +15480,18 @@ async function fmEnsureTemplate(){
 }
 
 /* ---------- generate ---------- */
+// A viewer clicks the form and gets the file. No steps, no options -- there
+// is nothing there they are allowed to change.
+async function fmQuickGenerate(formId){
+  const form=fmForm(formId); if(!form) return;
+  fmFormId=formId;
+  const foot=document.getElementById('forms-panel-foot');
+  if(foot){ foot.style.display='flex'; foot.innerHTML='<div class="fm-bar"><div class="fm-bt">Building the document…</div></div>'; }
+  const t=_fmTpl[form.id]||await fmTemplate(form);
+  if(!t){ fmRender(); return; }
+  await fmGenerate();
+  fmRender();
+}
 async function fmGenerate(){
   const form=fmForm(fmFormId); if(!form) return;
   const t=_fmTpl[form.id]||await fmTemplate(form);
@@ -15441,7 +15508,7 @@ async function fmGenerate(){
     else if(r.v) answers[f.idx]=r.v;
     else if(r.need) blanks.push(f.label.slice(0,70));
   });
-  if(blanks.length){
+  if(blanks.length && !viewerModeForced){
     const ok=await appConfirm(blanks.length+' field'+(blanks.length===1?' is':'s are')+' still blank and will stay as the form’s placeholder text:\n\n• '+
       blanks.slice(0,8).join('\n• ')+(blanks.length>8?'\n• …and '+(blanks.length-8)+' more':'')+'\n\nGenerate anyway?');
     if(!ok) return;
