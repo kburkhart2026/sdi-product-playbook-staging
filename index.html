@@ -1291,6 +1291,13 @@ body.is-staging::before{content:'';position:fixed;top:0;left:0;right:0;height:3p
 .fm-branch button.sel{border-color:#9B2743;background:#FBEDF0;}
 .fm-branch b{display:block;font-size:12.5px;margin-bottom:2px;}
 .fm-branch span{font-size:11.5px;color:#7A7168;}
+.fm-picksec{border:1px solid var(--bdr);border-radius:7px;margin-bottom:9px;overflow:hidden;}
+.fm-pickhead{background:#FAFAF8;padding:6px 9px;font-size:11.5px;font-weight:700;border-bottom:1px solid var(--bdr);}
+.fm-pickrow{display:flex;gap:8px;align-items:flex-start;padding:7px 9px;border-bottom:1px solid var(--bdr);font-size:11.5px;cursor:pointer;}
+.fm-pickrow:last-child{border-bottom:0;}
+.fm-pickrow:hover{background:#FAFAF8;}
+.fm-pickrow input{margin-top:2px;}
+.fm-src .link{border:0;background:none;color:#9B2743;font-size:11px;font-weight:650;text-decoration:underline;text-underline-offset:2px;padding:0;cursor:pointer;}
 .fm-aff{border:1px solid var(--bdr);border-radius:7px;padding:4px 10px;}
 .fm-affrow{display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--bdr);font-size:11.5px;color:#4A433D;align-items:flex-start;}
 .fm-affrow:last-child{border-bottom:0;}
@@ -2082,7 +2089,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
         <div id="forms-panel" style="display:none">
           <div class="pmp-head">
             <div class="pmp-title">Compliance Forms</div>
-            <button class="pmp-dashbtn" id="fm-back" onclick="fmGo('list')" style="display:none" title="Back to the form list">&#8592; Forms</button>
+            <button class="pmp-dashbtn" id="fm-back" onclick="fmBack()" style="display:none" title="Back">&#8592; Forms</button>
             <button class="pmp-iconbtn" onclick="fmPanelClose()" title="Close panel">&#10005;</button>
           </div>
           <div id="forms-panel-body"></div>
@@ -14678,8 +14685,8 @@ const FM_DEAC_MAP={
   "ents set forth in the deac accreditation handbook and bylaws#1":"affirm",
   "n opinion about the institution its programs or its services#1":"affirm",
   "edures and applicable federal and state laws and regulations#1":"affirm",
-  "provide evidence of payment scanned copy of check or similar#1":"manual:feeDate",
-  "section 5 documentation#1":"manual:feeDate",
+  "provide evidence of payment scanned copy of check or similar#1":"blank",
+  "section 5 documentation#1":"blank",
   "institution s president ceo#1":"org:presCertName",
   "institution s president ceo signature#1":"blank",
   "date#1":"blank"
@@ -14749,12 +14756,25 @@ for(let r=1;r<=5;r++) ['Addr','City','State','Zip','Type','Contact'].forEach(sfx
 });
 
 // The five Section 2 narratives, each drafted from a section of this program.
+// Each question carries the section names that usually answer it and the
+// words that appear in a real answer to it. Both are used for scoring -- the
+// section name alone picked Marketing -> Channels for "rationale" once.
 const FM_SEC_SLOTS = [
- {k:'rationale',      l:'Rationale for the proposed change',        match:/position|overview|rationale|concept|narrative/i},
- {k:'mission',        l:'How it supports the institutional mission', match:/mission|position/i},
- {k:'population',     l:'Target student population',                match:/audience|persona|voice of customer|\bvoc\b|admission/i},
- {k:'infrastructure', l:'Anticipated academic infrastructure changes', match:/staffing|operation|budget|readiness/i},
- {k:'market',         l:'Market research and findings',             match:/market research|competitive/i}
+ {k:'rationale',      l:'Rationale for the proposed change',
+  match:/position|overview|rationale|concept|narrative|curriculum/i,
+  kw:['rationale','industry','demand','employer','workforce','need','driver','skill','align','update','revis','expand','advanc','respond','trend','career']},
+ {k:'mission',        l:'How it supports the institutional mission',
+  match:/mission|position|overview/i,
+  kw:['mission','specialized','distance education','practical application','career-focused','accessible','flexible','commit','institution','align']},
+ {k:'population',     l:'Target student population',
+  match:/audience|persona|voice of customer|\bvoc\b|admission|position|market/i,
+  kw:['student','learner','adult','veteran','military','hobby','career change','working','enroll','audience','demographic','age','population']},
+ {k:'infrastructure', l:'Anticipated academic infrastructure changes',
+  match:/staffing|operation|budget|readiness|resource|faculty/i,
+  kw:['faculty','staff','instructor','infrastructure','resource','lms','equipment','facility','capacity','hire','support','already offers','no anticipated']},
+ {k:'market',         l:'Market research and findings',
+  match:/market research|competitive|market/i,
+  kw:['market','research','industry','growth','report','survey','employment','salary','bls','demand','projected','percent','%','graduates','job']}
 ];
 
 
@@ -14818,19 +14838,140 @@ function fmSections(progId){
   (phasesOf(p)||[]).forEach(ph=>(ph.sections||[]).forEach(s=>out.push({id:s.id,name:s.name,phase:ph.name})));
   return out;
 }
-function fmSectionText(progId,secId){
-  const html=(blockStore||{})[progId+':'+secId]||'';
-  if(!html) return '';
+// innerText only reports text that is actually being rendered. On a DETACHED
+// element it silently degrades to textContent, which is why a three-column
+// table arrived as "ChannelPriorityBudget %". The scratch container therefore
+// has to be in the document AND visible -- visibility:hidden and display:none
+// both put us straight back to textContent. Off-screen is the only way to have
+// it laid out without it being seen.
+let _fmScratchEl=null;
+function fmScratch(){
+  if(_fmScratchEl && _fmScratchEl.isConnected) return _fmScratchEl;
   const d=document.createElement('div');
-  d.innerHTML=html;
-  d.querySelectorAll('.tbl-toolbar,.bctrl,.add-block-area,script,style').forEach(n=>n.remove());
-  return (d.innerText||d.textContent||'').replace(/\n{3,}/g,'\n\n').replace(/[ \t]+/g,' ').trim();
+  d.id='fm-scratch';
+  d.setAttribute('aria-hidden','true');
+  d.style.cssText='position:absolute;left:-10000px;top:0;width:760px;z-index:-1;pointer-events:none;';
+  document.body.appendChild(d);
+  _fmScratchEl=d;
+  return d;
 }
-function fmPickSection(progId,slot){
-  const secs=fmSections(progId);
-  const hit=secs.filter(s=>slot.match.test(s.name)&&fmSectionText(progId,s.id).length>80)[0]
-         || secs.filter(s=>slot.match.test(s.name))[0];
-  return hit?hit.id:'';
+// Checklist ticks, callout icons and trend arrows are characters inside her
+// blocks, not toolbar chrome, so removing the toolbars never reached them.
+const FM_GLYPHS=/[\u2190-\u21FF\u2300-\u27BF\u2B00-\u2BFF\u2600-\u26FF\uFE00-\uFE0F\u2800-\u28FF]|[\uD83C-\uDBFF][\uDC00-\uDFFF]/g;
+function fmClean(t){
+  return String(t||'').replace(FM_GLYPHS,'')
+    .replace(/[ \t\u00a0]+/g,' ')
+    .replace(/ ?\n ?/g,'\n')
+    .replace(/\n{3,}/g,'\n\n')
+    .trim();
+}
+const FM_KIND={ 'block-text':'prose','block-callout':'prose','block-table-wrap':'table','block-table':'table',
+  'block-swot':'structured','block-decision':'structured','block-approval':'structured','block-costtable':'structured',
+  'block-timeline':'structured','block-margin':'structured','block-margin-scenario':'structured','block-course-card':'structured',
+  'block-image':'media','block-video':'media','block-file':'media','block-embed':'media','block-divider':'media' };
+function fmTableLines(el){
+  const rows=[...el.querySelectorAll('tr')];
+  if(!rows.length) return '';
+  const cell=c=>fmClean(c.innerText).replace(/\n+/g,' ').trim();
+  const heads=[...rows[0].children].map(cell);
+  return rows.slice(1,12).map(tr=>[...tr.children].map(cell)
+      .map((v,i)=>v?((heads[i]?heads[i]+': ':'')+v):'')
+      .filter(Boolean).join('; ')).filter(Boolean).join('\n');
+}
+// One record per block, with its text already readable.
+function fmBlocks(progId,secId){
+  const html=(blockStore||{})[progId+':'+secId]||'';
+  if(!html) return [];
+  const host=fmScratch();
+  host.innerHTML=html;
+  const out=[];
+  [...host.children].forEach((bl,i)=>{
+    const clone=bl.cloneNode(true);
+    clone.querySelectorAll('.bctrl,.tbl-toolbar,.add-block-area,.vid-change-bar,script,style').forEach(n=>n.remove());
+    host.appendChild(clone);                       // attached, so innerText lays out
+    let kind='other';
+    for(const k in FM_KIND) if(clone.querySelector('.'+k)||clone.classList.contains(k)){ kind=FM_KIND[k]; break; }
+    let text = kind==='table' ? fmTableLines(clone) : fmClean(clone.innerText);
+    if(kind==='table') text=fmClean(text);
+    clone.remove();
+    if(kind!=='media' && text) out.push({ i, bid: bl.dataset.bid||('i'+i), kind, text });
+  });
+  host.innerHTML='';
+  return out;
+}
+function fmSectionText(progId,secId){
+  return fmBlocks(progId,secId).map(b=>b.text).join('\n\n');
+}
+// How well one block answers one DEAC question. Prose wins; a table or a
+// tracker loses, because neither reads as a narrative however clean it is.
+function fmKwHits(text,slot){
+  const low=text.toLowerCase();
+  let n=0; slot.kw.forEach(w=>{ if(low.indexOf(w)>=0) n++; });
+  return n;
+}
+function fmScore(block,slot,secName){
+  let sc=0;
+  if(slot.match.test(secName)) sc+=4;
+  // Discriminative, not absolute: a long well-written block hits every
+  // question's vocabulary, so what matters is whether it hits THIS question's
+  // words more than the others'. Without this, one strong paragraph was
+  // drafted into four of the five answers.
+  const mine=fmKwHits(block.text,slot);
+  let best=0;
+  FM_SEC_SLOTS.forEach(o=>{ if(o.k!==slot.k) best=Math.max(best,fmKwHits(block.text,o)); });
+  sc+=Math.min(mine,6)*0.6 + (mine-best)*1.6;
+  if(block.kind==='prose') sc+=5;
+  if(block.kind==='table') sc-=7;
+  if(block.kind==='structured') sc-=6;
+  const n=block.text.length;
+  if(n<140) sc-=4; else if(n>=200&&n<=4000) sc+=2;
+  const sentences=(block.text.match(/[.!?](\s|$)/g)||[]).length;
+  sc+=Math.min(sentences,6)*0.5;
+  return sc;
+}
+// Which question a block answers best. A block is only offered to that one,
+// so five answers do not all open with the same paragraph.
+function fmBestSlot(block,secName){
+  let bk='', bs=-99;
+  FM_SEC_SLOTS.forEach(o=>{ const v=fmScore(block,o,secName); if(v>bs){ bs=v; bk=o.k; } });
+  return bk;
+}
+// Assemble an answer from the whole program, not one chosen section.
+function fmAutoDraft(progId,slot){
+  const secs=fmSections(progId), cand=[];
+  secs.forEach((s,si)=>fmBlocks(progId,s.id).forEach(b=>{
+    cand.push({ secId:s.id, secName:s.name, phase:s.phase, si, bid:b.bid, i:b.i,
+                kind:b.kind, text:b.text, score:fmScore(b,slot,s.name) });
+  }));
+  let picked=cand.filter(c=>c.score>=6 && fmBestSlot(c,c.secName)===slot.k);
+  if(!picked.length) picked=cand.filter(c=>c.score>=6);   // nothing else fits it
+  picked.sort((a,b)=>b.score-a.score);
+  const used=[]; let chars=0;
+  for(const c of picked){
+    if(used.length>=3) break;
+    if(used.length && chars+c.text.length>3000) continue;
+    if(used.length>=2 && !used.some(u=>u.secId===c.secId)) continue;
+    used.push(c); chars+=c.text.length;
+  }
+  used.sort((a,b)=> a.si-b.si || a.i-b.i);
+  return used;
+}
+// The blocks behind an answer: whatever she chose by hand, else the draft.
+function fmUsedBlocks(progId,a,slot){
+  const chosen=(a.secUse||{})[slot.k];
+  if(chosen && chosen.length){
+    const out=[];
+    fmSections(progId).forEach((s,si)=>{
+      if(!chosen.some(c=>c.secId===s.id)) return;
+      fmBlocks(progId,s.id).forEach(b=>{
+        if(chosen.some(c=>c.secId===s.id&&c.bid===b.bid))
+          out.push({secId:s.id,secName:s.name,phase:s.phase,si,bid:b.bid,i:b.i,kind:b.kind,text:b.text});
+      });
+    });
+    out.sort((x,y)=> x.si-y.si || x.i-y.i);
+    return out;
+  }
+  return fmAutoDraft(progId,slot);
 }
 // Course figures for a program, from the Course Database. Returns null rather
 // than a guess when nothing is linked -- a wrong credit-hour count on an
@@ -14895,10 +15036,12 @@ function fmResolve(srcSpec,progId,a){
   if(head==='sec'){
     if(a.vals[s]) return { v:a.vals[s], src:'edited here' };
     const slot=FM_SEC_SLOTS.filter(x=>x.k===tail)[0];
-    const secId=a.secPick[tail] || (slot?fmPickSection(progId,slot):'');
-    const txt=secId?fmSectionText(progId,secId):'';
-    const sec=fmSections(progId).filter(x=>x.id===secId)[0];
-    return { v:txt, src:sec?('drafted from '+sec.phase+' → '+sec.name):'no section chosen', need:!txt, draft:!!txt };
+    if(!slot) return { v:'', src:'unmapped', need:true };
+    const used=fmUsedBlocks(progId,a,slot);
+    const txt=used.map(u=>u.text).join('\n\n');
+    const names=[...new Set(used.map(u=>u.phase+' → '+u.secName))];
+    return { v:txt, src: used.length? ('drafted from '+names.join(' + ')) : 'nothing in this program answers it yet',
+             need:!txt, draft:!!txt, used };
   }
   const want = head==='new' ? 'new' : 'existing';
   if(head==='new'||head==='ex'){
@@ -14992,9 +15135,10 @@ function fmLoadLocalTemplate(formId){
 
 /* ---------- the panel ---------- */
 let fmPanelOpen=false, fmView='list', fmFormId='', fmStep=0, fmProgId='';
-// The 14 affirmations are always checked on the generated document, so
-// they are not a step here -- there is nothing to decide.
-const FM_STEPS=['Type of change','Program','Narratives','Documentation'];
+// Only what the app can actually answer is a step. The affirmations are
+// always checked, and Sections 5 and 6 are completed by hand on the
+// generated document, so neither is anything to decide here.
+const FM_STEPS=['Type of change','Program','Narratives'];
 
 function fmOpenSmart(){
   if(!curProgId){ toast('Open a program first — forms are filled per program.'); return; }
@@ -15020,6 +15164,7 @@ function fmPanelClose(){
   if(handle) handle.style.display='none';
 }
 function fmGo(view,formId){ fmView=view; if(formId!==undefined) fmFormId=formId; fmStep=0; fmRender(); }
+function fmBack(){ if(fmView==='pick'){ fmPickDone(); return; } fmGo('list'); }
 function fmSetStep(n){ fmStep=n; fmRender(); }
 
 function fmChip(src,need){
@@ -15048,6 +15193,50 @@ function fmSetChoice(what,val){
   const a=fmAns(fmProgId,fmFormId);
   if(what==='type') a.type=Number(val); else a[what]=val;
   fmDirty(); fmRender();
+}
+// Back to the app's own draft: forget both the hand-picked blocks and the
+// edit, and let the router choose again.
+function fmRedraft(slotKey){
+  if(viewerModeForced) return;
+  const a=fmAns(fmProgId,fmFormId);
+  delete a.vals['sec:'+slotKey];
+  if(a.secUse) delete a.secUse[slotKey];
+  fmDirty(); fmRender();
+}
+let fmPickSlot='';
+function fmOpenPicker(slotKey){ if(viewerModeForced) return; fmPickSlot=slotKey; fmView='pick'; fmRender(); }
+function fmPickToggle(secId,bid,on){
+  const a=fmAns(fmProgId,fmFormId);
+  if(!a.secUse) a.secUse={};
+  const cur=(a.secUse[fmPickSlot]||[]).filter(c=>!(c.secId===secId&&c.bid===bid));
+  if(on) cur.push({secId,bid});
+  a.secUse[fmPickSlot]=cur;
+  delete a.vals['sec:'+fmPickSlot];   // a new selection replaces an old edit
+  fmDirty();
+}
+function fmPickDone(){ fmView='form'; fmStep=2; fmRender(); }
+function fmRenderPicker(){
+  const a=fmAns(fmProgId,fmFormId), slot=FM_SEC_SLOTS.filter(x=>x.k===fmPickSlot)[0]||FM_SEC_SLOTS[0];
+  const chosen=(a.secUse||{})[fmPickSlot]||[];
+  const auto=chosen.length?[]:fmAutoDraft(fmProgId,slot);
+  let h='<p class="fm-q">'+escapeHtml(slot.l)+'</p>'+
+    '<p class="fm-hint">Tick the blocks this answer should use. They can come from more than one section. '+
+    (chosen.length?'':'The ticked ones are what the app drafted on its own.')+'</p>';
+  fmSections(fmProgId).forEach(sec=>{
+    const blocks=fmBlocks(fmProgId,sec.id).filter(b=>b.kind!=='media');
+    if(!blocks.length) return;
+    h+='<div class="fm-picksec"><div class="fm-pickhead">'+escapeHtml(sec.phase+' → '+sec.name)+'</div>';
+    blocks.forEach(b=>{
+      const on = chosen.length ? chosen.some(c=>c.secId===sec.id&&c.bid===b.bid)
+                               : auto.some(u=>u.secId===sec.id&&u.bid===b.bid);
+      h+='<label class="fm-pickrow"><input type="checkbox"'+(on?' checked':'')+
+         ' onchange="fmPickToggle(\''+sec.id+'\',\''+b.bid+'\',this.checked)">'+
+         '<span><span class="fm-chip '+(b.kind==='prose'?'ok':'man')+'">'+b.kind+'</span> '+
+         escapeHtml(b.text.slice(0,150))+(b.text.length>150?'…':'')+'</span></label>';
+    });
+    h+='</div>';
+  });
+  return h;
 }
 function fmSetSec(slot,secId){
   if(viewerModeForced) return;
@@ -15143,23 +15332,25 @@ function fmRenderForm(){
        '<p class="fm-hint">Each answer is drafted from a section of this program. Edit it here and the edit stays with the form, not the section.</p>';
     FM_SEC_SLOTS.forEach(slot=>{
       const key='sec:'+slot.k, r=fmResolve(key,fmProgId,a);
-      const cur=a.secPick[slot.k]||fmPickSection(fmProgId,slot);
+      // "Redraft" has to be offered after a hand-pick too, not only after an
+      // edit -- otherwise the only way back is unticking blocks one by one.
+      const edited=!!a.vals[key] || !!((a.secUse||{})[slot.k]||[]).length;
+      const used=r.used||[];
       h+='<div class="fm-f'+(r.need?' need':'')+'">'+
          '<label>'+escapeHtml(slot.l)+'</label>'+
-         '<select onchange="fmSetSec(\''+slot.k+'\',this.value)"'+(viewerModeForced?' disabled':'')+'>'+
-         '<option value="">— choose a section —</option>'+
-         secs.map(s=>'<option value="'+s.id+'"'+(s.id===cur?' selected':'')+'>'+escapeHtml(s.phase+' → '+s.name)+'</option>').join('')+
-         '</select>'+
          '<textarea rows="5"'+(viewerModeForced?' readonly':'')+' oninput="fmEdit(\''+key+'\',this.value)">'+escapeHtml(r.v)+'</textarea>'+
-         '<div class="fm-src">'+fmChip(r.src,r.need)+'</div></div>';
+         '<div class="fm-src">'+fmChip(r.src,r.need)+
+         (used.length?'<span class="fm-chip man">'+used.length+' block'+(used.length===1?'':'s')+'</span>':'')+
+         (viewerModeForced?'':
+            '<button class="link" onclick="fmOpenPicker(\''+slot.k+'\')">Choose blocks…</button>'+
+            (edited?'<button class="link" onclick="fmRedraft(\''+slot.k+'\')">Redraft from the program</button>':''))+
+         '</div></div>';
     });
+    h+='<p class="fm-note">Nothing else is asked here: Section 4’s 14 affirmations are checked on the '+
+       'generated document, and Sections 5 and 6 — the fee evidence, the signature and the date — are '+
+       'left blank to be completed by hand.</p>';
   }
-  if(fmStep===3){
-    h+='<p class="fm-q">Section 5 — documentation</p>'+
-       fmTextField('manual:feeDate','Application fee — date mailed and reference',a.vals['manual:feeDate']||'','you answer this',!a.vals['manual:feeDate'])+
-       '<p class="fm-note">Section 4’s 14 institutional affirmations are checked on the generated document. '+
-       'Section 6 carries the president’s printed name, with the signature line and date left blank to be signed electronically.</p>';
-  }
+
   return h;
 }
 function fmRadio(what,opts,cur){
@@ -15187,11 +15378,19 @@ function fmRender(){
   const body=document.getElementById('forms-panel-body'), foot=document.getElementById('forms-panel-foot'),
         title=document.querySelector('#forms-panel .pmp-title'), back=document.getElementById('fm-back');
   if(!body) return;
-  if(title) title.textContent = fmView==='form' ? (fmForm(fmFormId)||{}).title||'Form' : (fmView==='org'?'Institution Profile':'Compliance Forms');
+  if(title) title.textContent = fmView==='form' ? (fmForm(fmFormId)||{}).title||'Form'
+    : fmView==='org' ? 'Institution Profile'
+    : fmView==='pick' ? 'Choose blocks' : 'Compliance Forms';
   if(back) back.style.display = fmView==='list' ? 'none' : 'inline-block';
-  body.innerHTML = fmView==='list' ? fmRenderList() : (fmView==='org' ? fmRenderOrg() : fmRenderForm());
+  body.innerHTML = fmView==='list' ? fmRenderList()
+    : fmView==='org' ? fmRenderOrg()
+    : fmView==='pick' ? fmRenderPicker() : fmRenderForm();
   if(foot){
-    if(fmView==='form'){
+    if(fmView==='pick'){
+      foot.style.display='flex';
+      foot.innerHTML='<div class="fm-bar"><div class="fm-bt">Ticked blocks become this answer, in the order they appear.</div></div>'+
+        '<button class="fm-cta" onclick="fmPickDone()">Done</button>';
+    }else if(fmView==='form'){
       const s=fmStatus();
       foot.style.display='flex';
       foot.innerHTML='<div class="fm-bar"><div class="fm-bt">'+escapeHtml(s.msg)+'</div>'+
@@ -15200,7 +15399,7 @@ function fmRender(){
         '<button class="fm-cta" onclick="fmGenerate()"'+(s.ready?'':' disabled')+'>Generate Word file</button>';
     }else{ foot.style.display='none'; foot.innerHTML=''; }
   }
-  if(fmView==='form' && !_fmTpl[fmFormId]) fmEnsureTemplate();
+  if((fmView==='form'||fmView==='pick') && !_fmTpl[fmFormId]) fmEnsureTemplate();
 }
 // A template committed a minute ago is the normal case, so a failed read
 // must offer another go rather than a dead end.
