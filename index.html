@@ -14680,9 +14680,9 @@ const FM_DEAC_MAP={
   "edures and applicable federal and state laws and regulations#1":"affirm",
   "provide evidence of payment scanned copy of check or similar#1":"manual:feeDate",
   "section 5 documentation#1":"manual:feeDate",
-  "institution s president ceo#1":"org:presName",
-  "institution s president ceo signature#1":"manual:signature",
-  "date#1":"manual:date"
+  "institution s president ceo#1":"org:presCertName",
+  "institution s president ceo signature#1":"blank",
+  "date#1":"blank"
 };
 
 /* ---------- what forms exist ---------- */
@@ -14732,6 +14732,7 @@ const FM_ORG_FIELDS = [
  {k:'presTitle',l:'President/CEO — title'},
  {k:'presEmail',l:'President/CEO — email'},
  {k:'presPhone',l:'President/CEO — telephone'},
+ {k:'presCertName',l:'President/CEO — name as signed (Section 6)'},
  {k:'coName',  l:'Compliance officer'},
  {k:'coTitle', l:'Compliance officer — title'},
  {k:'coEmail', l:'Compliance officer — email'},
@@ -14756,8 +14757,39 @@ const FM_SEC_SLOTS = [
  {k:'market',         l:'Market research and findings',             match:/market research|competitive/i}
 ];
 
+
+// Section 1 as SDI has filed it before, taken from the ASFT submission. These
+// are starting values, not constants -- every one is editable in the panel,
+// and an edit sticks. Seeded once per browser so clearing a field keeps it
+// cleared rather than having it reappear on the next boot.
+const FM_ORG_DEFAULTS = {
+  name:'Sonoran Desert Institute',
+  formerNames:'',
+  mainAddr:'1555 W. University Drive, Suite 103',
+  mainCity:'Tempe', mainState:'AZ', mainZip:'85281', mainContact:'Traci Lee',
+  loc1Addr:'7230 N. Glen Harbor Blvd.', loc1City:'Glendale', loc1State:'AZ',
+  loc1Zip:'85307', loc1Type:'Administrative Site', loc1Contact:'Traci Lee',
+  website:'www.sdi.edu', phone:'480-314-2102',
+  mission:'To provide students with current, industry-driven, quality education with a focus on specialized programs delivered through online distance education and practical application. SDI is committed to continuous improvement in our instructional processes and the overall student experience. We accomplish this through student and graduate achievement and satisfaction as well as our stakeholder relationships and reputation in the markets we serve.',
+  presName:'Traci Lee', presTitle:'President',
+  presEmail:'traci.lee@sdi.edu', presPhone:'480-744-0738',
+  presCertName:'Traci A. Lee',
+  coName:'Teresa Speicher', coTitle:'Compliance Manager',
+  coEmail:'teresa.speicher@sdi.edu', coPhone:'412-302-2096',
+  accList:'N/A', accDenied:'N/A', accPending:'N/A',
+  defDelivery:'Online', defTerms:'Semesters', defLanguage:'English'
+};
+
 /* ---------- stored answers ---------- */
-function fmOrg(){ if(!formStore.org||typeof formStore.org!=='object') formStore.org={}; return formStore.org; }
+function fmOrg(){
+  if(!formStore.org||typeof formStore.org!=='object') formStore.org={};
+  const o=formStore.org;
+  if(!o.__seeded){
+    Object.keys(FM_ORG_DEFAULTS).forEach(k=>{ if(o[k]===undefined) o[k]=FM_ORG_DEFAULTS[k]; });
+    o.__seeded=1;
+  }
+  return o;
+}
 function fmAns(progId,formId){
   if(!formStore.answers) formStore.answers={};
   if(!formStore.answers[progId]) formStore.answers[progId]={};
@@ -14843,6 +14875,9 @@ function fmProgFacts(progId){
 function fmResolve(srcSpec,progId,a){
   const org=fmOrg(), s=String(srcSpec||''), c=s.indexOf(':'), head=c<0?s:s.slice(0,c), tail=c<0?'':s.slice(c+1);
   if(head==='affirm') return { v:true, src:'affirmation' };
+  // Deliberately left as the form's own blank line: the president signs
+  // and dates the generated file electronically.
+  if(head==='blank') return { v:'', src:'left for the signer' };
   if(head==='type')   return { v:a.type===Number(tail), src:'your choice', need:a.type<0 };
   if(head==='cbd'||head==='acc1'||head==='acc2'||head==='acc3'||head==='lic')
     return { v:a[head]===tail, src:'your choice' };
@@ -14957,7 +14992,9 @@ function fmLoadLocalTemplate(formId){
 
 /* ---------- the panel ---------- */
 let fmPanelOpen=false, fmView='list', fmFormId='', fmStep=0, fmProgId='';
-const FM_STEPS=['Type of change','Program','Narratives','Affirmations','Certify'];
+// The 14 affirmations are always checked on the generated document, so
+// they are not a step here -- there is nothing to decide.
+const FM_STEPS=['Type of change','Program','Narratives','Documentation'];
 
 function fmOpenSmart(){
   if(!curProgId){ toast('Open a program first — forms are filled per program.'); return; }
@@ -15118,23 +15155,10 @@ function fmRenderForm(){
     });
   }
   if(fmStep===3){
-    h+='<p class="fm-q">Section 4 — institutional affirmations</p>'+
-       '<p class="fm-hint">All 14 are checked on the generated form. They are shown so nothing is attested off-screen.</p>'+
-       '<div class="fm-aff">';
-    const t=_fmTpl[fmFormId];
-    const items=t?t.fields.filter(f=>form.map[f.fp]==='affirm'):[];
-    if(!items.length) h+='<p class="fm-note">Open the form once so the template loads, and the 14 affirmations will be listed here.</p>';
-    items.forEach(f=>{ h+='<div class="fm-affrow"><span class="fm-box on">&#10003;</span><span>'+escapeHtml(f.label)+'</span></div>'; });
-    h+='</div>';
-  }
-  if(fmStep===4){
-    const org=fmOrg();
-    h+='<p class="fm-q">Sections 5 & 6 — documentation and certification</p>'+
+    h+='<p class="fm-q">Section 5 — documentation</p>'+
        fmTextField('manual:feeDate','Application fee — date mailed and reference',a.vals['manual:feeDate']||'','you answer this',!a.vals['manual:feeDate'])+
-       fmTextField('org:presName','Institution’s President/CEO',org.presName||'','Institution Profile',!org.presName)+
-       fmTextField('manual:signature','President/CEO signature (typed)',a.vals['manual:signature']||'','you answer this',!a.vals['manual:signature'])+
-       fmTextField('manual:date','Date',a.vals['manual:date']||'','you answer this',!a.vals['manual:date'])+
-       '<p class="fm-note">The signature is typed by the president, which the form states has the same effect as signing on paper.</p>';
+       '<p class="fm-note">Section 4’s 14 institutional affirmations are checked on the generated document. '+
+       'Section 6 carries the president’s printed name, with the signature line and date left blank to be signed electronically.</p>';
   }
   return h;
 }
