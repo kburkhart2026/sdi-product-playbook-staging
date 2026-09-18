@@ -17149,9 +17149,16 @@ function applyStagingSkin(){
   try{ document.title = '[STAGING] ' + document.title; }catch(e){}
 }
 
-function hideEditorChromeForViewer(){
+// Nothing in a read-only session saves, so the topbar must never be left
+// saying it is saving. Called both when viewer chrome goes up and again the
+// moment the read-only flag is set, which is the last point anything could
+// have written it.
+function clearSaveIndicator(){
   const si=document.getElementById('save-ind');
-  if(si){ si.textContent=''; }   // nothing in a read-only session saves
+  if(si){ si.textContent=''; si.style.color=''; }
+}
+function hideEditorChromeForViewer(){
+  clearSaveIndicator();
 
   document.querySelectorAll('.mode-btn').forEach(b=>b.style.display='none');
   const tbExtra=document.getElementById('tb-extra'); if(tbExtra) tbExtra.style.display='none';
@@ -17233,6 +17240,7 @@ async function init(){
     if(manifest && manifest.v === 3 && (manifest.programs||[]).length > 0){
       manifestMode = true;
       viewerModeForced = true;   // BEFORE applyState -- see note below
+      clearSaveIndicator();
       applyState(manifest);
       loaded = true;
       setHubSyncStatus('viewer');
@@ -17246,6 +17254,7 @@ async function init(){
       // during that step puts 'Saving...' in the topbar of a session that
       // will never save, and nothing ever clears it.
       viewerModeForced = true;
+      clearSaveIndicator();
       applyState(githubState);
       loaded = true;
       setHubSyncStatus('viewer');
