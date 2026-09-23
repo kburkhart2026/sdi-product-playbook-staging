@@ -14893,26 +14893,26 @@ const FM_NSC_REFS = ['XX.A','XX.B.1-2','XX.B.3','XX.B.4','XX.C','XX.D','XX.E','X
 // pairing below is against the option each control actually ticks, verified
 // paragraph by paragraph against the .docx.
 const FM_NSC_MAP={
-  "hange below select all that apply and submit applicable fees#0":"nsc:0",
-  "valuation study reference deac handbook part ii section xx a#0":"nsc:1",
-  "content reference deac handbook part ii section xx b 1 and 2#0":"nsc:2",
-  " the outcomes reference deac handbook part ii section xx b 3#0":"nsc:3",
-  "gram outcomes reference deac handbook part ii section xx b 4#0":"nsc:4",
-  "pproved by deac reference deac handbook part ii section xx c#0":"nsc:5",
-  "ce standard v b reference deac handbook part ii section xx d#0":"nsc:6",
-  "iv hea programs reference deac handbook part ii section xx e#0":"nsc:7",
-  "ccredited scope reference deac handbook part ii section xx f#0":"nsc:8",
-  "urse or program reference deac handbook part ii section xx g#0":"nsc:9",
-  "the institution reference deac handbook part ii section xx h#0":"nsc:10",
-  "institution name#0":"org:name",
-  "institution website#0":"org:website",
-  "primary contact#0":"org:coName",
-  "email#0":"org:coEmail",
-  "telephone#0":"org:phone",
-  "provide evidence of payment scanned copy of check or similar#0":"manual:nscFeeDate",
-  "institution s president ceo#0":"org:presCertName",
-  "institution s president ceo signature#0":"blank",
-  "date#0":"blank"
+  "hange below select all that apply and submit applicable fees#1":"nsc:0",
+  "valuation study reference deac handbook part ii section xx a#1":"nsc:1",
+  "content reference deac handbook part ii section xx b 1 and 2#1":"nsc:2",
+  " the outcomes reference deac handbook part ii section xx b 3#1":"nsc:3",
+  "gram outcomes reference deac handbook part ii section xx b 4#1":"nsc:4",
+  "pproved by deac reference deac handbook part ii section xx c#1":"nsc:5",
+  "ce standard v b reference deac handbook part ii section xx d#1":"nsc:6",
+  "iv hea programs reference deac handbook part ii section xx e#1":"nsc:7",
+  "ccredited scope reference deac handbook part ii section xx f#1":"nsc:8",
+  "urse or program reference deac handbook part ii section xx g#1":"nsc:9",
+  "the institution reference deac handbook part ii section xx h#1":"nsc:10",
+  "institution name#1":"org:name",
+  "institution website#1":"org:website",
+  "primary contact#1":"org:coName",
+  "email#1":"org:coEmail",
+  "telephone#1":"org:phone",
+  "provide evidence of payment scanned copy of check or similar#1":"manual:nscFeeDate",
+  "institution s president ceo#1":"org:presCertName",
+  "institution s president ceo signature#1":"blank",
+  "date#1":"blank"
 };
 
 const FM_FORMS = [{
@@ -16199,8 +16199,13 @@ async function fmGenerate(){
   const t=_fmTpl[form.id]||await fmTemplate(form);
   if(!t) return;
   const a=fmAns(fmProgId,fmFormId);
-  if(a.type<0){ await appAlert('Choose the type of substantive change first (step 1).'); return; }
-  if(!a.branch){ await appAlert('Say whether this is a new program or a change to an existing one (step 2).'); return; }
+  // Those two questions belong to the substantive form; this one asks neither.
+  if(fmIsNsc(form)){
+    if(!Object.keys(a.nsc||{}).length){ await appAlert('Select at least one non-substantive change first.'); return; }
+  }else{
+    if(a.type<0){ await appAlert('Choose the type of substantive change first (step 1).'); return; }
+    if(!a.branch){ await appAlert('Say whether this is a new program or a change to an existing one (step 2).'); return; }
+  }
   const answers={}; const blanks=[];
   t.fields.forEach(f=>{
     const spec=form.map[f.fp];
