@@ -14628,10 +14628,29 @@ function dxBlueRun(doc,run){
   if(!run) return;
   let rPr=dxChildEls(run).filter(c=>c.localName==='rPr'&&c.namespaceURI===DX_W)[0];
   if(!rPr){ rPr=doc.createElementNS(DX_W,'w:rPr'); run.insertBefore(rPr,run.firstChild); }
-  let col=dxChildEls(rPr).filter(c=>c.localName==='color'&&c.namespaceURI===DX_W)[0];
-  if(!col){ col=doc.createElementNS(DX_W,'w:color'); rPr.appendChild(col); }
-  col.setAttributeNS(DX_W,'w:val',DX_FILL_COLOR);
+  dxBluePr(doc,rPr);
 }
+// w:rPr is a sequence, so w:color has to sit in its schema position or Word
+// drops it. Everything listed here legally precedes it.
+const DX_RPR_BEFORE_COLOR = ['rStyle','rFonts','b','bCs','i','iCs','caps','smallCaps','strike',
+  'dstrike','outline','shadow','emboss','imprint','noProof','snapToGrid','vanish','webHidden'];
+function dxBluePr(doc,rPr){
+  if(!rPr) return;
+  let col=dxChildEls(rPr).filter(c=>c.localName==='color'&&c.namespaceURI===DX_W)[0];
+  if(!col){
+    col=doc.createElementNS(DX_W,'w:color');
+    const after=dxChildEls(rPr).filter(c=>c.namespaceURI===DX_W && DX_RPR_BEFORE_COLOR.indexOf(c.localName)<0)[0];
+    if(after) rPr.insertBefore(col,after); else rPr.appendChild(col);
+  }
+  col.setAttributeNS(DX_W,'w:val',DX_FILL_COLOR);
+  // DEAC's placeholders are grey by THEME (background1, shaded 80%), and a
+  // theme colour wins over w:val -- so the value alone left the text grey.
+  ['themeColor','themeShade','themeTint'].forEach(a=>{
+    col.removeAttributeNS(DX_W,a);
+    col.removeAttribute('w:'+a);
+  });
+}
+
 
 function dxSetText(doc,f,text){
   if(!f.content) return false;
@@ -14662,6 +14681,9 @@ function dxSetText(doc,f,text){
     if(st && (st.getAttributeNS(DX_W,'val')||'')==='PlaceholderText') st.parentNode.removeChild(st);
     run.appendChild(rPr);
     dxBlueRun(doc,run);
+    // The control itself can carry the grey placeholder colour; this control
+    // now holds a real answer, so that goes blue as well.
+    if(f.pr) dxBluePr(doc, dxChildEls(f.pr).filter(c=>c.localName==='rPr'&&c.namespaceURI===DX_W)[0]);
   }
   String(text==null?'':text).split('\n').forEach((line,i)=>{
     if(i>0) run.appendChild(doc.createElementNS(DX_W,'w:br'));
