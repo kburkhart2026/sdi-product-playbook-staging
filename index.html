@@ -15889,9 +15889,33 @@ function cmSection(progId){
   }
   return named;
 }
+// "CUT-F -- Certificate in ..." is how a program is stored; the document wants
+// the name, not the code, which the file name and the footer carry anyway.
+function cmProgName(name){
+  const n=String(name||'').trim();
+  return n.replace(/^[A-Za-z0-9][A-Za-z0-9\-\/.]{0,14}\s*(?:--|\u2013|\u2014)\s*/,'').trim() || n;
+}
 function cmCellText(td){
   let t=(td.textContent||'').replace(/[▲▼✕✚✖]/g,' ');
   return t.replace(/\s+/g,' ').trim();
+}
+// Block-level structure becomes real line breaks; a detached DOM has no layout,
+// so innerText would silently collapse the whole block onto one line.
+function cmBlockText(el){
+  const BLOCK=/^(P|DIV|LI|TR|H1|H2|H3|H4|H5|H6|BLOCKQUOTE|SECTION)$/;
+  let out='';
+  (function walk(n){
+    for(const ch of n.childNodes){
+      if(ch.nodeType===3){ out+=ch.nodeValue.replace(/\s+/g,' '); continue; }
+      if(ch.nodeType!==1) continue;
+      if(ch.tagName==='BR'){ out+='\n'; continue; }
+      const isBlock=BLOCK.test(ch.tagName);
+      if(isBlock && out && !/\n$/.test(out)) out+='\n';
+      walk(ch);
+      if(isBlock && out && !/\n$/.test(out)) out+='\n';
+    }
+  })(el);
+  return out.split('\n').map(l=>l.trim()).filter(Boolean).join('\n');
 }
 // Pull the section apart into headings and tables, dropping the editing column.
 function cmParse(progId){
@@ -15902,24 +15926,29 @@ function cmParse(progId){
   const root=doc.getElementById('cmr');
   root.querySelectorAll('.tbl-rowops,.tbl-row-del,.tbl-add-row,.tbl-gear,.tbl-toolbar,.bctrl,.block-tag,.add-block-area,button,input,select,style,script').forEach(e=>e.remove());
   const parts=[];
-  Array.prototype.forEach.call(root.children,el=>{
-    const table=el.matches&&el.matches('table') ? el : el.querySelector&&el.querySelector('table');
-    if(table){
-      const trs=Array.prototype.slice.call(table.querySelectorAll('tr'));
-      if(!trs.length) return;
-      let rows=trs.map(tr=>Array.prototype.slice.call(tr.querySelectorAll('td,th')).map(cmCellText));
-      // the last column is the app's own row controls when it is empty throughout
-      const w=Math.max.apply(null,rows.map(r=>r.length));
-      rows=rows.map(r=>{ const c=r.slice(); while(c.length<w) c.push(''); return c; });
-      if(rows.every(r=>!r[w-1])) rows=rows.map(r=>r.slice(0,w-1));
-      const head=rows.shift()||[];
-      const plo=head.filter(h=>/^PLO\s*\d/i.test(h)).length>=3;
-      if(rows.length) parts.push({kind:'table', head, rows, plo});
-      return;
-    }
-    const txt=(el.textContent||'').replace(/\s+/g,' ').trim();
-    if(txt) parts.push({kind:'text', text:txt});
-  });
+  function readTable(table){
+    const trs=Array.prototype.slice.call(table.querySelectorAll('tr'));
+    if(!trs.length) return;
+    let rows=trs.map(tr=>Array.prototype.slice.call(tr.querySelectorAll('td,th')).map(cmCellText));
+    const w=Math.max.apply(null,rows.map(r=>r.length));
+    rows=rows.map(r=>{ const c=r.slice(); while(c.length<w) c.push(''); return c; });
+    // the last column is the app's own row controls when it is empty throughout --
+    // but never strip it down to nothing, which produced a table Word drew blank
+    if(w>2 && rows.every(r=>!r[w-1])) rows=rows.map(r=>r.slice(0,w-1));
+    const head=rows.shift()||[];
+    const plo=head.filter(h=>/^PLO\s*\d/i.test(h)).length>=3;
+    if(rows.length && head.length) parts.push({kind:'table', head, rows, plo});
+  }
+  // Walk in document order. A block holding BOTH prose and a table used to lose
+  // the prose, because only the table was read.
+  (function walk(node){
+    Array.prototype.forEach.call(node.children,el=>{
+      if(el.tagName==='TABLE'){ readTable(el); return; }
+      if(el.querySelector && el.querySelector('table')){ walk(el); return; }
+      const txt=cmBlockText(el);
+      if(txt) parts.push({kind:'text', text:txt});
+    });
+  })(root);
   return { section:sec, parts };
 }
 // A course owns every row until the next row that names a course.
@@ -15931,6 +15960,24 @@ function cmGroups(rows){
     else out[out.length-1].rows.push(r);
   });
   return out;
+}
+
+// The matrix names outcomes as "PLO 3" and nothing else, so the reader needs
+// the wording. It is already in the map -- as the first column of the alignment
+// table, or as prose -- so collect it rather than asking anyone to retype it.
+function cmPlos(parts){
+  const found={};
+  const take=str=>{
+    const m=/^PLO\s*(\d+)\s*[:.\u2013\u2014-]\s*(.+)$/i.exec(String(str||'').trim());
+    if(!m) return;
+    const n=Number(m[1]), text=m[2].trim();
+    if(!found[n] || text.length>found[n].length) found[n]=text;
+  };
+  parts.forEach(p=>{
+    if(p.kind==='table') p.rows.forEach(r=>take(r[0]));
+    else p.text.split('\n').forEach(take);
+  });
+  return Object.keys(found).map(Number).sort((a,b)=>a-b).map(n=>({n, text:found[n]}));
 }
 
 /* ---------- OOXML pieces ---------- */
@@ -16043,8 +16090,22 @@ function cmBodyXml(parsed,progName){
   x+=cmP('Sonoran Desert Institute  ·  generated '+
          new Date().toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric'}),
          {sz:15,color:'6B6560',after:200});
+  const plos=cmPlos(parsed.parts);
+  if(plos.length){
+    x+=cmP('Program Learning Outcomes',{b:true,sz:22,color:CM_INK,before:80,after:100});
+    x+=cmTable([1100, CM_BODY_W-1100], ['Outcome','Description'],
+      plos.map(pl=>({cells:['PLO '+pl.n, pl.text], keepNext:false, center:[]})));
+    x+=cmP('',{after:160});
+  }
   parsed.parts.forEach(part=>{
-    if(part.kind==='text'){ x+=cmP(part.text,{b:true,sz:20,color:CM_INK,before:240,after:80}); return; }
+    if(part.kind==='text'){
+      // a block's own lines stay separate lines instead of running together
+      part.text.split('\n').forEach((line,i)=>{
+        x+=cmP(line,{b:i===0,sz:i===0?20:16,color:i===0?CM_INK:'3A3A38',
+                     before:i===0?240:0,after:i===0?80:40});
+      });
+      return;
+    }
     if(part.plo){
       const n=part.head.length;
       const ploCount=part.head.filter(h=>/^PLO\s*\d/i.test(h)).length;
@@ -16078,9 +16139,10 @@ function cmBodyXml(parsed,progName){
   });
   return x;
 }
-async function cmBuildDocx(progId,progName){
+async function cmBuildDocx(progId,rawName){
   const parsed=cmParse(progId);
   if(!parsed) return null;
+  const progName=cmProgName(rawName);
   const logo=await cmLogoBytes();
   const NS='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '+
     'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '+
