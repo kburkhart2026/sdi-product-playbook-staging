@@ -4938,6 +4938,7 @@ async function doPersist(){
       'Nothing has been overwritten. Your unsaved changes are still in this window '+
       'and in the backup you take in step 1.');
   }
+  return ok;   // callers that must know whether GitHub actually has it
 }
 let _staleWarned = false;
 
@@ -11900,10 +11901,26 @@ async function applySnapshotMerge(snap, label){
     await saveSpace({ programs, phases: clonePhases(PHASES), blockStore, sectionStatus, sectionLocks,
       sectionComments, sectionUpdated, blockTags, pmStore, marginStore, knowledgeStore, standardsStore, courseStore, shelfStore, changelogStore, formStore, v:2, ts: Date.now() });
   }catch(err){ await appAlert('Restore failed while writing to browser storage: '+err.message); return; }
+  // Writing to this browser is not enough. Boot reads the manifest from GitHub
+  // and applyState()s it over whatever is here, so a merge that never reached
+  // GitHub is silently undone by its own reload. Push it first.
+  let pushed=true, pushWhy='';
+  if(githubMode()==='editor'){
+    const touch=id=>{ if(!id) return; dirtyPrograms.add(id); loadedPrograms.add(id); };
+    (snap.programs||[]).forEach(p=>touch(p.id));
+    Object.keys(snap.blockStore||{}).forEach(k=>{ const i=k.indexOf(':'); if(i>0) touch(k.slice(0,i)); });
+    try{ pushed = !!(await doPersist()); }
+    catch(err){ pushed=false; pushWhy=err.message||String(err); }
+    if(!pushed && !pushWhy) pushWhy=ghLastErrorText();
+  }
   window.__skipPersist=true;
   await appAlert('Added '+addedProgs+' program(s), '+addedSecs+' section entr(ies) and '+addedBlocks+
-    ' section(s) of content from '+addedFrom+'.\n\nNothing already here was replaced.\n\nThe page will now reload.');
-  location.reload();
+    ' section(s) of content from '+addedFrom+'.\n\nNothing already here was replaced.'+
+    (pushed ? '\n\nThe page will now reload.'
+            : '\n\n\u26a0 It was saved in this browser but NOT to GitHub'+(pushWhy?' ('+pushWhy+')':'')+
+              '.\n\nDo NOT reload until it saves, or the import will be lost. Close this, fix the '+
+              'connection, and press Ctrl/Cmd+S.'));
+  if(pushed) location.reload();
 }
 
 // Roll back to the version saved before the most recent write (IDB 'prev' slot).
