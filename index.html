@@ -1447,6 +1447,8 @@ body.view-mode .wysiwyg-bar{display:none!important;}
 .btool-copy:hover{background:#dbeafe;color:#1e40af;}
 /* ===== Added: hub utility (backup) buttons ===== */
 .hub-util-btn{background:rgba(255,255,255,0.12);color:#fff;border:none;padding:8px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity 0.12s;margin-right:6px;}
+#hub-editor-actions .export-menu{color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;text-transform:none;letter-spacing:normal;font-weight:400;text-align:left;width:236px;}
+#hub-editor-actions .export-opt{white-space:nowrap;}
 .hub-util-btn:hover{opacity:0.85;}
 /* ===== Added: copy-block modal ===== */
 .cb-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:10000;align-items:center;justify-content:center;}
@@ -1909,12 +1911,25 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
     <div class="hub-sync-status local" id="hub-sync-status">💾 Saving locally</div>
     <div id="hub-editor-actions" style="display:flex;align-items:center;gap:8px;">
       <button class="hub-util-btn" onclick="openPMDash()" title="Portfolio dashboard — PM roll-up across all programs">📊 Dashboard</button>
-      <button class="hub-util-btn" onclick="exportBackup()" title="Download a backup file of all programs and content">⬇ Backup</button>
-      <button class="hub-util-btn" onclick="triggerRestore()" title="Restore everything from a backup file">⬆ Restore</button>
+      <div class="export-wrap" style="margin-right:6px;">
+        <button class="hub-util-btn" id="hub-data-btn" style="margin-right:0;" onclick="toggleHubDataMenu(event)" title="Back up or restore the whole Playbook">⚙ Data ▾</button>
+        <div class="export-menu" id="hub-data-menu">
+          <div class="export-opt" onclick="closeHubMenus(); exportBackup();">💾 Backup all data (.json)</div>
+          <div class="export-opt" onclick="closeHubMenus(); backupToGithubNow();">⬆🐙 Back up to GitHub now</div>
+          <div class="export-opt" onclick="closeHubMenus(); triggerRestore();">⤴ Restore from backup…</div>
+          <div class="export-opt" onclick="closeHubMenus(); showVersionHistory();">🕓 Version history…</div>
+        </div>
+      </div>
       <input type="file" id="restore-file-input" accept="application/json,.json" style="display:none" onchange="handleRestoreFile(this)">
       <input type="file" id="import-prog-input" accept="application/json,.json" style="display:none" onchange="handleImportProgramFile(this)">
-      <button class="hub-new-btn" style="background:rgba(255,255,255,0.12);margin-right:6px;" onclick="showTemplateModal()">From Template</button>
-      <button class="hub-new-btn" onclick="newProgram()">+ New Program</button>
+      <div class="export-wrap">
+        <button class="hub-new-btn" id="hub-new-btn" onclick="toggleHubNewMenu(event)" title="Add a program: blank, from a template, or from a file">+ Add Program ▾</button>
+        <div class="export-menu" id="hub-new-menu">
+          <div class="export-opt" onclick="closeHubMenus(); newProgram();">📄 Blank program</div>
+          <div class="export-opt" onclick="closeHubMenus(); showTemplateModal();">📋 From a template…</div>
+          <div class="export-opt" onclick="closeHubMenus(); triggerImportProgram();">📥 Import from a file…</div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="hub-body">
@@ -2354,7 +2369,6 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
     <div class="export-opt" onclick="toggleAutoBackup()" id="auto-bk-opt">⏱ Daily backup file: On</div>
     <div class="export-opt" onclick="toggleGhBackup()" id="auto-gh-bk-opt">🐙 Daily GitHub backup: On</div>
     <div class="export-opt" onclick="closeDataBackupModal(); triggerRestore();">⤴ Restore from backup…</div>
-    <div class="export-opt" onclick="closeDataBackupModal(); triggerImportProgram();">📥 Import a program from a file…</div>
     <div class="export-opt" onclick="closeDataBackupModal(); loadBundledSnapshot();">📦 Load bundled snapshot…</div>
     <div class="export-opt" onclick="closeDataBackupModal(); recoverPrevVersion();">↺ Recover previous version…</div>
     <div class="export-opt" onclick="closeDataBackupModal(); showVersionHistory();">🕓 Version history…</div>
@@ -7819,6 +7833,10 @@ document.addEventListener('click',e=>{
   if(em&&!em.contains(e.target)&&!e.target.closest('.export-btn')) em.classList.remove('show');
   const tm=document.getElementById('tools-menu');
   if(tm&&!tm.contains(e.target)&&!e.target.closest('#tools-btn')) tm.classList.remove('show');
+  const hd=document.getElementById('hub-data-menu');
+  if(hd&&!hd.contains(e.target)&&!e.target.closest('#hub-data-btn')) hd.classList.remove('show');
+  const hn=document.getElementById('hub-new-menu');
+  if(hn&&!hn.contains(e.target)&&!e.target.closest('#hub-new-btn')) hn.classList.remove('show');
 });
 // True for anything where the browser's own editing behaviour should win:
 // real form controls, and anything inside a docked tool panel. Content blocks
@@ -7869,6 +7887,21 @@ function toggleToolsMenu(e){
   e.stopPropagation();
   const em=document.getElementById('export-menu'); if(em) em.classList.remove('show');
   document.getElementById('tools-menu').classList.toggle('show');
+}
+// ---- Hub topbar menus. Same popover pattern as Export/Tools, but these live
+// on the portfolio screen, so they only ever hold whole-Playbook actions.
+function closeHubMenus(){
+  ['hub-data-menu','hub-new-menu'].forEach(id=>{ const m=document.getElementById(id); if(m) m.classList.remove('show'); });
+}
+function toggleHubDataMenu(e){
+  e.stopPropagation();
+  const n=document.getElementById('hub-new-menu'); if(n) n.classList.remove('show');
+  const m=document.getElementById('hub-data-menu'); if(m) m.classList.toggle('show');
+}
+function toggleHubNewMenu(e){
+  e.stopPropagation();
+  const d=document.getElementById('hub-data-menu'); if(d) d.classList.remove('show');
+  const m=document.getElementById('hub-new-menu'); if(m) m.classList.toggle('show');
 }
 function exportPDF(){
   document.getElementById('export-menu').classList.remove('show');
