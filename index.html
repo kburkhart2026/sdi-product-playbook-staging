@@ -11581,6 +11581,36 @@ function updateBackupReminder(){
     pill.style.display=overdue?'':'none';
   }
 }
+// A restore writes the recovered state to THIS BROWSER only. Boot then reads
+// the manifest from GitHub and applyState()s it over the top, so the restore is
+// undone by its own reload and you are left believing you recovered something
+// you did not. The recovered state has to reach GitHub before the page reloads.
+//
+// Unlike the import, a restore REPLACES: saveSpace() has written the new state
+// to storage but the live globals still hold the old one, and doPersist() reads
+// the globals -- so the restored state is made live first, or GitHub would be
+// handed back exactly what we are trying to replace.
+async function pushRestoredStateToGithub(state){
+  if(githubMode()!=='editor') return { pushed:true, why:'' };
+  try{
+    renderedKey = null;          // stop saveCurrentBlocks writing the OLD section's DOM into the new store
+    applyState(state);
+    (state.programs||[]).forEach(pr=>{ if(pr&&pr.id){ dirtyPrograms.add(pr.id); loadedPrograms.add(pr.id); } });
+    Object.keys(state.blockStore||{}).forEach(k=>{
+      const i=k.indexOf(':'); if(i>0){ dirtyPrograms.add(k.slice(0,i)); loadedPrograms.add(k.slice(0,i)); }
+    });
+    const ok = !!(await doPersist());
+    return { pushed:ok, why: ok?'':ghLastErrorText() };
+  }catch(err){ return { pushed:false, why: err.message||String(err) }; }
+}
+function restoreOutcomeText(what, r){
+  return r.pushed
+    ? what+' restored, here and on GitHub.\n\nThe page will now reload.'
+    : what+' was restored in this browser but could NOT be saved to GitHub'+(r.why?' ('+r.why+')':'')+
+      '.\n\n\u26a0 Do NOT reload \u2014 reloading reads GitHub\'s older copy back over it and the '+
+      'restore is lost.\n\nBack up now (\u2699 Data & Backup \u2192 Backup all data), fix the connection, '+
+      'then press Ctrl/Cmd+S.';
+}
 function triggerImportProgram(){
   if(viewerModeForced) return;
   const inp=document.getElementById('import-prog-input'); if(inp){ inp.value=''; inp.click(); }
@@ -11675,8 +11705,9 @@ function handleRestoreFile(input){
       if(data.sdi_user_tags) localStorage.setItem('sdi_user_tags', JSON.stringify(data.sdi_user_tags));
     }catch(err){ await appAlert('Restore failed while writing to browser storage: '+err.message); input.value=''; return; }
     window.__skipPersist=true; // stop beforeunload from clobbering the restored data
-    await appAlert('Backup restored. The page will now reload.');
-    location.reload();
+    const r=await pushRestoredStateToGithub(data.sdi_space);
+    await appAlert(restoreOutcomeText('Backup', r));
+    if(r.pushed) location.reload();
   };
   reader.readAsText(file);
 }
@@ -11935,7 +11966,9 @@ async function recoverPrevVersion(){
     '\nSections with content: '+nSec+'\n\nThis replaces what is currently in this browser. Download a backup first if unsure.')) return;
   window.__skipPersist=true;
   try{ await saveSpace(prev); }catch(err){ window.__skipPersist=false; await appAlert('Rollback failed: '+err.message); return; }
-  location.reload();
+  const r=await pushRestoredStateToGithub(prev);
+  await appAlert(restoreOutcomeText('That version', r));
+  if(r.pushed) location.reload();
 }
 
 // Rolling history browser: pick any retained version and roll back to it.
@@ -11973,7 +12006,9 @@ async function showVersionHistory(){
       if(!await appConfirm('Restore the version from '+new Date(rec.meta.ts).toLocaleString()+'?\n\nThis replaces what is currently in this browser.')) return;
       window.__skipPersist=true;
       try{ await saveSpace(rec.state); }catch(err){ window.__skipPersist=false; await appAlert('Restore failed: '+err.message); return; }
-      location.reload();
+      const r=await pushRestoredStateToGithub(rec.state);
+      await appAlert(restoreOutcomeText('That version', r));
+      if(r.pushed) location.reload();
     };
   });
 }
