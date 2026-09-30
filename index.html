@@ -758,7 +758,7 @@ body.view-mode .file-edit,body.locked .file-edit{display:none;}
 .block-gallery[data-cols="4"] .gal-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
 .gal-item{display:flex;flex-direction:column;gap:6px;min-width:0;}
 .gal-pic{position:relative;}
-.gal-pic img{width:100%;display:block;height:150px;object-fit:contain;background:#f8fafc;border-radius:4px;cursor:zoom-in;}
+.gal-pic img{width:100%;display:block;height:150px;object-fit:contain;background:#f8fafc;border:1px solid var(--bdr);border-radius:4px;cursor:zoom-in;}
 /* fewer columns means a wider tile, so give it proportionally more height */
 .block-gallery[data-cols="2"] .gal-pic img{height:210px;}
 .block-gallery[data-cols="4"] .gal-pic img{height:118px;}
@@ -1437,6 +1437,7 @@ body.view-mode .pc2-rev{display:none!important;}
   .tbl-gear,.tbl-toolbar,.tbl-rowops,.tbl-row-del,.tbl-add-row,.tl-add-btn,.tl-del,.tl-date-clear,.dl-add,.ap-add,
   .tl-date-month,.tl-date-year,
   .vid-change-bar,.block-tag,.wysiwyg-bar,.btool-tag,.btool-copy,.bdel,.bdrag,
+  .gal-bar,.gal-grip,.gal-del,.gal-swap,.gal-empty,
   .cost-add,.cost-clear,.cost-foot-bar,.cost-rowdrag,
   .tbl-rowops,
   .ap-btn[onclick],.locked-banner,#clog-post-btn,.claude-panel,.link-pop,#tbl-fmt-pop,.export-menu,#databackup-modal,#shortcuts-modal{display:none!important;}
@@ -1448,6 +1449,7 @@ body.view-mode .pc2-rev{display:none!important;}
   /* collapse the empty row-delete column so it leaves no sliver */
   .block-table td:last-child:empty,.block-table th:last-child:empty{display:none!important;}
   .block-text,.block-callout,.block-table-wrap,.block-timeline,.block-decision,.block-approval,.block-image,.block-video,.block-embed{page-break-inside:avoid;}
+  .block-gallery,.gal-item{page-break-inside:avoid;}
   .swot-q{page-break-inside:avoid;}
   a{color:#0563C1;}
 }
@@ -5113,6 +5115,7 @@ function saveCurrentBlocks(){
     clone.querySelectorAll('.tf-sel').forEach(el=>el.classList.remove('tf-sel'));
     clone.querySelectorAll('.tbl-col-hl').forEach(el=>el.classList.remove('tbl-col-hl'));
     clone.querySelectorAll('.tools-open').forEach(el=>el.classList.remove('tools-open'));
+    clone.querySelectorAll('.gal-bar').forEach(el=>el.remove());   // rebuilt by galSyncBar on load; never stored, so no export can leak it
     const cur = clone.innerHTML;
     // Real edit detection: content changed vs. what was stored -> stamp the section
     if(blockStore[renderedKey] !== cur){
@@ -8231,7 +8234,7 @@ function _imgXml(img,ctx,maxW){
   const cap=maxW||600;
   if(nw>cap){ nh=Math.round(nh*cap/nw); nw=cap; }
   const cx=nw*9525, cy=nh*9525, did=(ctx.did=(ctx.did||0)+1);
-  return '<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+cx+'" cy="'+cy+'"/><wp:docPr id="'+did+'" name="Picture '+did+'"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="'+did+'" name="Picture '+did+'"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+rid+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
+  return '<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+cx+'" cy="'+cy+'"/><wp:docPr id="'+did+'" name="Picture '+did+'"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="'+did+'" name="Picture '+did+'"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="'+rid+'"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+cx+'" cy="'+cy+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:ln w="9525"><a:solidFill><a:srgbClr val="DAD5C9"/></a:solidFill></a:ln></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
 }
 function _inline(node,f,ctx){
   let out='';
@@ -8406,8 +8409,8 @@ th{background:#f0f0f0;font-weight:bold;font-size:9pt;text-transform:uppercase;}
 .block-gallery{border:1pt solid #ddd;border-radius:3pt;padding:6pt;page-break-inside:avoid;}
 .gal-grid{display:grid;gap:6pt;}
 .gal-item{page-break-inside:avoid;}
-.gal-pic img{max-height:2in;}
-.gal-bar{display:none!important;}
+.gal-pic img{max-height:2in;border:1pt solid #ddd;}
+.gal-bar,.gal-grip,.gal-del,.gal-swap,.gal-empty{display:none!important;}
 .block-callout{background:#eff6ff;border-left:4px solid #3b82f6;padding:10pt 14pt;border-radius:4pt;}
 .dl-status,.ap-btn,.prog-status{display:inline-block;padding:2pt 8pt;border-radius:10pt;font-size:9pt;}
 ul{list-style:disc outside;padding-left:22pt;margin:6pt 0;}
