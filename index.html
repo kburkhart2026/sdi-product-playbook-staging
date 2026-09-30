@@ -765,6 +765,11 @@ body.view-mode .file-edit,body.locked .file-edit{display:none;}
 .gal-cap{font-size:12px;line-height:1.45;color:var(--mut);outline:none;min-height:17px;}
 .gal-cap:empty:before{content:attr(data-ph);color:#9aa2ac;}
 .gal-del,.gal-swap{position:absolute;top:5px;width:22px;height:22px;border:none;border-radius:3px;color:#fff;font-size:12px;line-height:1;cursor:pointer;opacity:0;transition:opacity 0.12s;}
+.gal-grip{position:absolute;top:5px;left:5px;width:22px;height:22px;border-radius:3px;background:rgba(16,24,32,0.72);color:#fff;font-size:12px;line-height:22px;text-align:center;cursor:grab;opacity:0;transition:opacity 0.12s;user-select:none;}
+.gal-grip:active{cursor:grabbing;}
+.gal-item:hover .gal-grip{opacity:1;}
+.gal-item.gal-ghost{opacity:0.35;}
+.gal-item.gal-chosen .gal-grip{opacity:1;}
 .gal-del{right:5px;background:rgba(213,0,50,0.9);}
 .gal-swap{right:31px;background:rgba(16,24,32,0.72);}
 .gal-item:hover .gal-del,.gal-item:hover .gal-swap{opacity:1;}
@@ -989,6 +994,7 @@ body.view-mode .sec-del,
 body.view-mode .ph-del,
 body.view-mode .vid-change-bar,
 body.view-mode .gal-bar,
+body.view-mode .gal-grip,
 body.view-mode .gal-del,
 body.view-mode .gal-swap,
 body.view-mode .gal-empty,
@@ -1241,7 +1247,7 @@ body.is-staging::before{content:'';position:fixed;top:0;left:0;right:0;height:3p
 .locked-banner{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;margin-bottom:16px;display:none;}
 .section-locked .locked-banner{display:block;}
 .section-locked .add-block-area{display:none!important;}
-.section-locked .gal-bar,.section-locked .gal-del,.section-locked .gal-swap,.section-locked .gal-empty,
+.section-locked .gal-grip,.section-locked .gal-bar,.section-locked .gal-del,.section-locked .gal-swap,.section-locked .gal-empty,
 .section-locked .bctrl,.section-locked .swot-add,.section-locked .tbl-toolbar,.section-locked .tbl-gear,.section-locked .tbl-rowops,.section-locked .tbl-row-del,.section-locked .tl-add-btn,.section-locked .tl-del,.section-locked .tl-date-clear,.section-locked .tbl-add-row,.section-locked .dl-add,.section-locked .ap-add{display:none!important;}
 .section-locked #page-title{pointer-events:none;}
 
@@ -6567,7 +6573,17 @@ function upgradeGalleryBlocks(root){
       const grid=document.createElement('div'); grid.className='gal-grid';
       grid.innerHTML=galEmptyHTML(); g.insertBefore(grid, g.firstChild);
     }
+    // Galleries saved before the grip existed get one, so they become draggable
+    // without being rebuilt.
+    g.querySelectorAll('.gal-item .gal-pic').forEach(pic=>{
+      if(!pic.querySelector('.gal-grip')){
+        const d=document.createElement('div');
+        d.className='gal-grip'; d.title='Drag to reorder'; d.textContent='\u283f';
+        pic.appendChild(d);
+      }
+    });
     galSyncBar(g);
+    galInitSort(g.querySelector('.gal-grid'));
   });
 }
 // Patch old image blocks that lack the "Change image" bar
@@ -7480,11 +7496,35 @@ function galEmptyHTML(){
 }
 function galItemHTML(cap){
   return '<div class="gal-item"><div class="gal-pic"><img alt="">'+
+    '<div class="gal-grip" title="Drag to reorder">\u283f</div>'+
     '<button class="gal-swap" title="Replace this image" onclick="galChangeImage(this)">\u21c4</button>'+
     '<button class="gal-del" title="Remove this image" onclick="galRemove(this)">\u2715</button>'+
     '</div><div class="gal-cap" contenteditable="true" spellcheck="false" data-ph="Caption\u2026">'+(cap||'')+'</div></div>';
 }
 // Never build a tile by interpolating the src into HTML: a URL may carry a quote.
+// A multi-file pick arrives in the browser's own order -- directory order, not
+// the order they were clicked, which the file dialog never reports. Sort by name
+// so the result is at least predictable (Figure_02 before Figure_10).
+function galSortFiles(files){
+  const coll = (typeof Intl!=='undefined' && Intl.Collator)
+    ? new Intl.Collator(undefined,{numeric:true,sensitivity:'base'})
+    : null;
+  return files.slice().sort((a,b)=> coll ? coll.compare(a.name||'', b.name||'')
+                                         : String(a.name||'').localeCompare(String(b.name||'')));
+}
+// Tiles reorder by dragging the grip. The grip is the handle rather than the
+// picture, so a drag can never be mistaken for the click that opens the
+// lightbox, and the caption stays ordinarily editable.
+function galInitSort(grid){
+  if(!grid || grid.__galSortWired || typeof Sortable==='undefined') return;
+  if(typeof viewerModeForced!=='undefined' && viewerModeForced) return;
+  grid.__galSortWired=true;
+  new Sortable(grid,{
+    animation:150, handle:'.gal-grip', draggable:'.gal-item',
+    ghostClass:'gal-ghost', chosenClass:'gal-chosen',
+    onEnd(){ scheduleSave(); }
+  });
+}
 function galAppend(grid, src){
   const d=document.createElement('div');
   d.innerHTML=galItemHTML('');
@@ -7527,7 +7567,7 @@ function galAdd(el){
   const inp=document.createElement('input');
   inp.type='file'; inp.accept='image/*'; inp.multiple=true;
   inp.onchange=async e=>{
-    const files=[...(e.target.files||[])];
+    const files=galSortFiles([...(e.target.files||[])]);
     if(!files.length) return;
     const grid=wrap.querySelector('.gal-grid'); if(!grid) return;
     const ph=grid.querySelector('.gal-empty'); if(ph) ph.remove();
@@ -7540,6 +7580,7 @@ function galAdd(el){
       }catch(err){ console.warn('gallery image skipped:', err.message); }
     }
     galSyncBar(wrap);
+    galInitSort(grid);
     if(added) toast(added+' image'+(added===1?'':'s')+' added \u00b7 stored at '+galFmtBytes(galBytes(wrap)));
     scheduleSave();
   };
