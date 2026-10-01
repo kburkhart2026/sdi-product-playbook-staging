@@ -2168,6 +2168,7 @@ body.view-mode .mg2-libchip{pointer-events:none;}
             <div class="pmp-title">Course Database</div>
             <button class="pmp-dashbtn" onclick="crsAddPrompt()" title="Add a course">&#43; Course</button>
             <button class="pmp-dashbtn" onclick="crsLinkMarginAction()" title="Match costing lines to courses">&#128279; Link</button>
+            <button class="pmp-dashbtn" onclick="crsCreateMarginEntries()" title="Create costing entries for courses that have none">&#128178; Costing</button>
             <button class="pmp-dashbtn" onclick="crsExportDialog()" title="Export the database">&#8681;</button>
             <button class="pmp-iconbtn" onclick="crsPanelFullScreen()" title="Open full screen">&#8599;</button>
             <button class="pmp-iconbtn" onclick="crsPanelClose()" title="Close panel">&#10005;</button>
@@ -3666,31 +3667,49 @@ function crsCreditConflicts(){
 // imported program writes only to the first -- so AMT's courses existed but
 // the Margin Calculator had nothing to cost. This creates the missing costing
 // entries from the course records and links them both ways.
+function crsMissingCostingPlan(){
+  return crsAll().filter(c=>!(c.marginCourseIds||[]).length && c.code);
+}
+// ONE costing entry per distinct code, pointed at every course record that
+// carries it. A gen-ed runs as two records (5-week and 8-week) and they cost
+// the same; two entries would double-count and then re-link to each other.
+function crsCreateMarginEntriesFor(plan){
+  marginStore.courses = marginStore.courses || [];
+  const groups = new Map();
+  plan.forEach(c=>{
+    const k = (typeof ccNormCode==='function') ? ccNormCode(c.code) : String(c.code||'').trim();
+    if(!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(c);
+  });
+  groups.forEach(cs=>{
+    const lead = cs[0];
+    const m = { id:marginUid('mc'), code:lead.code, school:lead.school||'Unassigned',
+                creditHours: (lead.credits==null?4:Number(lead.credits)),
+                costItems:[{ id:marginUid('mci'), label:'Course materials', amount:0 }],
+                courseIds:cs.map(c=>c.id) };
+    marginStore.courses.push(m);
+    cs.forEach(c=>{ c.marginCourseIds = (c.marginCourseIds||[]).concat(m.id); c.updated = Date.now(); });
+  });
+  scheduleSave();
+  return groups.size;
+}
 async function crsCreateMarginEntries(){
   if(viewerModeForced) return;
-  marginStore.courses = marginStore.courses || [];
-  const plan = crsAll().filter(c=>!(c.marginCourseIds||[]).length && c.code);
+  const plan = crsMissingCostingPlan();
   if(!plan.length){ await appAlert('Nothing to add \u2014 every course already has a costing entry.'); return; }
   const noSchool = plan.filter(c=>!c.school).length;
   const bySchool = {};
   plan.forEach(c=>{ const k=c.school||'Unassigned'; bySchool[k]=(bySchool[k]||0)+1; });
   const summary = Object.keys(bySchool).sort().map(k=>'  '+k+': '+bySchool[k]).join('\n');
-  if(!await appConfirm('Create '+plan.length+' costing entr'+(plan.length===1?'y':'ies')+
-      ' in the Margin Calculator?\n\n'+summary+
+  const nEntries = new Set(plan.map(c=>(typeof ccNormCode==='function')?ccNormCode(c.code):c.code)).size;
+  if(!await appConfirm('Create '+nEntries+' costing entr'+(nEntries===1?'y':'ies')+
+      ' in the Margin Calculator, covering '+plan.length+' course record'+(plan.length===1?'':'s')+'?\n\n'+summary+
       '\n\nEach one carries the course code, credit hours and school, with a single '+
       '$0 materials line to fill in. Nothing already in the costing library is changed.'+
       (noSchool?'\n\n'+noSchool+' course(s) have no school set and will go in as Unassigned.':''),
       'Create entries', 'Cancel')) return;
-  plan.forEach(c=>{
-    const m = { id:marginUid('mc'), code:c.code, school:c.school||'Unassigned',
-                creditHours: (c.credits==null?4:Number(c.credits)),
-                costItems:[{ id:marginUid('mci'), label:'Course materials', amount:0 }],
-                courseIds:[c.id] };
-    marginStore.courses.push(m);
-    c.marginCourseIds = (c.marginCourseIds||[]).concat(m.id);
-    c.updated = Date.now();
-  });
-  scheduleSave(); crsRender();
+  crsCreateMarginEntriesFor(plan);
+  crsRender();
   toast(plan.length+' costing entr'+(plan.length===1?'y':'ies')+' created \u2713 \u2014 set the costs in the Margin Calculator');
 }
 async function crsFillSchoolsFromMargin(){
@@ -3726,6 +3745,13 @@ async function crsLinkMarginAction(){
   if(rep.unmatched.length)
     msg += '\n\nNo match: '+rep.unmatched.join(', ')
         +  '\nThese are costed but not in the catalog — add them as draft courses if they are real.';
+  const missing = crsMissingCostingPlan();
+  if(missing.length)
+    msg += '\n\n'+missing.length+' course'+(missing.length===1?' has':'s have')+' no costing entry at all'
+        +  ' — the Margin Calculator cannot cost '+(missing.length===1?'it':'them')+' yet:\n  '
+        +  missing.slice(0,10).map(c=>crsDisplay(c)).join(', ')
+        +  (missing.length>10 ? ', …and '+(missing.length-10)+' more' : '')
+        +  '\nOffered below.';
   if(conflicts.length)
     msg += '\n\n⚠ Credit hours disagree on '+conflicts.length+':\n  '
         +  conflicts.map(c=>c.code+' — margin says '+c.margin+', catalog says '+c.catalog.join('/')).join('\n  ')
@@ -3738,6 +3764,19 @@ async function crsLinkMarginAction(){
         'Link variants', 'Leave unlinked')){
       const n = crsLinkVariants();
       toast('Linked '+n+' costing variant'+(n===1?'':'s'));
+    }
+  }
+  if(missing.length){
+    const bySchool = {};
+    missing.forEach(c=>{ const k=c.school||'Unassigned'; bySchool[k]=(bySchool[k]||0)+1; });
+    if(await appConfirm('Create costing entries for the '+missing.length+' course'+
+        (missing.length===1?'':'s')+' that have none?\n\n'+
+        Object.keys(bySchool).sort().map(k=>'  '+k+': '+bySchool[k]).join('\n')+
+        '\n\nEach carries the course code, credit hours and school, with a single $0 materials '+
+        'line to fill in. Nothing already in the costing library is changed.',
+        'Create entries', 'Not now')){
+      const n = crsCreateMarginEntriesFor(missing);
+      toast(n+' costing entr'+(n===1?'y':'ies')+' created \u2713 — set the costs in the Margin Calculator');
     }
   }
   crsRender();
