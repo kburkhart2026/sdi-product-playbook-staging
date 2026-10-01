@@ -1898,7 +1898,7 @@ body.view-mode .mg2-libchip{pointer-events:none;}
 .mg2-cost-item-row input[type=text]{flex:2;}
 .mg2-cost-item-row input[type=number]{flex:1;}
 .mg2-field-input{font-family:inherit;font-size:13px;padding:6px 8px;border:1px solid var(--bdr);border-radius:5px;width:100%;box-sizing:border-box;}
-/* compact Course Library row -- used in the docked panel below its table
+/* compact Tools Library row -- used in the docked panel below its table
    width threshold (the real table row's min-width:160px + width:90px +
    min-width:260px columns need ~550-600px). */
 .mg2-course-compact-list{display:flex;flex-direction:column;gap:10px;}
@@ -2054,6 +2054,7 @@ body.view-mode .mg2-libchip{pointer-events:none;}
                 <div class="tools-group">Plan &amp; track</div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); pmOpenSmart();"><span class="ti">&#128450;</span><span>PM Board</span></div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); marginOpenSmart();"><span class="ti">&#128178;</span><span>Margin Calculator</span></div>
+                <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); marginOpenLibrary();"><span class="ti">&#128218;</span><span>Tools Library</span></div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); cycleStatus();"><span class="ti">&#127991;</span><span>Program status</span></div>
                 <div class="export-opt" onclick="document.getElementById('tools-menu').classList.remove('show'); clogOpenSmart();"><span class="ti">&#128344;</span><span>Changelog</span></div>
                 <div class="tools-group">Review &amp; release</div>
@@ -18327,6 +18328,14 @@ async function kbDelete(id){
   scheduleSave(); renderKnowledgeBase();
 }
 function marginGoLibrary(){ marginView='library'; renderMargin(); }
+// Straight to the Tools Library from the Tools menu, without going through the
+// Margin Calculator's program view first.
+function marginOpenLibrary(){
+  if(viewerModeForced) return;
+  marginOpenSmart();          // opens the panel, which forces marginView='program'
+  marginView='library';       // so the view is set AFTER, not before
+  renderMargin();
+}
 function marginOpenProgram(progId){ marginView='program'; marginCurProgId=progId; marginDrafts={}; renderMargin(); }
 // Docked-panel counterparts to renderPMBody()'s root switch and
 // pmPanelWidthNow() -- same reasoning, just for the margin tool's own panel.
@@ -18384,7 +18393,7 @@ function renderMarginDashboard(){
   marginBodyRoot().innerHTML = `
     <div class="mg2-header">
       <div class="mg2-title">All Programs<span class="sub">Margin by program &mdash; primary scenario</span></div>
-      <div class="mg2-actions"><button class="mg2-btn" onclick="marginGoLibrary()">📚 Course Library</button><button class="mg2-btn mg2-import-btn" onclick="marginTriggerImport()">⬆ Import legacy backup&hellip;</button></div>
+      <div class="mg2-actions"><button class="mg2-btn" onclick="marginGoLibrary()">📚 Tools Library</button><button class="mg2-btn mg2-import-btn" onclick="marginTriggerImport()">⬆ Import legacy backup&hellip;</button></div>
     </div>
     <div class="mg2-panel"><div class="mg2-panel-title">Margin comparison</div>${renderMarginChart(chartItems)}</div>
     <div class="mg2-panel" style="margin-bottom:0;">
@@ -18467,7 +18476,7 @@ function renderMarginLibrary(){
         ${body}
       </div>`;
   }).join('');
-  marginBodyRoot().innerHTML = `<div class="mg2-header"><div class="mg2-title">Course Library<span class="sub">Shared across every program</span></div></div>${sections}`;
+  marginBodyRoot().innerHTML = `<div class="mg2-header"><div class="mg2-title">Tools Library<span class="sub">Per-course tool and material costs, shared across every program</span></div></div>${sections}`;
 }
 function marginAddCourse(school){
   if(viewerModeForced) return;
@@ -18563,7 +18572,7 @@ function marginMembershipTableHtml(p, schoolFilter){
         </select></td>
       </tr>`;
   }).join('');
-  return `<table class="mg2-table"><thead><tr><th>Course</th><th>Credits</th><th>Cost</th><th>Membership</th></tr></thead><tbody>${rows||'<tr><td colspan="4" style="color:var(--mut);">No courses in this school yet -- add some from the Course Library.</td></tr>'}</tbody></table>`;
+  return `<table class="mg2-table"><thead><tr><th>Course</th><th>Credits</th><th>Cost</th><th>Membership</th></tr></thead><tbody>${rows||'<tr><td colspan="4" style="color:var(--mut);">No courses in this school yet -- add some from the Tools Library.</td></tr>'}</tbody></table>`;
 }
 function marginGenedsMembershipTableHtml(p){
   const pm = programMargin(p);
