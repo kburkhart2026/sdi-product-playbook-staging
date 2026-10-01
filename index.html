@@ -18716,9 +18716,13 @@ function marginAddScenario(progId){
   const list = marginScenariosFor(progId);
   const p = programs.find(x=>x.id===progId);
   const pm = p ? programMargin(p) : { coreCourseIds:[], electiveCourseIds:[] };
+  // With the program-level template panel gone, a new scenario starts from the
+  // primary one -- far more useful than starting empty, and still its own copy.
+  const seed = p ? marginScenarioEnsure(pm, (list.find(x=>x.isPrimary) || list[0])) : null;
   list.push({ id:marginUid('ms'), name:'Scenario '+(list.length+1), isPrimary:false,
-              coreCourseIds:[...(pm.coreCourseIds||[])], electiveCourseIds:[],
-              selectedElectiveCourseIds:[], overrides:{} });
+              coreCourseIds:[...((seed&&seed.coreCourseIds) || pm.coreCourseIds || [])],
+              electiveCourseIds:[...((seed&&seed.electiveCourseIds) || [])],
+              selectedElectiveCourseIds:[...((seed&&seed.electiveCourseIds) || [])], overrides:{} });
   scheduleSave(); renderMarginProgram();
 }
 function marginDuplicateScenario(progId, scenarioId){
@@ -18894,12 +18898,6 @@ function renderMarginProgram(){
         <div class="mg2-field"><label>Default max terms</label><input type="number" step="1" class="mg2-field-input" value="${pm.maxTerms}" oninput="marginProgramField('${p.id}','maxTerms', this.value)"></div>
       </div>
       <div class="mg2-field"><label>General education</label><button class="mg2-btn mg2-gened-toggle-btn" onclick="marginToggleIncludesGeneds('${p.id}')">${pm.includesGeneds?'Enabled — click to disable':'Enable General Education'}</button></div>
-    </div>
-    <div class="mg2-panel">
-      <div class="mg2-panel-title">Course membership <span style="text-transform:none;font-weight:400;">&mdash; defaults for new scenarios</span></div>
-      ${pm.libraries.map(sch=>
-        (pm.libraries.length>1 ? `<div class="mg2-lib-sub">${marginSchoolBadge(sch)}</div>` : '')
-        + marginMembershipTableHtml(p, sch)).join('')}
     </div>
     ${pm.includesGeneds ? `<div class="mg2-panel"><div class="mg2-panel-title">${marginSchoolBadge('Geneds')} General Education &mdash; course membership</div>${marginGenedsMembershipTableHtml(p)}</div>` : ''}
     <div class="mg2-panel"><div class="mg2-panel-title">Scenarios</div>${list.map(s=>marginScenarioCardHtml(p, s)).join('')}</div>
