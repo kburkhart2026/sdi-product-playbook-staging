@@ -1862,6 +1862,12 @@ table.mg2-table td{padding:9px 10px;border-bottom:1px solid var(--bdr);font-vari
 table.mg2-table td.num{text-align:right;}
 table.mg2-table tr.clickable{cursor:pointer;}
 table.mg2-table tr.clickable:hover{background:#FDF4F5;}
+.mg2-libpick{display:flex;flex-wrap:wrap;gap:6px;}
+.mg2-libchip{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border:1px solid var(--bdr);border-radius:3px;background:#fff;font:600 12px/1 inherit;color:var(--mut);cursor:pointer;user-select:none;}
+.mg2-libchip.on{border:2px solid var(--acc);color:var(--acc);padding:5px 10px;}
+.mg2-lib-sub{margin:14px 0 6px;}
+.mg2-lib-sub:first-child{margin-top:0;}
+body.view-mode .mg2-libchip{pointer-events:none;}
 .mg2-badge{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;font-family:var(--font-cond);letter-spacing:0.02em;text-transform:uppercase;white-space:nowrap;}
 .mg2-scenario-card{border:1px solid var(--bdr);border-radius:8px;overflow:hidden;margin-bottom:14px;}
 .mg2-scenario-card.primary{border-color:#E9C46A;}
@@ -2287,6 +2293,7 @@ table.mg2-table tr.clickable:hover{background:#FDF4F5;}
         <button class="mg2-btn" onclick="crsImportFromRepo()">&#8681; Import catalog edition</button>
         <button class="mg2-btn" onclick="crsLinkMarginAction()">&#128279; Link to Margin Calculator</button>
         <button class="mg2-btn" onclick="crsFillSchoolsFromMargin()">&#127979; Fill schools</button>
+        <button class="mg2-btn" onclick="crsCreateMarginEntries()">&#128178; Add to costing library</button>
         <button class="mg2-btn" onclick="crsExportDialog()">&#8681; Export…</button>
       </div>
     </div>
@@ -3655,6 +3662,37 @@ function crsCreditConflicts(){
   return out;
 }
 // Fill School from the costing library, where all 37 entries already carry one.
+// The Course Database and the costing library are separate stores, and an
+// imported program writes only to the first -- so AMT's courses existed but
+// the Margin Calculator had nothing to cost. This creates the missing costing
+// entries from the course records and links them both ways.
+async function crsCreateMarginEntries(){
+  if(viewerModeForced) return;
+  marginStore.courses = marginStore.courses || [];
+  const plan = crsAll().filter(c=>!(c.marginCourseIds||[]).length && c.code);
+  if(!plan.length){ await appAlert('Nothing to add \u2014 every course already has a costing entry.'); return; }
+  const noSchool = plan.filter(c=>!c.school).length;
+  const bySchool = {};
+  plan.forEach(c=>{ const k=c.school||'Unassigned'; bySchool[k]=(bySchool[k]||0)+1; });
+  const summary = Object.keys(bySchool).sort().map(k=>'  '+k+': '+bySchool[k]).join('\n');
+  if(!await appConfirm('Create '+plan.length+' costing entr'+(plan.length===1?'y':'ies')+
+      ' in the Margin Calculator?\n\n'+summary+
+      '\n\nEach one carries the course code, credit hours and school, with a single '+
+      '$0 materials line to fill in. Nothing already in the costing library is changed.'+
+      (noSchool?'\n\n'+noSchool+' course(s) have no school set and will go in as Unassigned.':''),
+      'Create entries', 'Cancel')) return;
+  plan.forEach(c=>{
+    const m = { id:marginUid('mc'), code:c.code, school:c.school||'Unassigned',
+                creditHours: (c.credits==null?4:Number(c.credits)),
+                costItems:[{ id:marginUid('mci'), label:'Course materials', amount:0 }],
+                courseIds:[c.id] };
+    marginStore.courses.push(m);
+    c.marginCourseIds = (c.marginCourseIds||[]).concat(m.id);
+    c.updated = Date.now();
+  });
+  scheduleSave(); crsRender();
+  toast(plan.length+' costing entr'+(plan.length===1?'y':'ies')+' created \u2713 \u2014 set the costs in the Margin Calculator');
+}
 async function crsFillSchoolsFromMargin(){
   if(viewerModeForced) return;
   const plan = [];
@@ -9433,10 +9471,18 @@ function ccAcceptVariant(progId, text){
   scheduleSave(); ccRefresh();
   toast('“'+text+'” accepted as an allowed form.');
 }
+// The Course Database already knows which school a code belongs to; use it
+// rather than defaulting every new costing entry into SUT.
+function ccSchoolForCode(code){
+  if(typeof crsAll!=='function' || typeof ccNormCode!=='function') return '';
+  const n = ccNormCode(code||'');
+  const hit = crsAll().filter(c=>ccNormCode(c.code)===n && c.school);
+  return hit.length ? hit[0].school : '';
+}
 function ccAddCourse(code, title, credits){
   if(viewerModeForced) return;
   marginStore.courses = marginStore.courses || [];
-  marginStore.courses.push({ id: marginUid('mc'), code: code, school: 'SUT',
+  marginStore.courses.push({ id: marginUid('mc'), code: code, school: ccSchoolForCode(code) || 'SUT',
     creditHours: credits || 4, costItems: [{ id: marginUid('mci'), label: 'Course materials', amount: 0 }] });
   if(title) standardsStore.courseTitles[code] = { title: title, confirmed: true, ts: Date.now() };
   scheduleSave(); ccRefresh();
@@ -18027,6 +18073,14 @@ function marginAutoSchool(name){ return /firearm|gunsmith|asft|cftg|\baft\b|ball
 function programMargin(p){
   if(!p.margin) p.margin = { tuitionRate:390, erf:700, maxTerms:2, coreCourseIds:[], electiveCourseIds:[], includesGeneds:false, school:marginAutoSchool(p.name) };
   if(!p.margin.school) p.margin.school = marginAutoSchool(p.name); // heal configs saved before `school` existed
+  // `school` stays the PRIMARY library (badges, the legacy importer and every
+  // saved scenario still read it). `libraries` is the full set a program draws
+  // on -- AMT mixes shared MFT courses with its own, so one library is not
+  // enough. Membership itself is already a flat list of course ids with no
+  // school attached, so widening the choice changes nothing about the maths.
+  if(!Array.isArray(p.margin.libraries) || !p.margin.libraries.length)
+    p.margin.libraries = [p.margin.school];
+  if(p.margin.libraries.indexOf(p.margin.school)<0) p.margin.school = p.margin.libraries[0];
   return p.margin;
 }
 function marginCourse(id){ return marginStore.courses.find(c=>c.id===id); }
@@ -18073,8 +18127,33 @@ const MARGIN_SCHOOLS = {
   SFT:{color:'#7A2331', bg:'#F7E8EA', label:'SFT'},
   Geneds:{color:'#5B3A8E', bg:'#EFE9F7', label:'Geneds'}
 };
+// Every school the data actually knows about: the three built in, plus any
+// school carried by a costing entry or by a Course Database record. A program
+// imported with its own school (Manufacturing) has to be selectable without a
+// code change -- the hardcoded list is what made AMT impossible to cost.
+function marginAllSchools(){
+  const out = ['SUT','SFT'];
+  const add = v=>{ v=String(v||'').trim(); if(v && v!=='Geneds' && out.indexOf(v)<0) out.push(v); };
+  (marginStore.courses||[]).forEach(c=>add(c.school));
+  if(typeof crsAll==='function') crsAll().forEach(c=>add(c.school));
+  return out.slice(0,2).concat(out.slice(2).sort());
+}
+// A school with no entry in MARGIN_SCHOOLS still needs a stable, readable
+// badge -- it used to borrow the Geneds purple, so Manufacturing and General
+// Education looked like the same thing.
+const MG_BADGE_PALETTE = [
+  {color:'#8A4B08', bg:'#FBEEE2'}, {color:'#14532D', bg:'#E7F3EC'},
+  {color:'#1F3A5F', bg:'#E8EEF6'}, {color:'#6B3A1E', bg:'#F6EBE4'}
+];
+function marginSchoolStyle(school){
+  if(MARGIN_SCHOOLS[school]) return MARGIN_SCHOOLS[school];
+  const key=String(school||'');
+  let h=0; for(let i=0;i<key.length;i++) h=(h*31+key.charCodeAt(i))>>>0;
+  const pal=MG_BADGE_PALETTE[h%MG_BADGE_PALETTE.length];
+  return { color:pal.color, bg:pal.bg, label:key||'Unassigned' };
+}
 function marginSchoolBadge(school){
-  const m = MARGIN_SCHOOLS[school] || MARGIN_SCHOOLS.Geneds;
+  const m = marginSchoolStyle(school);
   return `<span class="mg2-badge" style="color:${m.color};background:${m.bg};">${escapeHtml(m.label)}</span>`;
 }
 function marginStatusBadge(status){
@@ -18329,7 +18408,7 @@ function marginCourseRowHtmlCompact(c){
 }
 function marginToggleLibSection(school){ marginLibExpanded[school] = !marginLibExpanded[school]; renderMarginLibrary(); }
 function renderMarginLibrary(){
-  const schools = ['SUT','SFT','Geneds'];
+  const schools = marginAllSchools().concat(['Geneds']);
   const compact = marginPanelWidthNow() < 650;
   const sections = schools.map(sch=>{
     const courses = marginStore.courses.filter(c=>c.school===sch);
@@ -18491,7 +18570,32 @@ function marginProgramField(progId, field, value){
 function marginProgramSchool(progId, value){
   if(viewerModeForced) return;
   const p = programs.find(x=>x.id===progId); if(!p) return;
-  programMargin(p).school = value;
+  const pm = programMargin(p);
+  pm.school = value;
+  if(pm.libraries.indexOf(value)<0) pm.libraries.unshift(value);
+  scheduleSave(); renderMarginProgram();
+}
+// Tick a library on or off for this program. The last one cannot be removed --
+// a program with no library has nothing to cost and no way back to one.
+function marginToggleLibrary(progId, school){
+  if(viewerModeForced) return;
+  const p = programs.find(x=>x.id===progId); if(!p) return;
+  const pm = programMargin(p);
+  const i = pm.libraries.indexOf(school);
+  if(i>=0){
+    if(pm.libraries.length===1){ toast('A program needs at least one course library.'); return; }
+    const dropped = pm.libraries.splice(i,1)[0];
+    // Courses from a library that is no longer selected would otherwise keep
+    // counting toward the totals while being invisible, so release them.
+    const ids = new Set((marginStore.courses||[]).filter(c=>c.school===dropped).map(c=>c.id));
+    pm.coreCourseIds = pm.coreCourseIds.filter(id=>!ids.has(id));
+    pm.electiveCourseIds = pm.electiveCourseIds.filter(id=>!ids.has(id));
+    (marginStore.scenariosByProgram[p.id]||[]).forEach(sc=>{
+      if(Array.isArray(sc.selectedElectiveCourseIds))
+        sc.selectedElectiveCourseIds = sc.selectedElectiveCourseIds.filter(id=>!ids.has(id));
+    });
+    if(pm.school===dropped) pm.school = pm.libraries[0];
+  } else pm.libraries.push(school);
   scheduleSave(); renderMarginProgram();
 }
 
@@ -18671,17 +18775,18 @@ function renderMarginProgram(){
   const fieldGridStyle = marginPanelWidthNow() < 760 ? 'grid-template-columns:1fr 1fr;' : '';
   marginBodyRoot().innerHTML = `
     <div class="mg2-header">
-      <div class="mg2-title">${escapeHtml(p.name)}<span class="sub">Course membership from the ${escapeHtml(pm.school)} library</span></div>
+      <div class="mg2-title">${escapeHtml(p.name)}<span class="sub">Course membership from ${pm.libraries.map(escapeHtml).join(' + ')}</span></div>
       <div class="mg2-actions"><button class="mg2-btn mg2-newscenario-btn" onclick="marginAddScenario('${p.id}')">+ New Scenario</button></div>
     </div>
     <div class="mg2-panel">
       <div class="mg2-panel-title">Program details</div>
       <div class="mg2-field-grid" style="${fieldGridStyle}">
-        <div class="mg2-field"><label>Course library</label>
-          <select class="mg2-field-input" onchange="marginProgramSchool('${p.id}', this.value)">
-            <option value="SUT" ${pm.school==='SUT'?'selected':''}>SUT</option>
-            <option value="SFT" ${pm.school==='SFT'?'selected':''}>SFT</option>
-          </select>
+        <div class="mg2-field"><label>Course libraries</label>
+          <div class="mg2-libpick">${marginAllSchools().map(sch=>`
+            <label class="mg2-libchip${pm.libraries.indexOf(sch)>=0?' on':''}">
+              <input type="checkbox" class="mg2-libcheck" ${pm.libraries.indexOf(sch)>=0?'checked':''}
+                     onchange="marginToggleLibrary('${p.id}','${escapeHtml(sch)}')">${escapeHtml(sch)}
+            </label>`).join('')}</div>
         </div>
         <div class="mg2-field"><label>Default tuition rate ($/SCH)</label><input type="number" step="0.01" class="mg2-field-input" value="${pm.tuitionRate}" oninput="marginProgramField('${p.id}','tuitionRate', this.value)"></div>
         <div class="mg2-field"><label>Default ERF ($/term)</label><input type="number" step="0.01" class="mg2-field-input" value="${pm.erf}" oninput="marginProgramField('${p.id}','erf', this.value)"></div>
@@ -18691,7 +18796,9 @@ function renderMarginProgram(){
     </div>
     <div class="mg2-panel">
       <div class="mg2-panel-title">Course membership <span style="text-transform:none;font-weight:400;">&mdash; defaults for new scenarios</span></div>
-      ${marginMembershipTableHtml(p, pm.school)}
+      ${pm.libraries.map(sch=>
+        (pm.libraries.length>1 ? `<div class="mg2-lib-sub">${marginSchoolBadge(sch)}</div>` : '')
+        + marginMembershipTableHtml(p, sch)).join('')}
     </div>
     ${pm.includesGeneds ? `<div class="mg2-panel"><div class="mg2-panel-title">${marginSchoolBadge('Geneds')} General Education &mdash; course membership</div>${marginGenedsMembershipTableHtml(p)}</div>` : ''}
     <div class="mg2-panel"><div class="mg2-panel-title">Scenarios</div>${list.map(s=>marginScenarioCardHtml(p, s)).join('')}</div>
