@@ -1957,6 +1957,20 @@ body.view-mode .mg2-libchip{pointer-events:none;}
 .mscn-title{font-family:var(--font-cond);text-transform:uppercase;letter-spacing:0.03em;font-weight:800;font-size:13px;color:var(--acc);}
 .mscn-meta{font-size:11px;color:var(--mut);}
 .mscn-courses{padding:12px 16px;border-bottom:1px solid var(--bdr);}
+/* A credit proposal: a what-if scoped to one scenario, always visibly marked. */
+.mg2-prop{display:inline-flex;align-items:center;gap:4px;margin-left:auto;padding:2px 6px;
+  border:1px dashed var(--bdr);border-radius:4px;white-space:nowrap;}
+.mg2-prop.on{border-style:solid;border-color:#E8C98A;background:#FFF4DC;}
+.mg2-prop em{font-style:normal;font-family:var(--font-cond);font-size:10px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--mut);}
+.mg2-prop.on em{color:#8A5A00;}
+.mg2-prop b{font-family:var(--font-cond);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:#8A5A00;margin-left:2px;}
+.mg2-prop-in{width:46px;border:1px solid var(--bdr);border-radius:3px;padding:1px 4px;font:inherit;
+  font-size:12px;text-align:right;font-variant-numeric:tabular-nums;background:#fff;color:var(--txt);}
+.mscn-prop{font-family:var(--font-cond);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:#8A5A00;background:#FFF4DC;border:1px solid #E8C98A;border-radius:3px;padding:0 4px;}
+body.view-mode .mg2-prop-in{pointer-events:none;}
 .mscn-course-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--txt);}
 .mscn-course-row .cost{font-variant-numeric:tabular-nums;color:var(--mut);}
 .mscn-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:#fafafa;}
@@ -3724,9 +3738,14 @@ function crsConflictImpact(){
       if(!hit.length) return;
       const before = marginScenarioTotals(p, sc);
       const after  = marginScenarioTotals(p, sc, ov);
+      // A course this scenario has deliberately modelled at a different figure
+      // is unaffected by resolving the base one -- the report says so rather
+      // than reporting a move that will not happen.
+      const proposed = hit.filter(id=>marginCreditProposal(sc, id)!==null)
+                          .map(id=>({ id, cr: marginCreditProposal(sc, id) }));
       scenarios.push({ progId:p.id, progName:p.name, scenarioId:sc.id,
         scenarioName: sc.name || 'Untitled', isPrimary: !!sc.isPrimary,
-        entryIds: hit,
+        entryIds: hit, proposed,
         before, after,
         deltaMargin: after.grossMargin - before.grossMargin,
         deltaRevenue: after.totalProgramRevenue - before.totalProgramRevenue,
@@ -14895,6 +14914,7 @@ function crsConflictsHTML(){
   rep.conflicts.forEach(x=>{
     const title = (crsById((x.courseIds||[])[0])||{}).title || '';
     const ambiguous = x.catalog.length !== 1;
+    const xMarginId = x.marginId;
     const scns = rep.scenarios.filter(sc=>sc.entryIds.indexOf(x.marginId)>=0);
     h += '<div class="crsx-card">'
       +  '<div class="crsx-head"><span class="crs-code">'+escapeHtml(x.code||'')+'</span>'
@@ -14915,11 +14935,13 @@ function crsConflictsHTML(){
       scns.forEach(sc=>{
         const d = sc.deltaMargin;
         const cls = !sc.moves ? 'flat' : (d<0 ? 'down' : 'up');
+        const prop = (sc.proposed||[]).find(x=>x.id===xMarginId);
+        const why = (!sc.moves && prop) ? 'models '+prop.cr+' cr' : (sc.moves?((d>=0?'+':'')+(d*100).toFixed(1)+' pts'):'no change');
         h += '<tr><td>'+escapeHtml(sc.progName)+' &mdash; '+escapeHtml(sc.scenarioName)
           +  (sc.isPrimary?' <span class="mg2-badge mg2-primary-badge">&#9733;</span>':'')+'</td>'
           +  '<td class="num">'+marginPct(sc.before.grossMargin)+'</td>'
           +  '<td class="num">'+marginPct(sc.after.grossMargin)+'</td>'
-          +  '<td class="num crsx-'+cls+'">'+(sc.moves?((d>=0?'+':'')+(d*100).toFixed(1)+' pts'):'no change')+'</td></tr>';
+          +  '<td class="num crsx-'+cls+'">'+why+'</td></tr>';
       });
       h += '</tbody></table>';
     }
@@ -18352,6 +18374,13 @@ function marginPrimaryScenario(progId){
 // always said it was.
 function marginScenarioEnsure(pm, scenario){
   if(!scenario) return scenario;
+  // A credit PROPOSAL is a what-if scoped to this scenario: "model this course
+  // at 4 credits". It is deliberately NOT a change to the course record, so the
+  // catalog, the DEAC sheet and every other scenario keep reading the
+  // implemented figure. Empty by default; rides along in the scenario, so it
+  // persists, duplicates and merges with no new wiring.
+  if(!scenario.creditProposals || typeof scenario.creditProposals !== 'object'
+     || Array.isArray(scenario.creditProposals)) scenario.creditProposals = {};
   if(!Array.isArray(scenario.coreCourseIds) || !Array.isArray(scenario.electiveCourseIds)){
     // A scenario saved before this existed inherits what it was actually being
     // costed with, so no saved number moves.
@@ -18382,6 +18411,32 @@ function marginSetScenarioMembership(progId, scenarioId, courseId, status){
   draft.selectedElectiveCourseIds = [...draft.electiveCourseIds];   // kept in step for older readers
   renderMarginProgram();
 }
+// What this scenario actually costs this course at. A PROPOSAL wins over
+// everything, including the conflict report's override -- a scenario that has
+// deliberately modelled a different figure is not affected by resolving the
+// base one, and the report must say so rather than predicting a move.
+function marginCreditProposal(scenario, courseId){
+  const m = scenario && scenario.creditProposals;
+  const v = m && m[courseId];
+  return (v===null || v===undefined || v==='') ? null : Number(v);
+}
+function marginEffectiveCredits(scenario, c, creditOverride){
+  if(!c) return 0;
+  const prop = marginCreditProposal(scenario, c.id);
+  if(prop !== null && !isNaN(prop)) return prop;
+  if(creditOverride && creditOverride.has(c.id)) return creditOverride.get(c.id);
+  return c.creditHours;
+}
+function marginSetCreditProposal(progId, scenarioId, courseId, value, commit){
+  if(viewerModeForced) return;
+  const p = programs.find(x=>x.id===progId); if(!p) return;
+  const draft = marginGetDraft(progId, scenarioId); if(!draft) return;
+  marginScenarioEnsure(programMargin(p), draft);
+  const v = String(value==null?'':value).trim();
+  if(v==='' || isNaN(Number(v)) || Number(v) < 0) delete draft.creditProposals[courseId];
+  else draft.creditProposals[courseId] = Number(v);
+  if(commit) renderMarginProgram(); else marginUpdateScenarioSummaryDOM(progId, scenarioId);
+}
 // `creditOverride` is an optional Map of costing-entry id -> credit hours, used by
 // the conflict report to answer "what would this scenario read if the catalog
 // figure won?" WITHOUT writing anything. Omitted, every number is unchanged.
@@ -18389,8 +18444,7 @@ function marginScenarioTotals(program, scenario, creditOverride){
   const pm = programMargin(program);
   const activeIds = marginScenarioActiveCourseIds(pm, scenario);
   const courses = activeIds.map(id=>marginCourse(id)).filter(Boolean);
-  const _cr = c => (creditOverride && creditOverride.has(c.id)) ? creditOverride.get(c.id) : c.creditHours;
-  const totalCreditHours = courses.reduce((s,c)=>s+(Number(_cr(c))||0),0);
+  const totalCreditHours = courses.reduce((s,c)=>s+(Number(marginEffectiveCredits(scenario,c,creditOverride))||0),0);
   const cogs = courses.reduce((s,c)=>s+marginCourseTotalCost(c),0);
   const tuitionRate = (scenario.overrides.tuitionRate ?? pm.tuitionRate) || 0;
   const erf = (scenario.overrides.erf ?? pm.erf) || 0;
@@ -19004,7 +19058,7 @@ function marginScenarioCardHtml(p, savedScenario){
   const pm = programMargin(p);
   marginScenarioEnsure(pm, s);
   const inCourses = marginScenarioActiveCourseIds(pm, s).map(id=>marginCourse(id)).filter(Boolean);
-  const inCredits = inCourses.reduce((sum,c)=>sum+(Number(c.creditHours)||0),0);
+  const inCredits = inCourses.reduce((sum,c)=>sum+(Number(marginEffectiveCredits(s,c))||0),0);
   const coreLine = inCourses.length
     ? `<div style="margin-bottom:10px;">${marginStatusBadge('core')} <span style="color:var(--mut);font-size:12px;">${inCourses.length} course${inCourses.length===1?'':'s'}, ${inCredits} credits in this scenario</span></div>`
     : '<div style="margin-bottom:10px;color:var(--mut);font-size:12px;">No courses in this scenario yet &mdash; add them below.</div>';
@@ -19014,6 +19068,7 @@ function marginScenarioCardHtml(p, savedScenario){
   const pool = (marginStore.courses||[]).filter(c=>libs.indexOf(c.school)>=0);
   const electivesHtml = pool.map(c=>{
     const st = marginScenarioStatus(s, c.id);
+    const prop = marginCreditProposal(s, c.id);
     return `<label class="mg2-course-row" style="display:flex;align-items:center;gap:8px;">
       <select class="mg2-field-input" style="width:auto;" onchange="marginSetScenarioMembership('${p.id}','${savedScenario.id}','${c.id}', this.value)">
         <option value="none" ${st==='none'?'selected':''}>Out</option>
@@ -19021,7 +19076,13 @@ function marginScenarioCardHtml(p, savedScenario){
         <option value="elective" ${st==='elective'?'selected':''}>Elective</option>
       </select>
       <span${st==='none'?' style="color:var(--mut);"':''}>${escapeHtml(c.code)}</span>
-      <span style="color:var(--mut);">(${c.creditHours} cr, ${_costUSD(marginCourseTotalCost(c))})</span></label>`;
+      <span style="color:var(--mut);">(${c.creditHours} cr, ${_costUSD(marginCourseTotalCost(c))})</span>
+      ${st==='none' ? '' : `<span class="mg2-prop${prop!==null?' on':''}" title="Propose different credit hours for THIS scenario only. The course record is not changed.">
+        <em>model at</em>
+        <input type="number" min="0" step="1" class="mg2-prop-in" placeholder="${c.creditHours}" value="${prop!==null?prop:''}"
+          oninput="marginSetCreditProposal('${p.id}','${savedScenario.id}','${c.id}', this.value, false)"
+          onchange="marginSetCreditProposal('${p.id}','${savedScenario.id}','${c.id}', this.value, true)">
+        <em>cr</em>${prop!==null?'<b>proposed</b>':''}</span>`}</label>`;
   }).join('');
   return `
     <div class="mg2-scenario-card ${savedScenario.isPrimary?'primary':''}" id="mg2-scenario-${savedScenario.id}">
@@ -19203,7 +19264,10 @@ async function marginInsertScenarioIntoSection(progId, scenarioId, targetSection
 
 // ---------- the saved-scenario block itself (lives in blockStore, survives reload) ----------
 function marginScenarioBlockInnerHtml(p, pm, scenario, t, savedAt){
-  const courseRows = t.courses.map(c=>`<div class="mscn-course-row"><span>${escapeHtml(c.code)}</span><span class="cost">${c.creditHours} cr &middot; ${_costUSD(marginCourseTotalCost(c))}</span></div>`).join('');
+  const courseRows = t.courses.map(c=>{
+    const _p = marginCreditProposal(scenario, c.id);
+    return `<div class="mscn-course-row"><span>${escapeHtml(c.code)}${_p!==null?' <span class="mscn-prop">proposed</span>':''}</span><span class="cost">${_p!==null?_p:c.creditHours} cr &middot; ${_costUSD(marginCourseTotalCost(c))}</span></div>`;
+  }).join('');
   const dateLabel = new Date(savedAt).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
   return `<div class="block-margin-scenario" data-margin-program="${p.id}" data-margin-scenario="${scenario.id}" data-margin-saved="${savedAt}">`+
     `<div class="mscn-head"><div class="mscn-head-left">${marginSchoolBadge(pm.school)}<span class="mscn-title">${escapeHtml(p.name)} — ${escapeHtml(scenario.name)}</span>${scenario.isPrimary?'<span class="mg2-badge mg2-primary-badge">★ Primary</span>':''}</div><div class="mscn-meta">Saved ${dateLabel}</div></div>`+
